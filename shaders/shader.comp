@@ -1,0 +1,151 @@
+#version 450
+
+#define PI 3.1415926538
+
+struct Particle {
+    vec4 position;
+    vec4 color;
+    vec3 velocity;
+    float movable;
+    vec3 acc;
+    float density;
+};
+
+layout(std140, binding = 1) readonly buffer ParticleSSBOIn {
+    Particle particlesIn[];
+};
+
+layout(std140, binding = 2) buffer ParticleSSBOOut {
+    Particle particlesOut[];
+};
+
+layout(binding = 3) uniform Attributes {
+    vec4 center;
+    float smootingLength;
+    float mass;
+    float stateConstant;
+    float polytropicIndex;
+    float damping;
+    float gravity;
+    int stop;   // stop simulation
+    float pad;  // just padding
+} attributes;
+
+layout(binding = 5) uniform UniformBufferObject {
+    mat4 model;
+    mat4 view;
+    mat4 proj;
+    float deltaTime;
+} ubo;
+
+layout(push_constant) uniform Constants {
+    int stageIndex;
+} constants;
+
+layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+const uint NUMBER_OF_PARTICLES = 4072;
+
+// smoothing length
+float h;          
+float m;
+vec3 gravity = vec3(0.0, -1.0, 0.0);
+
+float W(vec3 position) {
+    float r = length(position);
+    float w = pow(1.0 / (h * sqrt(PI)), 3) * exp(-r * r / (h * h));
+    return w;
+}
+
+vec3 gradW(vec3 position) {
+    float r = length(position);
+    float n = -2.0 * exp(-r * r / (h * h)) / pow(h, 5) / pow(PI, 1.5);
+    return n * position;
+}
+
+float getDensity(vec3 position) {
+    float w_sum = 0.0f;
+    for (int i = 0; i < NUMBER_OF_PARTICLES; i++) {
+        Particle p = particlesIn[i];
+        vec3 dist = position - p.position.xyz;
+        if (length(dist) <= h){
+            w_sum += m * W(dist);
+        }
+    }
+
+    return w_sum;
+}
+
+vec3 getAcc(vec3 position, float rho, uint index, vec3 vel){
+    vec3 acc = vec3(0.0, 0.0, 0.0);
+    float n = attributes.polytropicIndex;
+    float pressure = attributes.stateConstant * pow(rho, (1 + 1 / n));
+    for (uint i = 0; i < NUMBER_OF_PARTICLES; i++) {
+        Particle p = particlesIn[i];
+        vec3 r = position - p.position.xyz;
+        float dist = length(r);
+        if (dist <= h && i != index){
+            vec3 dW = gradW(r);
+            float dP = pressure / (rho * rho) + (attributes.stateConstant * pow(p.density, (1 + 1 / n))) / (p.density * p.density);
+            acc -= m * dP * dW;
+        }
+    }
+
+    acc -= (attributes.damping / 100000.0) * vel;
+    
+    return acc + gravity;
+}
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    Particle particleIn = particlesIn[index];
+    
+    h = attributes.smootingLength;
+    m = attributes.mass * 0.00000000000001;
+
+    vec4 gravityObject = transpose(inverse(ubo.model)) * vec4(gravity, 0.0);
+    float g = attributes.gravity * 0.0000000007;
+    vec4 transformedGravity = (inverse(ubo.model)) * vec4(vec3(0.0, 0.0, -g), 0.0);
+    gravity = normalize(transformedGravity.xyz) * length(vec3(0.0, 0.0, -g));
+   
+    if (attributes.stop == 0){
+        if (constants.stageIndex == 1){
+            particlesOut[index].density = getDensity(particleIn.position.xyz);
+        } else if (constants.stageIndex == 2) {
+            particlesOut[index].acc = getAcc(particleIn.position.xyz, particleIn.density, index, particleIn.velocity);
+        } else if (constants.stageIndex == 3){
+            if (particleIn.movable > 0.5){
+                vec3 vel = particleIn.velocity + particleIn.acc * ubo.deltaTime / 2.0;
+                vec4 pos= particleIn.position + vec4(particleIn.velocity, 0.0) * (ubo.deltaTime);
+                vel = vel + particleIn.acc * ubo.deltaTime / 2.0;
+
+                if (pos.z < attributes.center.z - 0.675f){
+                    vel.z = -0.5 * vel.z;
+                    pos.z = attributes.center.z - 0.675f;
+                } else if (pos.z > attributes.center.z + 0.675f){
+                    vel.z = -0.5 * vel.z;
+                    pos.z = 0.675f + attributes.center.z;
+                }
+
+                if (pos.y < attributes.center.y - 0.676f){
+                    vel.y = -0.5 * vel.y;
+                    pos.y = attributes.center.y - 0.675f;
+                } else if (pos.y > attributes.center.y + 0.676f){
+                    vel.y = -0.5 * vel.y;
+                    pos.y = attributes.center.y + 0.675f;
+                }
+
+                if (pos.x < attributes.center.x - 0.676f){
+                    vel.x = -0.5 * vel.x;
+                    pos.x = attributes.center.x - 0.675f;
+                } else if (pos.x > attributes.center.x + 0.676f){
+                    vel.x = -0.5 * vel.x;
+                    pos.x = attributes.center.x + 0.675f;
+                }
+
+                particlesOut[index].velocity = 0.99998 * vel;
+                particlesOut[index].position = pos;
+            }
+        }
+    }
+}

@@ -30,3 +30,10 @@
 *.exe
 *.out
 *.app
+
+# Exclude the build files and directories
+out/build/x64-Debug/*
+
+# Include 'out/build/x64-Debug/shaders/*.spv'
+!out/build/x64-Debug/shaders/
+
