@@ -3,6 +3,8 @@
 #include <iostream>
 #include <stdexcept>
 
+int Utils::vertexCount = 0;
+
 uint32_t Utils::findMemoryType(uint32_t typeFilter,
                                VkMemoryPropertyFlags properties,
                                VkPhysicalDevice &physicalDevice) {
@@ -21,7 +23,7 @@ uint32_t Utils::findMemoryType(uint32_t typeFilter,
 
 void Utils::initializeParticles(std::vector<Particle> &particles,
                                 glm::vec3 center) {
-  const double side = 1.3;
+  const double side = 1.35;
   const double Volume = side * side * side;
   const double particleVolume = Volume / MOVABLE_PARTICLE_COUNT;
   const double particleLength = pow(particleVolume, 1.0 / 3.0);
@@ -51,13 +53,21 @@ void Utils::initializeParticles(std::vector<Particle> &particles,
     std::cerr << "Failed to initialize the partciles"
               << MOVABLE_PARTICLE_COUNT - counter << " counter: " << counter;
 
-  const float dist_from_each = 0.1f;
+  const float dist_from_each = 0.075f;
   glm::vec4 insideWallColor = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
   glm::vec4 outsideWallColor = insideWallColor;
   glm::vec4 testColor(1, 0, 0, 0.02);
 
   float lowest = -0.75;
   float highest = 0.75;
+
+  int c = 0;
+  for (float y = lowest; y <= highest + 0.001f; y += 0.075f) {
+    for (float z = lowest; z <= highest + 0.001f; z += 0.075f) {
+      ++c;
+    }
+  }
+  std::cout << "engine: Number of wall particles: " << c * 12 << std::endl;
 
   for (float y = lowest; y <= highest + 0.001f; y += dist_from_each) {
     for (float z = lowest; z <= highest + 0.001f; z += dist_from_each) {
@@ -98,6 +108,34 @@ void Utils::initializeParticles(std::vector<Particle> &particles,
                          insideWallColor, center);
     }
   }
+
+  // additional particles in the corner of the cube so the fluid won't get stuck
+  float corner = 0.7f;
+  createWallParticle(particles[counter++],
+                     glm::vec4(corner, corner, corner, 1.0f), insideWallColor,
+                     center);
+  createWallParticle(particles[counter++],
+                     glm::vec4(corner, corner, -corner, 1.0f), insideWallColor,
+                     center);
+  createWallParticle(particles[counter++],
+                     glm::vec4(corner, -corner, corner, 1.0f), insideWallColor,
+                     center);
+  createWallParticle(particles[counter++],
+                     glm::vec4(corner, -corner, -corner, 1.0f), insideWallColor,
+                     center);
+
+  createWallParticle(particles[counter++],
+                     glm::vec4(-corner, corner, corner, 1.0f), insideWallColor,
+                     center);
+  createWallParticle(particles[counter++],
+                     glm::vec4(-corner, corner, -corner, 1.0f), insideWallColor,
+                     center);
+  createWallParticle(particles[counter++],
+                     glm::vec4(-corner, -corner, corner, 1.0f), insideWallColor,
+                     center);
+  createWallParticle(particles[counter++],
+                     glm::vec4(-corner, -corner, -corner, 1.0f),
+                     insideWallColor, center);
 }
 
 void Utils::createWallParticle(Particle &particle, glm::vec4 position,
@@ -154,7 +192,7 @@ void Utils::createSphere(std::vector<glm::vec4> &vertices, float radius,
   for (int i = 0; i < indices.size(); ++i) {
     vertices.emplace_back(sphereVertices[indices[i]]);
   }
-  std::cout << "** " << vertices.size() << " ** \n";
+  setVertexCount(vertices.size());
 }
 
 glm::mat4 Utils::updateCamera(float deltaTime, InputState &inputState,

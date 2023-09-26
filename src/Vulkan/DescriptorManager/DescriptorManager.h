@@ -12,7 +12,10 @@
 class DescriptorManager {
 
   VkDescriptorSetLayout descriptorSetLayout;
+  VkDescriptorSetLayout quadDescriptorSetLayout;
+
   VkDescriptorPool descriptorPool;
+  VkDescriptorPool quadDescriptorPool;
 
 public:
   void init(VkDevice &device) { createDescriptorSetLayout(device); }
@@ -23,8 +26,9 @@ public:
 
   void createDescriptorSets(VkDevice &device,
                             std::vector<VkDescriptorSet> &descriptorSets,
+                            std::vector<VkDescriptorSet> &quadDescriptorSets,
                             std::vector<VkBuffer> &shaderStorageBuffers,
-                            VkBuffer &sphereBuffers,
+                            VkBuffer &sphereBuffers, VkBuffer &quadBuffers,
                             std::vector<VkBuffer> &uniformBuffers,
                             std::vector<VkBuffer> &attributesUniformBuffers,
                             std::vector<VkBuffer> &modelUniformBuffers);
@@ -35,6 +39,10 @@ public:
 
   VkDescriptorSetLayout &getDescriptorSetLayout() {
     return descriptorSetLayout;
+  }
+
+  VkDescriptorSetLayout &getQuadDescriptorSetLayout() {
+    return quadDescriptorSetLayout;
   }
 
   VkDescriptorPool &getDescriptorPool() { return descriptorPool; }

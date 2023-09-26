@@ -5,7 +5,7 @@
 
 struct quad {
 
-   static constexpr std::array<float, 16> quadVertices = {
+  static constexpr std::array<float, 16> quadVertices = {
       -1.0f, -1.0f, 0.0f, 1.0f, 1.0f,  -1.0f, 1.0f, 1.0f,
       1.0f,  1.0f,  1.0f, 0.0f, -1.0f, 1.0f,  0.0f, 0.0f};
 
@@ -18,7 +18,8 @@ struct quad {
     return bindingDescription;
   }
 
-  static std::array<VkVertexInputAttributeDescription, 1> getAttributeDescriptions() {
+  static std::array<VkVertexInputAttributeDescription, 1>
+  getAttributeDescriptions() {
     std::array<VkVertexInputAttributeDescription, 1> attributeDescriptions{};
     attributeDescriptions[0].binding = 0;
     attributeDescriptions[0].location = 0;

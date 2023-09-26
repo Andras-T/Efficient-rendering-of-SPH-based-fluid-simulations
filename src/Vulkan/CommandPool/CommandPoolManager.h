@@ -11,6 +11,7 @@ class CommandPoolManager {
 
   VkCommandPool commandPool;
   std::vector<VkCommandBuffer> commandBuffers;
+  std::vector<VkCommandBuffer> quadCommandBuffers;
   std::vector<VkCommandBuffer> computeCommandBuffers;
   std::vector<VkCommandBuffer> imGuiCommandBuffers;
 
@@ -18,6 +19,8 @@ public:
   void init(VkDevice &device, QueueFamilyIndices &queueFamilyIndices);
 
   void createCommandBuffers(VkDevice &device);
+
+  void createQuadCommandBuffer(VkDevice &device);
 
   VkCommandBuffer beginSingleTimeCommands(VkDevice &device);
 
@@ -33,6 +36,10 @@ public:
   }
 
   std::vector<VkCommandBuffer> &getCommandBuffers() { return commandBuffers; }
+
+  std::vector<VkCommandBuffer> &getQuadCommandBuffers() {
+    return quadCommandBuffers;
+  }
 
   std::vector<VkCommandBuffer> &getImGuiCommandBuffers() {
     return imGuiCommandBuffers;

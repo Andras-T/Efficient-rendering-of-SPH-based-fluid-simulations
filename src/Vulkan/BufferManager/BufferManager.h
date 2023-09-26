@@ -10,7 +10,7 @@
 
 class BufferManager {
 
-  bool singletonCreated = false;
+  bool firstRun = true;
 
   VkBuffer sphereBuffer;
   VkDeviceMemory sphereMemory;
@@ -54,6 +54,7 @@ public:
 
   VkDeviceMemory &getSphereMemory() { return sphereMemory; }
   VkBuffer &getSphereBuffer() { return sphereBuffer; }
+  VkBuffer &getQuadBuffer() { return quadBuffer; }
 };
 
 #endif // BUFFERMANAGER_H

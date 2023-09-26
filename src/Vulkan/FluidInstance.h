@@ -16,6 +16,8 @@ class FluidInstance {
 
 private:
   std::vector<VkDescriptorSet> descriptorSets;
+  std::vector<VkDescriptorSet> quadDescriptorSets;
+
   std::vector<VkBuffer> shaderStorageBuffers;
   std::vector<VkDeviceMemory> shaderStorageBuffersMemory;
 
@@ -52,6 +54,10 @@ public:
   std::vector<VkDescriptorSet> &getDescriptorSets() { return descriptorSets; }
 
   glm::vec3 getCenter() { return glm::vec3(center.x, center.y, center.z); }
+
+  std::vector<VkDescriptorSet> &getQuadDescriptorSets() {
+    return quadDescriptorSets;
+  }
 };
 
 #endif // FLUIDINSTANCE_H

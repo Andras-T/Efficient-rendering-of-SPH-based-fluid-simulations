@@ -15,9 +15,13 @@ class PipelineManager {
   VkPipelineLayout computePipelineLayout;
   VkPipeline computePipeline;
 
+  VkPipelineLayout quadPipelineLayout;
+  VkPipeline quadGraphicsPipeline;
+
 public:
   void init(const char *vertPath, const char *fragPath, const char *compPath,
             VkDevice &device, VkDescriptorSetLayout &descriptorSetLayout,
+            VkDescriptorSetLayout &quadDescriptorSetLayout,
             VkRenderPass &renderPass);
 
   void createGraphicsPipeline(const char *vertPath, const char *fragPath,
@@ -28,6 +32,10 @@ public:
   void createComputePipeline(const char *compPath, VkDevice &device,
                              VkDescriptorSetLayout &descriptorSetLayout,
                              VkRenderPass &renderPass);
+
+  void createQuadGraphicsPipeline(VkDevice &device,
+                                  VkDescriptorSetLayout &descriptorSetLayout,
+                                  VkRenderPass &renderPass);
 
   VkShaderModule createShaderModule(const std::vector<char> &code,
                                     VkDevice &device);
@@ -40,9 +48,13 @@ public:
 
   VkPipelineLayout &getPipelineLayout() { return pipelineLayout; }
 
+  VkPipelineLayout &getQuadPipelineLayout() { return quadPipelineLayout; }
+
   VkPipeline &getComputePipeline() { return computePipeline; }
 
   VkPipeline &getGraphicsPipeline() { return graphicsPipeline; }
+
+  VkPipeline &getQuadGraphicsPipeline() { return quadGraphicsPipeline; }
 
 #pragma endregion
 

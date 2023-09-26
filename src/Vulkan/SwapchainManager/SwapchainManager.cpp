@@ -201,6 +201,27 @@ void SwapchainManager::createFramebuffers(VkRenderPass &renderPass) {
       throw std::runtime_error("failed to create framebuffer!");
     }
   }
+
+  quadSwapChainFramebuffers.resize(swapChainImageViews.size());
+
+  for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+    std::array<VkImageView, 2> attachments = {swapChainImageViews[i],
+                                              depthImageView};
+
+    VkFramebufferCreateInfo framebufferInfo{};
+    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferInfo.renderPass = renderPass;
+    framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    framebufferInfo.pAttachments = attachments.data();
+    framebufferInfo.width = swapChainExtent.width;
+    framebufferInfo.height = swapChainExtent.height;
+    framebufferInfo.layers = 1;
+
+    if (vkCreateFramebuffer(*device, &framebufferInfo, nullptr,
+                            &quadSwapChainFramebuffers[i]) != VK_SUCCESS) {
+      throw std::runtime_error("failed to create framebuffer!");
+    }
+  }
 }
 
 void SwapchainManager::createFramebuffers() {
@@ -221,6 +242,27 @@ void SwapchainManager::createFramebuffers() {
 
     if (vkCreateFramebuffer(*device, &framebufferInfo, nullptr,
                             &swapChainFramebuffers[i]) != VK_SUCCESS) {
+      throw std::runtime_error("failed to create framebuffer!");
+    }
+  }
+
+  quadSwapChainFramebuffers.resize(swapChainImageViews.size());
+
+  for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+    std::array<VkImageView, 2> attachments = {swapChainImageViews[i],
+                                              depthImageView};
+
+    VkFramebufferCreateInfo framebufferInfo{};
+    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferInfo.renderPass = *renderPass;
+    framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    framebufferInfo.pAttachments = attachments.data();
+    framebufferInfo.width = swapChainExtent.width;
+    framebufferInfo.height = swapChainExtent.height;
+    framebufferInfo.layers = 1;
+
+    if (vkCreateFramebuffer(*device, &framebufferInfo, nullptr,
+                            &quadSwapChainFramebuffers[i]) != VK_SUCCESS) {
       throw std::runtime_error("failed to create framebuffer!");
     }
   }
@@ -249,11 +291,13 @@ void SwapchainManager::cleanupSwapChain() {
   vkDestroyImage(*device, depthImage, nullptr);
   vkFreeMemory(*device, depthImageMemory, nullptr);
 
-  for (auto framebuffer : swapChainFramebuffers) {
+  for (auto& framebuffer : swapChainFramebuffers)
     vkDestroyFramebuffer(*device, framebuffer, nullptr);
-  }
 
-  for (auto imageView : swapChainImageViews) {
+  for (auto& framebuffer : quadSwapChainFramebuffers)
+      vkDestroyFramebuffer(*device, framebuffer, nullptr);
+
+  for (auto& imageView : swapChainImageViews) {
     vkDestroyImageView(*device, imageView, nullptr);
   }
 

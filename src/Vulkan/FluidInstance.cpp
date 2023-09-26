@@ -34,9 +34,9 @@ void FluidInstance::InitDescriptorSets(DescriptorManager &descriptorManager,
                                        VkDevice &device,
                                        BufferManager &bufferManager) {
   descriptorManager.createDescriptorSets(
-      device, descriptorSets, shaderStorageBuffers,
-      bufferManager.getSphereBuffer(), uniformBuffers, attributesUniformBuffers,
-      modelUniformBuffers);
+      device, descriptorSets, quadDescriptorSets, shaderStorageBuffers,
+      bufferManager.getSphereBuffer(), bufferManager.getQuadBuffer(),
+      uniformBuffers, attributesUniformBuffers, modelUniformBuffers);
 }
 
 void FluidInstance::Render(const VkCommandBuffer &commandBuffer,
@@ -48,7 +48,8 @@ void FluidInstance::Render(const VkCommandBuffer &commandBuffer,
                           layout, 0, 1, &descriptorSets[currentFrame], 0,
                           nullptr);
 
-  vkCmdDraw(commandBuffer, 336, Utils::PARTICLE_COUNT, 0, 0);
+  vkCmdDraw(commandBuffer, Utils::getVertexCount(), Utils::PARTICLE_COUNT, 0,
+            0);
 }
 
 void FluidInstance::updateUniformBuffer(uint32_t currentImage,
@@ -95,9 +96,6 @@ void FluidInstance::updateUniformBuffer(uint32_t currentImage,
   UniformBufferObject ubo{};
   ubo.model = glm::translate(glm::mat4(1.0f), transformations.translate) *
               translateBack * rotationMatrix * scaleMatrix * translateToCenter;
-  // ubo.model = translateBack * rotationMatrix * scaleMatrix *
-  // translateToCenter * glm::translate(glm::mat4(1.0f),
-  // transformations.translate);
   ubo.view = view;
   ubo.proj =
       glm::perspective(glm::radians(45.0f),

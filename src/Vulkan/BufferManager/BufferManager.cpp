@@ -13,28 +13,28 @@ void BufferManager::createVertexBuffer(DeviceManager &deviceManager,
   VkDevice device = deviceManager.getDevice();
   VkPhysicalDevice physicalDevice = deviceManager.getPhysicalDevice();
 
-  VkBuffer sphereBuffer;
-  VkDeviceMemory sphereBufferMemory;
-  createBuffer(
-      device, physicalDevice, bufferSize,
-      VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sphereBuffer, sphereBufferMemory);
+  VkBuffer buffer_;
+  VkDeviceMemory deviceMemory_;
+  createBuffer(device, physicalDevice, bufferSize,
+               VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer_, deviceMemory_);
 
-  void *sphereBufferData;
-  vkMapMemory(device, sphereBufferMemory, 0, bufferSize, 0, &sphereBufferData);
-  memcpy(sphereBufferData, src, (size_t)bufferSize);
-  vkUnmapMemory(device, sphereBufferMemory);
+  void *bufferData;
+  vkMapMemory(device, deviceMemory_, 0, bufferSize, 0, &bufferData);
+  memcpy(bufferData, src, (size_t)bufferSize);
+  vkUnmapMemory(device, deviceMemory_);
 
   createBuffer(device, physicalDevice, bufferSize,
                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
                    VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, buffer, deviceMemory);
-  copyBuffer(device, commandPool, deviceManager.getGraphicsQueue(),
-             sphereBuffer, buffer, bufferSize);
+  copyBuffer(device, commandPool, deviceManager.getGraphicsQueue(), buffer_,
+             buffer, bufferSize);
 
-  vkDestroyBuffer(device, sphereBuffer, nullptr);
-  vkFreeMemory(device, sphereBufferMemory, nullptr);
+  vkDestroyBuffer(device, buffer_, nullptr);
+  vkFreeMemory(device, deviceMemory_, nullptr);
 }
 
 void BufferManager::createShaderStorageBuffers(
@@ -44,10 +44,10 @@ void BufferManager::createShaderStorageBuffers(
   VkDevice &device = deviceManager.getDevice();
   VkPhysicalDevice &physicalDevice = deviceManager.getPhysicalDevice();
 
-  if (!singletonCreated) {
+  if (firstRun) {
     std::vector<glm::vec4> sphereVertices;
     float sphereRadius = Utils::SPHERE_RADIUS;
-    int latitudeSegments = 8, longitudeSegments = 8;
+    int latitudeSegments = 12, longitudeSegments = 12;
     Utils::createSphere(sphereVertices, sphereRadius, latitudeSegments,
                         longitudeSegments);
     VkDeviceSize sphereBufferSize = sizeof(glm::vec4) * sphereVertices.size();
@@ -56,7 +56,7 @@ void BufferManager::createShaderStorageBuffers(
     createVertexBuffer(deviceManager, commandPool, quad::quadVertices.data(),
                        quadBuffer, quadMemory,
                        quad::quadVertices.size() * sizeof(float));
-    singletonCreated = true;
+    firstRun = false;
   }
 
   std::vector<Particle> particles(Utils::PARTICLE_COUNT);

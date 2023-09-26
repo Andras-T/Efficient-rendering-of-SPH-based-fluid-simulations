@@ -3,12 +3,15 @@
 #include "../Utils/Structs/Quad.h"
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <stdexcept>
 
 void PipelineManager::init(const char *vertPath, const char *fragPath,
                            const char *compPath, VkDevice &device,
                            VkDescriptorSetLayout &descriptorSetLayout,
+                           VkDescriptorSetLayout &quadDescriptorSetLayout,
                            VkRenderPass &renderPass) {
+  createQuadGraphicsPipeline(device, quadDescriptorSetLayout, renderPass);
   createGraphicsPipeline(vertPath, fragPath, device, descriptorSetLayout,
                          renderPass);
   createComputePipeline(compPath, device, descriptorSetLayout, renderPass);
@@ -54,7 +57,7 @@ void PipelineManager::createGraphicsPipeline(
   VkPipelineDepthStencilStateCreateInfo depthStencil =
       getDepthStencilStateCreateInfo(VK_TRUE, VK_TRUE, VK_TRUE, VK_TRUE);
   VkPipelineColorBlendAttachmentState colorBlendAttachment =
-      getColorBlendAttachmentState(VK_TRUE);
+      getColorBlendAttachmentState(VK_FALSE);
   VkPipelineColorBlendStateCreateInfo colorBlending =
       getColorBlendStateCreateInfo(colorBlendAttachment);
 
@@ -121,6 +124,88 @@ void PipelineManager::createComputePipeline(
   vkDestroyShaderModule(device, computeShaderModule, nullptr);
 }
 
+void PipelineManager::createQuadGraphicsPipeline(
+    VkDevice &device, VkDescriptorSetLayout &descriptorSetLayout,
+    VkRenderPass &renderPass) {
+  std::string currentPath(std::filesystem::current_path().string());
+  std::string vertPath = currentPath + "\\shaders\\quadVert.spv";
+  std::string fragPath = currentPath + "\\shaders\\quadFrag.spv";
+
+  VkPipelineLayoutCreateInfo pipelineLayoutInfo =
+      getPipelineLayoutCreateInfo(descriptorSetLayout);
+
+  if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr,
+                             &quadPipelineLayout) != VK_SUCCESS) {
+    throw std::runtime_error("failed to create pipeline layout!");
+  }
+
+  VkShaderModule vertShaderModule =
+      createShaderModule(readFile(vertPath), device);
+  VkShaderModule fragShaderModule =
+      createShaderModule(readFile(fragPath), device);
+
+  VkPipelineShaderStageCreateInfo shaderStages[] = {
+      getPipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT,
+                                       vertShaderModule, "main"),
+      getPipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT,
+                                       fragShaderModule, "main")};
+
+  auto bindingDescription = quad::getBindingDescription();
+  auto attributeDescriptions = quad::getAttributeDescriptions();
+  VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+  vertexInputInfo.sType =
+      VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+  vertexInputInfo.vertexBindingDescriptionCount = 1;
+  vertexInputInfo.vertexAttributeDescriptionCount =
+      static_cast<uint32_t>(attributeDescriptions.size());
+  vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+  vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+  VkPipelineInputAssemblyStateCreateInfo inputAssembly =
+      getInputAssemblyCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
+  VkPipelineViewportStateCreateInfo viewportState =
+      getViewportStateCreateInfo();
+  VkPipelineRasterizationStateCreateInfo rasterizer =
+      getRasterizationStateCreateInfo();
+  VkPipelineMultisampleStateCreateInfo multisampling =
+      getMultisampleStateCreateInfo();
+  VkPipelineDepthStencilStateCreateInfo depthStencil =
+      getDepthStencilStateCreateInfo(VK_FALSE, VK_FALSE, VK_FALSE, VK_FALSE);
+  VkPipelineColorBlendAttachmentState colorBlendAttachment =
+      getColorBlendAttachmentState(VK_FALSE);
+  VkPipelineColorBlendStateCreateInfo colorBlending =
+      getColorBlendStateCreateInfo(colorBlendAttachment);
+
+  std::vector<VkDynamicState> dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT,
+                                               VK_DYNAMIC_STATE_SCISSOR};
+  VkPipelineDynamicStateCreateInfo dynamicState =
+      getDynamicStateCreateInfo(dynamicStates);
+
+  VkGraphicsPipelineCreateInfo pipelineInfo{};
+  pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+  pipelineInfo.stageCount = 2;
+  pipelineInfo.pStages = shaderStages;
+  pipelineInfo.pVertexInputState = &vertexInputInfo;
+  pipelineInfo.pInputAssemblyState = &inputAssembly;
+  pipelineInfo.pViewportState = &viewportState;
+  pipelineInfo.pRasterizationState = &rasterizer;
+  pipelineInfo.pMultisampleState = &multisampling;
+  pipelineInfo.pDepthStencilState = &depthStencil;
+  pipelineInfo.pColorBlendState = &colorBlending;
+  pipelineInfo.pDynamicState = &dynamicState;
+  pipelineInfo.layout = quadPipelineLayout;
+  pipelineInfo.renderPass = renderPass;
+  pipelineInfo.subpass = 0;
+  pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+
+  if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
+                                nullptr, &quadGraphicsPipeline) != VK_SUCCESS) {
+    throw std::runtime_error("failed to create graphics pipeline!");
+  }
+
+  vkDestroyShaderModule(device, fragShaderModule, nullptr);
+  vkDestroyShaderModule(device, vertShaderModule, nullptr);
+}
+
 VkShaderModule
 PipelineManager::createShaderModule(const std::vector<char> &code,
                                     VkDevice &device) {
@@ -158,7 +243,7 @@ VkPipelineLayoutCreateInfo PipelineManager::getPipelineLayoutCreateInfo(
   pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
   return pipelineLayoutInfo;
 }
-#include <iostream>
+
 std::vector<char> PipelineManager::readFile(const std::string &filename) {
   std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
@@ -166,6 +251,7 @@ std::vector<char> PipelineManager::readFile(const std::string &filename) {
     throw std::runtime_error("failed to open file!");
   }
 
+  std::cout << "engine: reading file from: " << filename << "\n";
   size_t fileSize = (size_t)file.tellg();
   std::vector<char> buffer(fileSize);
   file.seekg(0);
@@ -323,4 +409,7 @@ void PipelineManager::cleanup(VkDevice &device) {
 
   vkDestroyPipeline(device, computePipeline, nullptr);
   vkDestroyPipelineLayout(device, computePipelineLayout, nullptr);
+
+  vkDestroyPipeline(device, quadGraphicsPipeline, nullptr);
+  vkDestroyPipelineLayout(device, quadPipelineLayout, nullptr);
 }

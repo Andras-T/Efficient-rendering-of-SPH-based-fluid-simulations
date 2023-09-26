@@ -14,6 +14,7 @@ private:
   VkExtent2D swapChainExtent;
   std::vector<VkImageView> swapChainImageViews;
   std::vector<VkFramebuffer> swapChainFramebuffers;
+  std::vector<VkFramebuffer> quadSwapChainFramebuffers;
 
   VkImage depthImage;
   VkDeviceMemory depthImageMemory;
@@ -78,6 +79,10 @@ public:
   VkSwapchainKHR &getSwapChain() { return swapChain; }
   std::vector<VkFramebuffer> &getSwapChainFramebuffers() {
     return swapChainFramebuffers;
+  }
+
+  std::vector<VkFramebuffer> &getQuadSwapChainFramebuffers() {
+    return quadSwapChainFramebuffers;
   }
 
   uint32_t getSwapchainImageCount() { return swapChainImages.size(); }
