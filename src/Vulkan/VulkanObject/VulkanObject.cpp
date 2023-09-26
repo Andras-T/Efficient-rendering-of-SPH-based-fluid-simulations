@@ -196,7 +196,15 @@ VkBool32 VulkanObject::debugCallback(
     VkDebugUtilsMessageTypeFlagsEXT messageType,
     const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
     void *pUserData) {
-  std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+  if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+    std::cerr << "\x1b[31m"
+              << "validation layer: " << pCallbackData->pMessage << "\x1b[0m"
+              << "\n";
+  } else {
+    std::cerr << "\x1b[33m"
+              << "validation layer: " << pCallbackData->pMessage << "\x1b[0m"
+              << "\n";
+  }
 
   return VK_FALSE;
 }

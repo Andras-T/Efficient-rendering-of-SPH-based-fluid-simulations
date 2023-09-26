@@ -1,5 +1,4 @@
-#ifndef QUEUEFAMILYINDICES_H
-#define QUEUEFAMILYINDICES_H
+#pragma once
 
 #include <cstdint>
 #include <optional>
@@ -12,5 +11,3 @@ struct QueueFamilyIndices {
     return graphicsAndComputeFamily.has_value() && presentFamily.has_value();
   }
 };
-
-#endif // QUEUEFAMILYINDICES_H

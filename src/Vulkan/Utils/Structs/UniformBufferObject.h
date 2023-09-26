@@ -1,5 +1,4 @@
-#ifndef UNIFORMBUFFEROBJECT_H
-#define UNIFORMBUFFEROBJECT_H
+#pragma once
 
 #include "glm/gtc/matrix_transform.hpp"
 
@@ -9,5 +8,3 @@ struct UniformBufferObject {
   glm::mat4 proj = glm::mat4(1.0f);
   float deltaTime = 1.0f;
 };
-
-#endif // UNIFORMBUFFEROBJECT_H

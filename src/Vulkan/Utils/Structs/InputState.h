@@ -1,5 +1,4 @@
-#ifndef INPUTSTATE_H
-#define INPUTSTATE_H
+#pragma once
 
 #include "glm/vec3.hpp"
 
@@ -14,5 +13,3 @@ struct InputState {
   bool freeCam = true;
   glm::vec3 fixedCamPos = glm::vec3(0.0f, 0.0f, 0.0f);
 };
-
-#endif // INPUTSTATE_H

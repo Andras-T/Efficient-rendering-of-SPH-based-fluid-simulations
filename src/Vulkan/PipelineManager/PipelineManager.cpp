@@ -13,7 +13,7 @@ void PipelineManager::init(const char *vertPath, const char *fragPath,
                            VkRenderPass &renderPass) {
   createQuadGraphicsPipeline(device, quadDescriptorSetLayout, renderPass);
   createSimulationPipeline(vertPath, fragPath, device, descriptorSetLayout,
-                         renderPass);
+                           renderPass);
   createComputePipeline(compPath, device, descriptorSetLayout, renderPass);
 }
 

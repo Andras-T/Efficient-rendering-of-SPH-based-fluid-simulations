@@ -1,5 +1,4 @@
-#ifndef ATTRIBUTES_H
-#define ATTRIBUTES_H
+#pragma once
 
 struct Attributes {
   glm::vec4 center = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -12,5 +11,3 @@ struct Attributes {
   int stop = 1;
   float pad;
 };
-
-#endif // ATTRIBUTES_H

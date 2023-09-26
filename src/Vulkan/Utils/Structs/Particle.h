@@ -1,5 +1,4 @@
-#ifndef PARTICLE_H
-#define PARTICLE_H
+#pragma once
 
 #define GLFW_INCLUDE_VULKAN
 #include "GLFW/glfw3.h"
@@ -40,5 +39,3 @@ struct Particle {
     return attributeDescriptions;
   }
 };
-
-#endif // PARTICLE_H

@@ -1,5 +1,4 @@
-#ifndef SWAPCHAINMANAGER_H
-#define SWAPCHAINMANAGER_H
+#pragma once
 
 #include "../Utils/Structs/QueueFamilyIndices.h"
 #include "../Utils/Structs/SwapChainSupportDetails.h"
@@ -89,5 +88,3 @@ public:
 
   uint32_t getMinImageCount() { return minImageCount; }
 };
-
-#endif // SWAPCHAINMANAGER_H

@@ -1,5 +1,4 @@
-#ifndef UTILS_H
-#define UTILS_H
+#pragma once
 
 #define GLFW_INCLUDE_VULKAN
 #include "GLFW/glfw3.h"
@@ -42,5 +41,3 @@ public:
   static glm::mat4 updateCamera(float deltaTime, InputState &inputState,
                                 ImGuiIO &io);
 };
-
-#endif // UTILS_H

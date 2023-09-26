@@ -34,7 +34,7 @@ void Window::init() {
 
   std::string iconPath =
       std::filesystem::current_path().string() + "\\..\\..\\..\\res\\logo.png";
-  std::cout << iconPath << "\n";
+  std::cout << "engine: loading icon from: " << iconPath << "\n";
   icon.pixels = stbi_load(iconPath.c_str(), &icon.width, &icon.height, 0, 0);
 
   if (icon.pixels != nullptr) {
@@ -43,7 +43,9 @@ void Window::init() {
 
     glfwSetWindowIcon(window, 1, images);
   } else {
-    std::cerr << "Failed to load icon!\n";
+    std::cerr << "\x1b[31m"
+              << "Failed to load icon!\n"
+              << "\x1b[0m";
   }
 
   lastTime = glfwGetTime();

@@ -1,5 +1,4 @@
-#ifndef QUAD_H
-#define QUAD_H
+#pragma once
 
 #include <array>
 
@@ -32,5 +31,3 @@ struct quad {
     return attributeDescriptions;
   }
 };
-
-#endif // !QUAD_H

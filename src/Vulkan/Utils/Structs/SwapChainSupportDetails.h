@@ -1,5 +1,4 @@
-#ifndef SWAPCHAINSUPPORTDETAILS_H
-#define SWAPCHAINSUPPORTDETAILS_H
+#pragma once
 
 #define GLFW_INCLUDE_VULKAN
 #include "GLFW/glfw3.h"
@@ -10,5 +9,3 @@ struct SwapChainSupportDetails {
   std::vector<VkSurfaceFormatKHR> formats;
   std::vector<VkPresentModeKHR> presentModes;
 };
-
-#endif // SWAPCHAINSUPPORTDETAILS_H

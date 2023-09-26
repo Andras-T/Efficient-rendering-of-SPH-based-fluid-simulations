@@ -1,5 +1,4 @@
-#ifndef MODEL_H
-#define MODEL_H
+#pragma once
 
 #include "glm/vec4.hpp"
 
@@ -11,5 +10,3 @@ struct Model {
   int wall = 0;
   float pad;
 };
-
-#endif // MODEL_H

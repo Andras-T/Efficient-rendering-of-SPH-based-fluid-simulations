@@ -1,5 +1,4 @@
-#ifndef RENDER_H
-#define RENDER_H
+#pragma once
 
 #include "../CommandPool/CommandPoolManager.h"
 #include "../DescriptorManager/DescriptorManager.h"
@@ -60,5 +59,3 @@ public:
 
   void cleanUp();
 };
-
-#endif // RENDER_H

@@ -1,5 +1,4 @@
-#ifndef BUFFERMANAGER_H
-#define BUFFERMANAGER_H
+#pragma once
 
 #define GLFW_INCLUDE_VULKAN
 #include "GLFW/glfw3.h"
@@ -56,5 +55,3 @@ public:
   VkBuffer &getSphereBuffer() { return sphereBuffer; }
   VkBuffer &getQuadBuffer() { return quadBuffer; }
 };
-
-#endif // BUFFERMANAGER_H

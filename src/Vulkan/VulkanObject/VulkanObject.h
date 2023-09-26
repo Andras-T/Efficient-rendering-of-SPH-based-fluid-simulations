@@ -1,5 +1,4 @@
-#ifndef VULKANOBJECT_H
-#define VULKANOBJECT_H
+#pragma once
 
 #define GLFW_INCLUDE_VULKAN
 
@@ -60,5 +59,3 @@ public:
 
   VkSurfaceKHR &getSurface() { return surface; }
 };
-
-#endif // VULKANOBJECT_H

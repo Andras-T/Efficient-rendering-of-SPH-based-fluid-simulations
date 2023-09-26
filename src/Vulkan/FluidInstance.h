@@ -1,5 +1,4 @@
-#ifndef FLUIDINSTANCE_H
-#define FLUIDINSTANCE_H
+#pragma once
 
 #define GLFW_INCLUDE_VULKAN
 
@@ -59,5 +58,3 @@ public:
     return quadDescriptorSets;
   }
 };
-
-#endif // FLUIDINSTANCE_H

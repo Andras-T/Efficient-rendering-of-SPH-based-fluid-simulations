@@ -50,8 +50,10 @@ void Utils::initializeParticles(std::vector<Particle> &particles,
   }
 
   if (counter < MOVABLE_PARTICLE_COUNT || counter > MOVABLE_PARTICLE_COUNT)
-    std::cerr << "Failed to initialize the partciles"
-              << MOVABLE_PARTICLE_COUNT - counter << " counter: " << counter;
+    std::cerr << "\x1b[31m"
+              << "Failed to initialize the partciles"
+              << MOVABLE_PARTICLE_COUNT - counter << " counter: " << counter
+              << "\x1b[0m";
 
   const float dist_from_each = 0.075f;
   glm::vec4 insideWallColor = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -61,13 +63,12 @@ void Utils::initializeParticles(std::vector<Particle> &particles,
   float lowest = -0.75;
   float highest = 0.75;
 
-  int c = 0;
-  for (float y = lowest; y <= highest + 0.001f; y += 0.075f) {
-    for (float z = lowest; z <= highest + 0.001f; z += 0.075f) {
-      ++c;
-    }
-  }
-  std::cout << "engine: Number of wall particles: " << c * 12 << std::endl;
+  // int c = 0;
+  // for (float y = lowest; y <= highest + 0.001f; y += 0.075f) {
+  //  for (float z = lowest; z <= highest + 0.001f; z += 0.075f) {
+  //    ++c;
+  //  }
+  //}
 
   for (float y = lowest; y <= highest + 0.001f; y += dist_from_each) {
     for (float z = lowest; z <= highest + 0.001f; z += dist_from_each) {
@@ -136,6 +137,10 @@ void Utils::initializeParticles(std::vector<Particle> &particles,
   createWallParticle(particles[counter++],
                      glm::vec4(-corner, -corner, -corner, 1.0f),
                      insideWallColor, center);
+
+  std::cout << "engine: Number particles: " << MOVABLE_PARTICLE_COUNT << "\n";
+  std::cout << "engine: Number of wall particles: " << UNMOVABLE_PARTICLE_COUNT
+            << "\n";
 }
 
 void Utils::createWallParticle(Particle &particle, glm::vec4 position,

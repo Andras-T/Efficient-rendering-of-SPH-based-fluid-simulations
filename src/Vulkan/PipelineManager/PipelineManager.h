@@ -1,5 +1,4 @@
-#ifndef PIPELINEMANAGER_H
-#define PIPELINEMANAGER_H
+#pragma once
 
 #define GLFW_INCLUDE_VULKAN
 #include "GLFW/glfw3.h"
@@ -25,9 +24,9 @@ public:
             VkRenderPass &renderPass);
 
   void createSimulationPipeline(const char *vertPath, const char *fragPath,
-                              VkDevice &device,
-                              VkDescriptorSetLayout &descriptorSetLayout,
-                              VkRenderPass &renderPass);
+                                VkDevice &device,
+                                VkDescriptorSetLayout &descriptorSetLayout,
+                                VkRenderPass &renderPass);
 
   void createComputePipeline(const char *compPath, VkDevice &device,
                              VkDescriptorSetLayout &descriptorSetLayout,
@@ -44,7 +43,9 @@ public:
 
 #pragma region getterFunctions
 
-  VkPipelineLayout &getSimulationPipelineLayout() { return simulationPipelineLayout; }
+  VkPipelineLayout &getSimulationPipelineLayout() {
+    return simulationPipelineLayout;
+  }
 
   VkPipelineLayout &getComputePipelineLayout() { return computePipelineLayout; }
 
@@ -107,5 +108,3 @@ private:
 
 #pragma endregion
 };
-
-#endif // PIPELINEMANAGER_H

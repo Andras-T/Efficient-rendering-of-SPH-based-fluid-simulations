@@ -1,5 +1,4 @@
-#ifndef IMGUIRENDER_H
-#define IMGUIRENDER_H
+#pragma once
 
 #include "../FluidInstance.h"
 #include "../Utils/Structs/UniformData.h"
@@ -48,5 +47,3 @@ public:
 
   InputState &getInputState() { return inputState; }
 };
-
-#endif // IMGUIRENDER_H

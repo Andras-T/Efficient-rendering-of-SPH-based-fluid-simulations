@@ -1,5 +1,4 @@
-#ifndef DESCRIPTORMANAGER_H
-#define DESCRIPTORMANAGER_H
+#pragma once
 
 #define GLFW_INCLUDE_VULKAN
 
@@ -51,5 +50,3 @@ public:
 
 #pragma endregion
 };
-
-#endif // FLUIDSIMULATION_DESCRIPTORMANAGER_H

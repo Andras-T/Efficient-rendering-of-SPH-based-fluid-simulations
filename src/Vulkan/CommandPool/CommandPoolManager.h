@@ -1,5 +1,4 @@
-#ifndef COMMANDPOOLMANAGER_H
-#define COMMANDPOOLMANAGER_H
+#pragma once
 
 #define GLFW_INCLUDE_VULKAN
 #include "../Utils/Structs/QueueFamilyIndices.h"
@@ -52,5 +51,3 @@ private:
   void createComputeCommandBuffers(VkDevice &device);
   void createImGuiCommandBuffers(VkDevice &device);
 };
-
-#endif // COMMANDPOOLMANAGER_H

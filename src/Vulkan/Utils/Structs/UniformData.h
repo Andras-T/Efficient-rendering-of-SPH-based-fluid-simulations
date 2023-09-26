@@ -1,5 +1,4 @@
-#ifndef UNIFORMDATA_H
-#define UNIFORMDATA_H
+#pragma once
 
 #include "Attributes.h"
 #include "InputState.h"
@@ -14,5 +13,3 @@ struct UniformData {
   Model model;
   bool wall = false;
 };
-
-#endif // UNIFORMDATA_H

@@ -1,5 +1,4 @@
-#ifndef FLUIDSIMULATIONENVIRONMENT_H
-#define FLUIDSIMULATIONENVIRONMENT_H
+#pragma once
 
 #include "Vulkan/BufferManager/BufferManager.h"
 #include "Vulkan/CommandPool/CommandPoolManager.h"
@@ -51,9 +50,16 @@ public:
   static void check_vk_result(VkResult err) {
     if (err == 0)
       return;
-    fprintf(stderr, "[vulkan] Error: VkResult = %d\n", err);
-    if (err < 0)
+    std::cerr << "\x1b[31m"
+              << "[vulkan] Error: VkResult = " << err << "\x1b[0m"
+              << "\n";
+    if (err < 0) {
+      std::cerr << "\x1b[31m"
+                << "[vulkan] Aborting"
+                << "\x1b[0m"
+                << "\n";
       abort();
+    }
   }
 
   void init();
@@ -64,9 +70,5 @@ public:
 
   void mainLoop();
 
-  void checkInput();
-
   void cleanUp();
 };
-
-#endif // FLUIDSIMULATIONENVIRONMENT_H

@@ -1,5 +1,4 @@
-#ifndef TRANSFORMATIONS_H
-#define TRANSFORMATIONS_H
+#pragma once
 
 #include "glm/vec3.hpp"
 
@@ -10,5 +9,3 @@ struct Transformations {
   glm::vec3 cameraRotations = glm::vec3(0.0f);
   float s = 1.0f;
 };
-
-#endif // TRANSFORMATIONS_H

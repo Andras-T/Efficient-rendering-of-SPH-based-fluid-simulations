@@ -4,6 +4,7 @@
 #include "imgui_internal.h"
 
 void FluidSimulationEnvironment::init() {
+  std::cout << "engine: setting up fluid simulations environment\n";
   window.init();
 
   vulkanObject.init(*window.get_GLFW_Window(), enableValidationLayers);
@@ -91,31 +92,20 @@ void FluidSimulationEnvironment::run() {
 }
 
 void FluidSimulationEnvironment::mainLoop() {
+  std::cout << "engine: fluid simulations environment main loop called\n";
   while (!glfwWindowShouldClose(window.get_GLFW_Window())) {
     glfwPollEvents();
     render.drawFrame(lastFrameTime);
-    checkInput();
     double currentTime = glfwGetTime();
     lastFrameTime = (currentTime - Window::lastTime) * 1000.0;
     Window::lastTime = currentTime;
   }
 }
 
-void FluidSimulationEnvironment::checkInput() {
-  // might want to remove it
-  if (ImGui::GetIO().KeyMods == ImGuiModFlags_Ctrl &&
-      ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-    ;
-  }
-  if (ImGui::GetIO().KeyMods == ImGuiModFlags_Ctrl &&
-      ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
-    VkResult err = vkDeviceWaitIdle(device);
-    ;
-  }
-}
-
 void FluidSimulationEnvironment::cleanUp() {
   VkResult err = vkDeviceWaitIdle(device);
+  check_vk_result(err);
+
   check_vk_result(err);
 
   ImGui_ImplVulkan_Shutdown();

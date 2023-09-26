@@ -1,5 +1,4 @@
-#ifndef DEVICEMANAGER_H
-#define DEVICEMANAGER_H
+#pragma once
 
 #define GLFW_INCLUDE_VULKAN
 #include "../Utils/Structs/QueueFamilyIndices.h"
@@ -53,5 +52,3 @@ private:
   SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice *phDevice,
                                                 VkSurfaceKHR &surface);
 };
-
-#endif // DEVICEMANAGER_H
