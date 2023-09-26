@@ -39,5 +39,3 @@ out/build/x64-Debug/*
 
 desktop.ini
 .vs/
-lib/
-!lib/stb/
