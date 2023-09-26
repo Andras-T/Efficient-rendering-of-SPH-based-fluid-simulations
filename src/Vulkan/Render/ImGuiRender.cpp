@@ -1,25 +1,6 @@
 #include "ImGuiRender.h"
 #include "imgui_internal.h"
-
-ImVec2 operator+(const ImVec2 &lhs, const ImVec2 &rhs) {
-  return {lhs.x + rhs.x, lhs.y + rhs.y};
-}
-
-ImVec2 operator+=(const ImVec2 &lhs, const ImVec2 &rhs) {
-  return {lhs.x + rhs.x, lhs.y + rhs.y};
-}
-
-ImVec2 operator*=(const ImVec2 &lhs, const float &rhs) {
-  return {lhs.x + rhs, lhs.y + rhs};
-}
-
-ImVec2 operator-(const ImVec2 &lhs, const ImVec2 &rhs) {
-  return {lhs.x - rhs.x, lhs.y - rhs.y};
-}
-
-ImVec2 operator*(const ImVec2 &lhs, const float &rhs) {
-  return {lhs.x * rhs, lhs.y * rhs};
-}
+#include "../Utils/Structs/ImVecUtils.h"
 
 void ImGuiRender::draw(VkCommandBuffer &commandBuffer) {
   ImGui_ImplVulkan_NewFrame();
@@ -39,8 +20,7 @@ void ImGuiRender::draw(VkCommandBuffer &commandBuffer) {
   if (showAppearanceMenu)
     createAppearanceMenu(width, height);
 
-  for (auto &data : uniformData)
-    data.io = ImGui::GetIO();
+  uniformData.io = ImGui::GetIO();
 
   ImGui::Render();
   ImDrawData *draw_data = ImGui::GetDrawData();
@@ -61,30 +41,23 @@ void ImGuiRender::createAppearanceMenu(int width, int height) {
 
   ImGui::SliderFloat("Font size", &ImGui::GetIO().FontGlobalScale, 0.5f, 2.0f);
 
-  if (!instances.empty()) {
+  ImGui::SliderFloat3("Font size", &ImGui::GetIO().FontGlobalScale, 0.5f, 2.0f);
 
-    ImGui::SliderFloat("Particle size", &uniformData[activeInstance].model.size,
-                       1.0f, 100.0f);
-    ImGui::SliderFloat("Wall particle size",
-                       &uniformData[activeInstance].model.wallSize, 1.0f,
-                       100.0f);
+  ImGui::SliderFloat3("Background Color", (float *)backgroundColor.float32,
+                      0.0f, 1.0f);
 
-    ImGui::Checkbox("Wall", &uniformData[activeInstance].wall);
-    uniformData[activeInstance].model.wall =
-        uniformData[activeInstance].wall ? 1 : 0;
+  ImGui::Checkbox("Wall", &uniformData.wall);
+  uniformData.model.wall = uniformData.wall ? 1 : 0;
+
+  ImGui::Spacing();
+
+  ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+  if (ImGui::CollapsingHeader("Color Picker")) {
+    ImGui::ColorPicker3("Particle color", (float *)&uniformData.model.color);
 
     ImGui::Spacing();
 
-    ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-    if (ImGui::CollapsingHeader("Color Picker")) {
-      ImGui::ColorPicker4("Particle color",
-                          (float *)&uniformData[activeInstance].model.color);
-
-      ImGui::Spacing();
-
-      ImGui::ColorPicker4(
-          "Wall color", (float *)&uniformData[activeInstance].model.wallColor);
-    }
+    ImGui::ColorPicker3("Wall color", (float *)&uniformData.model.wallColor);
   }
   ImGui::End();
 }
@@ -122,19 +95,6 @@ void ImGuiRender::createMenuBar() {
       }
       ImGui::EndMenuBar();
     }
-    if (ImGui::BeginMenuBar()) {
-      if (ImGui::BeginMenu("Selection")) {
-        for (int i = 0; i < instances.size(); ++i) {
-          if (ImGui::MenuItem(
-                  ("Select instance (" + std::to_string(i + 1) + ") ").c_str(),
-                  i < 9 ? std::to_string(i + 1).c_str() : "")) {
-            activeInstance = i;
-          }
-        }
-        ImGui::EndMenu();
-      }
-      ImGui::EndMenuBar();
-    }
     ImGui::End();
   }
 
@@ -165,42 +125,7 @@ void ImGuiRender::menuShortcuts() {
   else if (ImGui::GetIO().KeyMods == ImGuiModFlags_Alt &&
            ImGui::IsKeyPressed(ImGuiKey_Enter, ImGuiKeyOwner_Any))
     window->changeDisplayMode();
-  else if (ImGui::GetIO().KeyMods == ImGuiModFlags_Ctrl &&
-           ImGui::IsKeyPressed(ImGuiKey_1, ImGuiKeyOwner_Any))
-    activeInstance = 0;
-  else if (ImGui::GetIO().KeyMods == ImGuiModFlags_Ctrl &&
-           ImGui::IsKeyPressed(ImGuiKey_2, ImGuiKeyOwner_Any) &&
-           instances.size() >= 2)
-    activeInstance = 1;
-  else if (ImGui::GetIO().KeyMods == ImGuiModFlags_Ctrl &&
-           ImGui::IsKeyPressed(ImGuiKey_3, ImGuiKeyOwner_Any) &&
-           instances.size() >= 3)
-    activeInstance = 2;
-  else if (ImGui::GetIO().KeyMods == ImGuiModFlags_Ctrl &&
-           ImGui::IsKeyPressed(ImGuiKey_4, ImGuiKeyOwner_Any) &&
-           instances.size() >= 4)
-    activeInstance = 3;
-  else if (ImGui::GetIO().KeyMods == ImGuiModFlags_Ctrl &&
-           ImGui::IsKeyPressed(ImGuiKey_5, ImGuiKeyOwner_Any) &&
-           instances.size() >= 5)
-    activeInstance = 4;
-  else if (ImGui::GetIO().KeyMods == ImGuiModFlags_Ctrl &&
-           ImGui::IsKeyPressed(ImGuiKey_6, ImGuiKeyOwner_Any) &&
-           instances.size() >= 6)
-    activeInstance = 5;
-  else if (ImGui::GetIO().KeyMods == ImGuiModFlags_Ctrl &&
-           ImGui::IsKeyPressed(ImGuiKey_7, ImGuiKeyOwner_Any) &&
-           instances.size() >= 7)
-    activeInstance = 6;
-  else if (ImGui::GetIO().KeyMods == ImGuiModFlags_Ctrl &&
-           ImGui::IsKeyPressed(ImGuiKey_8, ImGuiKeyOwner_Any) &&
-           instances.size() >= 8)
-    activeInstance = 7;
-  else if (ImGui::GetIO().KeyMods == ImGuiModFlags_Ctrl &&
-           ImGui::IsKeyPressed(ImGuiKey_9, ImGuiKeyOwner_Any) &&
-           instances.size() >= 9)
-    activeInstance = 8;
-  inputState.fixedCamPos = instances[activeInstance]->getCenter();
+  inputState.fixedCamPos = instance->getCenter();
 }
 
 void ImGuiRender::createTransformationsMenu(int width, int height) {
@@ -213,100 +138,85 @@ void ImGuiRender::createTransformationsMenu(int width, int height) {
   ImGui::SetNextWindowSize(ImVec2(sizeX, sizeY));
   ImGui::SetNextWindowBgAlpha(0.5f);
 
+  ImGui::Begin("Transformations", nullptr, ImGuiWindowFlags_NoResize);
+
+  ImGui::Checkbox("Free camera", &inputState.freeCam);
+  ImGui::SliderFloat("Speed", &inputState.cameraSpeed, 0.01f, 10.0f);
   {
-    ImGui::Begin("Transformations", nullptr, ImGuiWindowFlags_NoResize);
+    ImGui::SliderFloat("Scale", &uniformData.transformations.s, 0.001f, 5.0f);
+    ImGui::SliderFloat("Scale X", &uniformData.transformations.scale.x, 0.001f,
+                       5.0f);
+    ImGui::SliderFloat("Scale Y", &uniformData.transformations.scale.y, 0.001f,
+                       5.0f);
+    ImGui::SliderFloat("Scale Z", &uniformData.transformations.scale.z, 0.001f,
+                       5.0f);
+    ImGui::SliderFloat("Rotate", &uniformData.transformations.rotations.z, 0.0f,
+                       720.0f);
+    ImGui::SliderFloat3("Translate",
+                        (float *)&uniformData.transformations.translate, -10.0f,
+                        10.0f);
 
-    ImGui::Checkbox("Free camera", &inputState.freeCam);
-    ImGui::SliderFloat("Speed", &inputState.cameraSpeed, 0.01f, 10.0f);
-    if (!instances.empty()) {
-      ImGui::SliderFloat("Scale",
-                         &uniformData[activeInstance].transformations.s, 0.001f,
-                         5.0f);
-      ImGui::SliderFloat("Scale X",
-                         &uniformData[activeInstance].transformations.scale.x,
-                         0.001f, 5.0f);
-      ImGui::SliderFloat("Scale Y",
-                         &uniformData[activeInstance].transformations.scale.y,
-                         0.001f, 5.0f);
-      ImGui::SliderFloat("Scale Z",
-                         &uniformData[activeInstance].transformations.scale.z,
-                         0.001f, 5.0f);
-      ImGui::SliderFloat(
-          "Rotate", &uniformData[activeInstance].transformations.rotations.z,
-          0.0f, 720.0f);
-      ImGui::SliderFloat3(
-          "Translate",
-          (float *)&uniformData[activeInstance].transformations.translate,
-          -10.0f, 10.0f);
+    ImGui::Spacing();
 
-      ImGui::Spacing();
+    ImGui::DragFloat("Smoothing length", &uniformData.attributes.smootingLength,
+                     0.001f, 0.0f, 0.25f, "%.3f", 0);
+    ImGui::DragFloat("particle mass", &uniformData.attributes.mass, 0.1f, 0.0f,
+                     500.0f, "%.3f", 0);
+    if (uniformData.attributes.mass == 0)
+      uniformData.attributes.mass = 0.1f;
+    ImGui::DragFloat("Equation of state constant",
+                     &uniformData.attributes.stateConstant, 0.5f, 0.0f, 5000.0f,
+                     "%.1f", 0);
+    ImGui::SliderFloat("gravity", &uniformData.attributes.gravity, -500.0f,
+                       1000.0f);
+    ImGui::DragFloat("damping", &uniformData.attributes.damping, 0.5f, 0.0f,
+                     100.0f, "%.1f", 0);
 
-      ImGui::DragFloat("Smoothing length",
-                       &uniformData[activeInstance].attributes.smootingLength,
-                       0.001f, 0.0f, 0.25f, "%.3f", 0);
-      ImGui::DragFloat("particle mass",
-                       &uniformData[activeInstance].attributes.mass, 0.1f, 0.0f,
-                       500.0f, "%.3f", 0);
-      if (uniformData[activeInstance].attributes.mass == 0)
-        uniformData[activeInstance].attributes.mass = 0.1f;
-      ImGui::DragFloat("Equation of state constant",
-                       &uniformData[activeInstance].attributes.stateConstant,
-                       0.5f, 0.0f, 5000.0f, "%.1f", 0);
-      ImGui::SliderFloat("gravity",
-                         &uniformData[activeInstance].attributes.gravity,
-                         -500.0f, 1000.0f);
-      ImGui::DragFloat("damping",
-                       &uniformData[activeInstance].attributes.damping, 0.5f,
-                       0.0f, 100.0f, "%.1f", 0);
-
-      ImGui::Spacing();
-      ImGui::Spacing();
-      static std::string buttonName;
-      buttonName =
-          uniformData[activeInstance].attributes.stop == 0 ? "Stop" : "Resume";
-      if (ImGui::Button(buttonName.c_str(), ImVec2(width / 4, 40))) {
-        if (!firstTime) {
-          uniformData[activeInstance].attributes.stop =
-              (uniformData[activeInstance].attributes.stop + 1) % 2;
-          if (buttonName == "Stop")
-            buttonName = "Resume";
-          else
-            buttonName = "Stop";
-        }
+    ImGui::Spacing();
+    ImGui::Spacing();
+    static std::string buttonName;
+    buttonName = uniformData.attributes.stop == 0 ? "Stop" : "Resume";
+    if (ImGui::Button(buttonName.c_str(), ImVec2(width / 4, 40))) {
+      if (!firstTime) {
+        uniformData.attributes.stop = (uniformData.attributes.stop + 1) % 2;
+        if (buttonName == "Stop")
+          buttonName = "Resume";
+        else
+          buttonName = "Stop";
       }
+    }
 
-      ImGui::Spacing();
+    ImGui::Spacing();
 
-      if (ImGui::Button("Reset", ImVec2(width / 4, 40))) {
-        Attributes a;
-        Transformations t;
-        uniformData[activeInstance].transformations = t;
-        InputState i;
-        inputState = i;
-        if (!firstTime && uniformData[activeInstance].attributes.stop == 0)
-          a.stop = 0;
-        uniformData[activeInstance].attributes = a;
-        uniformData[activeInstance].transformations.translate = glm::vec3(0.0);
-      }
+    if (ImGui::Button("Reset", ImVec2(width / 4, 40))) {
+      Attributes a;
+      Transformations t;
+      uniformData.transformations = t;
+      InputState i;
+      inputState = i;
+      if (!firstTime && uniformData.attributes.stop == 0)
+        a.stop = 0;
+      uniformData.attributes = a;
+      uniformData.transformations.translate = glm::vec3(0.0);
+    }
 
-      ImGui::Spacing();
+    ImGui::Spacing();
 
-      if (ImGui::Button("Reset  transformations", ImVec2(width / 4, 40))) {
-        Transformations t;
-        uniformData[activeInstance].transformations = t;
-        InputState i;
-        inputState = i;
-        uniformData[activeInstance].transformations.translate = glm::vec3(0.0);
-      }
+    if (ImGui::Button("Reset  transformations", ImVec2(width / 4, 40))) {
+      Transformations t;
+      uniformData.transformations = t;
+      InputState i;
+      inputState = i;
+      uniformData.transformations.translate = glm::vec3(0.0);
+    }
 
-      ImGui::Spacing();
+    ImGui::Spacing();
 
-      if (ImGui::Button("Reset  attributes", ImVec2(width / 4, 40))) {
-        Attributes a;
-        if (!firstTime && uniformData[activeInstance].attributes.stop == 0)
-          a.stop = 0;
-        uniformData[activeInstance].attributes = a;
-      }
+    if (ImGui::Button("Reset  attributes", ImVec2(width / 4, 40))) {
+      Attributes a;
+      if (!firstTime && uniformData.attributes.stop == 0)
+        a.stop = 0;
+      uniformData.attributes = a;
     }
     ImGui::Spacing();
 
@@ -328,8 +238,7 @@ void ImGuiRender::createPlayButton(int width, int height) {
 
     ImGui::SetCursorPos(ImVec2(0.0f, 0.0f));
     if (ImGui::Button("Play", size)) {
-      for (auto &data : uniformData)
-        data.attributes.stop = 0;
+      uniformData.attributes.stop = 0;
       firstTime = false;
     }
 
@@ -387,7 +296,7 @@ void ImGuiRender::createJoyStick(int width, int height,
   if (joystickActive) {
     float dist = sqrtf(movement.x * movement.x + movement.y * movement.y);
     movement = movement * (1 / dist);
-    uniformData[activeInstance].transformations.rotations.x += -movement.y / 20;
-    uniformData[activeInstance].transformations.rotations.y += -movement.x / 20;
+    uniformData.transformations.rotations.x += -movement.y / 10;
+    uniformData.transformations.rotations.y += -movement.x / 10;
   }
 }

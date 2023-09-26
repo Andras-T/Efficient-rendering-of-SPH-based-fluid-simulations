@@ -25,6 +25,7 @@ void FluidSimulationEnvironment::init() {
 
   pipelineManager.init(vertPath, fragPath, compPath, device,
                        descriptorManager.getDescriptorSetLayout(),
+                       descriptorManager.getQuadDescriptorSetLayout(),
                        vulkanObject.getRenderPass());
 
   commandPoolManager.init(device, deviceManager.getFamilyIndices());
@@ -34,21 +35,15 @@ void FluidSimulationEnvironment::init() {
 
   descriptorManager.createDescriptorPool(device);
 
-  for (auto &instance : instances) {
-    instance.InitBuffers(bufferManager, deviceManager,
-                         commandPoolManager.getCommandPool(),
-                         glm::vec3(x, 0.0f, 0.0f));
-    instance.InitDescriptorSets(descriptorManager, device, bufferManager);
-    x += offsetX;
-  }
+  instance.InitBuffers(bufferManager, deviceManager,
+                       commandPoolManager.getCommandPool(),
+                       glm::vec3(0.0f, 0.0f, 0.0f));
+  instance.InitDescriptorSets(descriptorManager, device, bufferManager);
 
   commandPoolManager.createCommandBuffers(device);
 
   render.init(deviceManager, swapChainManager, commandPoolManager,
-              pipelineManager, vulkanObject, window);
-
-  for (auto &instance : instances)
-    render.addInstance(instance);
+              pipelineManager, vulkanObject, window, instance);
 
   initImGui();
 }
@@ -107,31 +102,16 @@ void FluidSimulationEnvironment::mainLoop() {
 }
 
 void FluidSimulationEnvironment::checkInput() {
+    // might want to remove it
   if (ImGui::GetIO().KeyMods == ImGuiModFlags_Ctrl &&
-      ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
-      instances.size() < MAX_SIZE) {
-    addNewInstance();
+      ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+      ;
   }
   if (ImGui::GetIO().KeyMods == ImGuiModFlags_Ctrl &&
-      ImGui::IsMouseClicked(ImGuiMouseButton_Right) && instances.size() > 1) {
+      ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
     VkResult err = vkDeviceWaitIdle(device);
-    render.removeLastInstance();
-    instances[instances.size() - 1].cleanUp(device);
-    instances.pop_back();
-    x -= offsetX;
+    ;
   }
-}
-
-void FluidSimulationEnvironment::addNewInstance() {
-  FluidInstance instance1;
-  instances.push_back(instance1);
-  instances[instances.size() - 1].InitBuffers(
-      bufferManager, deviceManager, commandPoolManager.getCommandPool(),
-      glm::vec3(x, 0.0f, 0.0f));
-  instances[instances.size() - 1].InitDescriptorSets(descriptorManager, device,
-                                                     bufferManager);
-  render.addInstance(instances[instances.size() - 1]);
-  x += offsetX;
 }
 
 void FluidSimulationEnvironment::cleanUp() {
@@ -150,8 +130,7 @@ void FluidSimulationEnvironment::cleanUp() {
 
   descriptorManager.cleanup(device);
 
-  for (auto &instance : instances)
-    instance.cleanUp(device);
+  instance.cleanUp(device);
 
   bufferManager.cleanUp(device);
 

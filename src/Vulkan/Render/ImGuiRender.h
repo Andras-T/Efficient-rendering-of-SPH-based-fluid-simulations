@@ -19,25 +19,15 @@ private:
 
   Window *window;
   InputState inputState;
-  std::vector<UniformData> uniformData;
-  std::vector<FluidInstance *> instances;
+  UniformData uniformData;
+  FluidInstance *instance;
 
 public:
-  void init(Window &window) {
+  VkClearColorValue backgroundColor = {0.25f, 0.25f, 0.25f, 1.0f};
+
+  void init(Window &window, FluidInstance *instance) {
     this->window = &window;
-    // instances.resize(100);
-  }
-
-  void addInstance(FluidInstance &instance) {
-    instances.push_back(&instance);
-    uniformData.push_back(UniformData{});
-  }
-
-  void removeLastInstance() {
-    if (activeInstance == instances.size() - 1 && activeInstance > 0)
-      activeInstance--;
-    instances.pop_back();
-    uniformData.pop_back();
+    this->instance = instance;
   }
 
   void draw(VkCommandBuffer &commandBuffer);
@@ -54,7 +44,7 @@ public:
 
   void menuShortcuts();
 
-  std::vector<UniformData> &getUniformData() { return uniformData; };
+  UniformData &getUniformData() { return uniformData; };
 
   InputState &getInputState() { return inputState; }
 };

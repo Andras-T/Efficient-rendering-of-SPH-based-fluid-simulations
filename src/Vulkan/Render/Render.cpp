@@ -8,15 +8,16 @@ void Render::init(DeviceManager &deviceManager,
                   SwapchainManager &swapChainManager,
                   CommandPoolManager &commandPoolManager,
                   PipelineManager &pipelineManager, VulkanObject &vulkanObject,
-                  Window &window) {
+                  Window &window, FluidInstance &instance) {
   this->deviceManager = &deviceManager;
   this->swapChainManager = &swapChainManager;
   this->commandPoolManager = &commandPoolManager;
   this->pipelineManager = &pipelineManager;
   this->vulkanObject = &vulkanObject;
   this->window = &window;
+  this->instance = &instance;
   createSyncObjects();
-  imGuiRender.init(window);
+  imGuiRender.init(window, &instance);
 }
 
 void Render::createSyncObjects() {
@@ -61,13 +62,9 @@ void Render::drawFrame(uint32_t lastFrameTime) {
   vkWaitForFences(device, 1, &computeInFlightFences[currentFrame], VK_TRUE,
                   UINT64_MAX);
 
-  int index = 0;
-  for (auto &instance : instances) {
-    instance->updateUniformBuffer(
-        currentFrame, lastFrameTime, &swapChainManager->getSwapChainExtent(),
-        imGuiRender.getUniformData()[index], imGuiRender.getInputState());
-    index++;
-  }
+  instance->updateUniformBuffer(
+      currentFrame, lastFrameTime, &swapChainManager->getSwapChainExtent(),
+      imGuiRender.getUniformData(), imGuiRender.getInputState());
 
   vkResetFences(device, 1, &computeInFlightFences[currentFrame]);
 
@@ -106,8 +103,11 @@ void Render::drawFrame(uint32_t lastFrameTime) {
     throw std::runtime_error("failed to acquire swap chain image!");
   }
 
-  recordCommandBuffer(commandPoolManager->getCommandBuffers()[currentFrame],
+   recordCommandBuffer(commandPoolManager->getCommandBuffers()[currentFrame],
                       imageIndex);
+
+  //recordQuad(commandPoolManager->getQuadCommandBuffers()[currentFrame],
+  //           imageIndex);
 
   vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
@@ -185,34 +185,29 @@ void Render::recordComputeCommandBuffer(VkCommandBuffer &commandBuffer) {
   dependencyInfo.imageMemoryBarrierCount = 0;
   dependencyInfo.pImageMemoryBarriers = nullptr;
 
-  for (const auto &instance : instances) {
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                            pipelineManager->getComputePipelineLayout(), 0, 1,
-                            &instance->getDescriptorSets()[currentFrame], 0,
-                            nullptr);
+  vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                          pipelineManager->getComputePipelineLayout(), 0, 1,
+                          &instance->getDescriptorSets()[currentFrame], 0,
+                          nullptr);
 
-    int stageIndex = 1;
-    vkCmdPushConstants(
-        commandBuffer, pipelineManager->getComputePipelineLayout(),
-        VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(int), &stageIndex);
-    vkCmdDispatch(commandBuffer, Utils::PARTICLE_COUNT / 256, 1, 1);
+  int stageIndex = 1;
+  vkCmdPushConstants(commandBuffer, pipelineManager->getComputePipelineLayout(),
+                     VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(int), &stageIndex);
+  vkCmdDispatch(commandBuffer, Utils::PARTICLE_COUNT / 256, 1, 1);
 
-    vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
+  vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
 
-    stageIndex++; // 2
-    vkCmdPushConstants(
-        commandBuffer, pipelineManager->getComputePipelineLayout(),
-        VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(int), &stageIndex);
-    vkCmdDispatch(commandBuffer, Utils::PARTICLE_COUNT / 256, 1, 1);
+  stageIndex++; // 2
+  vkCmdPushConstants(commandBuffer, pipelineManager->getComputePipelineLayout(),
+                     VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(int), &stageIndex);
+  vkCmdDispatch(commandBuffer, Utils::PARTICLE_COUNT / 256, 1, 1);
 
-    vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
+  vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
 
-    stageIndex++; // 3
-    vkCmdPushConstants(
-        commandBuffer, pipelineManager->getComputePipelineLayout(),
-        VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(int), &stageIndex);
-    vkCmdDispatch(commandBuffer, Utils::PARTICLE_COUNT / 256, 1, 1);
-  }
+  stageIndex++; // 3
+  vkCmdPushConstants(commandBuffer, pipelineManager->getComputePipelineLayout(),
+                     VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(int), &stageIndex);
+  vkCmdDispatch(commandBuffer, Utils::PARTICLE_COUNT / 256, 1, 1);
 
   if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
     throw std::runtime_error("failed to record compute command buffer!");
@@ -238,7 +233,7 @@ void Render::recordCommandBuffer(VkCommandBuffer &commandBuffer,
   renderPassInfo.renderArea.extent = swapChainManager->getSwapChainExtent();
 
   std::array<VkClearValue, 2> clearValues{};
-  clearValues[0].color = {{1.15f, 1.15f, 1.15f, 1.0f}};
+  clearValues[0].color = imGuiRender.backgroundColor;
   clearValues[1].depthStencil = {1.0f, 0};
   renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
   renderPassInfo.pClearValues = clearValues.data();
@@ -263,11 +258,71 @@ void Render::recordCommandBuffer(VkCommandBuffer &commandBuffer,
   scissor.extent = swapChainManager->getSwapChainExtent();
   vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-  for (auto &instance : instances)
-    instance->Render(commandBuffer, pipelineManager->getPipelineLayout(),
-                     currentFrame);
+  instance->Render(commandBuffer, pipelineManager->getPipelineLayout(),
+                   currentFrame);
 
   imGuiRender.draw(commandBuffer);
+
+  vkCmdEndRenderPass(commandBuffer);
+
+  if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+    throw std::runtime_error("failed to record command buffer!");
+  }
+}
+
+void Render::recordQuad(VkCommandBuffer &commandBuffer, uint32_t imageIndex) {
+  VkCommandBufferBeginInfo beginInfo{};
+  beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+  if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+    throw std::runtime_error(
+        "failed to begin recording compute command buffer!");
+  }
+
+  VkRenderPassBeginInfo renderPassInfo{};
+  renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+  renderPassInfo.renderPass = vulkanObject->getRenderPass();
+  renderPassInfo.framebuffer =
+      (swapChainManager->getQuadSwapChainFramebuffers())[imageIndex];
+  renderPassInfo.renderArea.offset = {0, 0};
+  renderPassInfo.renderArea.extent = swapChainManager->getSwapChainExtent();
+
+  std::array<VkClearValue, 2> clearValues{};
+  clearValues[0].color = imGuiRender.backgroundColor;
+  clearValues[1].depthStencil = {1.0f, 0};
+  renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+  renderPassInfo.pClearValues = clearValues.data();
+
+  vkCmdBeginRenderPass(commandBuffer, &renderPassInfo,
+                       VK_SUBPASS_CONTENTS_INLINE);
+
+  vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    pipelineManager->getQuadGraphicsPipeline());
+
+  VkViewport viewport{};
+  viewport.x = 0.0f;
+  viewport.y = 0.0f;
+  viewport.width = (float)swapChainManager->getSwapChainExtent().width;
+  viewport.height = (float)swapChainManager->getSwapChainExtent().height;
+  viewport.minDepth = 0.0f;
+  viewport.maxDepth = 1.0f;
+  vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+  VkRect2D scissor{};
+  scissor.offset = {0, 0};
+  scissor.extent = swapChainManager->getSwapChainExtent();
+  vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+  VkDeviceSize offsets[] = {0};
+  vkCmdBindVertexBuffers(commandBuffer, 0, 1, &(bufferManager->getQuadBuffer()),
+                         offsets);
+
+  auto descSet = (*quadDescriptorSets)[currentFrame];
+  vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          pipelineManager->getQuadPipelineLayout(), 0, 1,
+                          &descSet, 0, nullptr);
+
+  vkCmdDraw(commandBuffer, 4, 1, 0, 0);
 
   vkCmdEndRenderPass(commandBuffer);
 

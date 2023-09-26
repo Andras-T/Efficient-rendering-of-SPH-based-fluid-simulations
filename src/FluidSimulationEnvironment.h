@@ -39,10 +39,7 @@ private:
   VkDevice device;
   VkPhysicalDevice physicalDevice;
 
-  std::vector<FluidInstance> instances;
-  const int MAX_SIZE = 10;
-  float offsetX = 1.5f;
-  float x = -1.5f;
+  FluidInstance instance;
 
   double lastFrameTime = 0.0f;
 
@@ -51,11 +48,6 @@ private:
   const char *compPath = "\\shaders\\comp.spv";
 
 public:
-  FluidSimulationEnvironment() {
-    instances.reserve(MAX_SIZE);
-    instances.resize(1);
-  }
-
   static void check_vk_result(VkResult err) {
     if (err == 0)
       return;
@@ -73,8 +65,6 @@ public:
   void mainLoop();
 
   void checkInput();
-
-  void addNewInstance();
 
   void cleanUp();
 };

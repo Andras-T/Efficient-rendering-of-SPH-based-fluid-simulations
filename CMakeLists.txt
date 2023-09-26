@@ -3,32 +3,40 @@ project(FluidSimulationSPH)
 
 set(CMAKE_CXX_STANDARD 17)
 
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++ -static-libgcc")
+set(CMAKE_VERBOSE_MAKEFILE OFF)
+
+#set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 
 set(IMGUI_DIR lib/imgui)
 set(STB_DIR lib/stb)
+set(VULKAN src/Vulkan)
 
 set(SOURCES
-        src/Vulkan/BufferManager/BufferManager.cpp
-        src/Vulkan/CommandPool/CommandPoolManager.cpp
-        src/Vulkan/DescriptorManager/DescriptorManager.cpp
-        src/Vulkan/DeviceManager/DeviceManager.cpp
+        ${VULKAN}/BufferManager/BufferManager.cpp
+        ${VULKAN}/CommandPool/CommandPoolManager.cpp
+        ${VULKAN}/DescriptorManager/DescriptorManager.cpp
+        ${VULKAN}/DeviceManager/DeviceManager.cpp
+        ${VULKAN}/PipelineManager/PipelineManager.cpp
+        ${VULKAN}/Render/Render.cpp
+        ${VULKAN}/SwapchainManager/SwapchainManager.cpp
+        ${VULKAN}/Utils/Utils.cpp
+        ${VULKAN}/VulkanObject/VulkanObject.cpp
+        ${VULKAN}/Window/Window.cpp
+        ${VULKAN}/Render/ImGuiRender.cpp
+        ${VULKAN}/FluidInstance.cpp
         src/FluidSimulationEnvironment.cpp
         src/main.cpp
-        src/Vulkan/PipelineManager/PipelineManager.cpp
-        src/Vulkan/Render/Render.cpp
-        src/Vulkan/SwapchainManager/SwapchainManager.cpp
-        src/Vulkan/Utils/Utils.cpp
-        src/Vulkan/VulkanObject/VulkanObject.cpp
-        src/Vulkan/Window/Window.cpp
-        src/Vulkan/Render/ImGuiRender.cpp
-        src/Vulkan/FluidInstance.cpp
 
-        ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp ${IMGUI_DIR}/backends/imgui_impl_vulkan.cpp
-        ${IMGUI_DIR}/imgui.cpp ${IMGUI_DIR}/imgui.h ${IMGUI_DIR}/imgui_draw.cpp
-        ${IMGUI_DIR}/imgui_demo.cpp ${IMGUI_DIR}/imgui_tables.cpp ${IMGUI_DIR}/imgui_widgets.cpp
+        ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp 
+        ${IMGUI_DIR}/backends/imgui_impl_vulkan.cpp
+        ${IMGUI_DIR}/imgui.cpp 
+        ${IMGUI_DIR}/imgui_draw.cpp
+        ${IMGUI_DIR}/imgui_demo.cpp 
+        ${IMGUI_DIR}/imgui_tables.cpp 
+        ${IMGUI_DIR}/imgui_widgets.cpp
 
-        ${STB_DIR}/stb_image.cpp ${STB_DIR}/stb_image.h)
+        ${STB_DIR}/stb_image.cpp 
+        ${STB_DIR}/stb_image.h)
 
 add_executable(FluidSimulationSPH ${SOURCES})
 

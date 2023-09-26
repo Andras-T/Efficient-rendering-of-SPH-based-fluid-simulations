@@ -24,33 +24,26 @@ private:
   std::vector<VkFence> inFlightFences;
   std::vector<VkFence> computeInFlightFences;
 
+  BufferManager *bufferManager;
+  CommandPoolManager *commandPoolManager;
   DeviceManager *deviceManager;
   DescriptorManager *descriptorManager;
-  SwapchainManager *swapChainManager;
-  CommandPoolManager *commandPoolManager;
   PipelineManager *pipelineManager;
+  SwapchainManager *swapChainManager;
   VulkanObject *vulkanObject;
   Window *window;
 
+  std::vector<VkDescriptorSet> *quadDescriptorSets;
+
   ImGuiRender imGuiRender;
 
-  std::vector<FluidInstance *> instances;
+  FluidInstance *instance;
 
 public:
   void init(DeviceManager &deviceManager, SwapchainManager &swapChainManager,
             CommandPoolManager &commandPoolManager,
             PipelineManager &pipelineManager, VulkanObject &vulkanObject,
-            Window &window);
-
-  void addInstance(FluidInstance &instance) {
-    instances.push_back(&instance);
-    imGuiRender.addInstance(instance);
-  }
-
-  void removeLastInstance() {
-    instances.pop_back();
-    imGuiRender.removeLastInstance();
-  }
+            Window &window, FluidInstance &instance);
 
   void createSyncObjects();
 
@@ -59,6 +52,8 @@ public:
   void recordComputeCommandBuffer(VkCommandBuffer &commandBuffer);
 
   void recordCommandBuffer(VkCommandBuffer &commandBuffer, uint32_t imageIndex);
+
+  void recordQuad(VkCommandBuffer &commandBuffer, uint32_t imageIndex);
 
   void cleanUp();
 };
