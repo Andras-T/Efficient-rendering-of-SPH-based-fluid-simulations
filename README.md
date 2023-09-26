@@ -3,7 +3,7 @@
 
 ## Overview
 
-This project is a fluid simulation implemented in C++ 17 using the Vulkan API. The SPH (Smoothed Particle Hydrodynamics) method is used to simulate the fluid, and a bounding box is created to contain the fluid particles. The particles are represented as spheres.
+This project is a fluid simulation implemented in C++ 17 using the Vulkan API. The SPH (Smoothed Particle Hydrodynamics) method is used to simulate the fluid, and a bounding box is created to contain the fluid particles. The particles are represented as spheres for now.
 
 ## Methodology
 
@@ -12,6 +12,10 @@ SPH is a widely used method for simulating fluid flows. It is a Lagrangian metho
 ## Tools
 
 The project is implemented in C++ programming language and uses the Vulkan API for graphics rendering. The GLFW library is used for window and input management, and the GLM library is used for vector and matrix operations.
+
+## Goal
+
+The goal is to achieve a Screen Space Fluid Rendering which is using the Depth Image to create a smooth surface.
 
 ## Conclusion
 
@@ -25,15 +29,12 @@ To run this project, you need to have the following installed:
 - GLFW submodule
 - GLM submodule
 - ImGui submodule
+- Visual Studio 2022
 
 ## Usage
 
-Once the project is built, run the executable FluidSimulationSPH, it can be found in the cmake-build-debug directory. The simulation window will open, and you will see the fluid particles moving inside the bounding box.
+Once the project is built, run the executable FluidSimulationSPH, it can be found in the build directory. The simulation window will open, and you will see the fluid particles moving inside the bounding box.
 
 ## Credits
 
-This project was developed by Andr·s TÛth. Special thanks to my consultant Andr·s M·tÈ Fridvalszky for his guidance and support.
-
-
-
-
+This project was developed by Andr√°s T√≥th. Special thanks to my consultant Andr√°s M√°t√© Fridvalszky for his guidance and support.
