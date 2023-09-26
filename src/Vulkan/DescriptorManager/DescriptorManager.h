@@ -47,6 +47,8 @@ public:
 
   VkDescriptorPool &getDescriptorPool() { return descriptorPool; }
 
+  VkDescriptorPool &getQuadDescriptorPool() { return quadDescriptorPool; }
+
 #pragma endregion
 };
 

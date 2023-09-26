@@ -9,8 +9,8 @@
 
 class PipelineManager {
 
-  VkPipelineLayout pipelineLayout;
-  VkPipeline graphicsPipeline;
+  VkPipelineLayout simulationPipelineLayout;
+  VkPipeline simulationPipeline;
 
   VkPipelineLayout computePipelineLayout;
   VkPipeline computePipeline;
@@ -24,7 +24,7 @@ public:
             VkDescriptorSetLayout &quadDescriptorSetLayout,
             VkRenderPass &renderPass);
 
-  void createGraphicsPipeline(const char *vertPath, const char *fragPath,
+  void createSimulationPipeline(const char *vertPath, const char *fragPath,
                               VkDevice &device,
                               VkDescriptorSetLayout &descriptorSetLayout,
                               VkRenderPass &renderPass);
@@ -44,15 +44,15 @@ public:
 
 #pragma region getterFunctions
 
-  VkPipelineLayout &getComputePipelineLayout() { return computePipelineLayout; }
+  VkPipelineLayout &getSimulationPipelineLayout() { return simulationPipelineLayout; }
 
-  VkPipelineLayout &getPipelineLayout() { return pipelineLayout; }
+  VkPipelineLayout &getComputePipelineLayout() { return computePipelineLayout; }
 
   VkPipelineLayout &getQuadPipelineLayout() { return quadPipelineLayout; }
 
-  VkPipeline &getComputePipeline() { return computePipeline; }
+  VkPipeline &getSimulationPipeline() { return simulationPipeline; }
 
-  VkPipeline &getGraphicsPipeline() { return graphicsPipeline; }
+  VkPipeline &getComputePipeline() { return computePipeline; }
 
   VkPipeline &getQuadGraphicsPipeline() { return quadGraphicsPipeline; }
 

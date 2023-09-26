@@ -2,6 +2,7 @@
 #include "../Utils/Utils.h"
 #include <algorithm>
 #include <functional>
+#include <iostream>
 #include <limits>
 #include <stdexcept>
 
@@ -73,7 +74,8 @@ void SwapchainManager::createSwapChain() {
   createInfo.imageColorSpace = surfaceFormat.colorSpace;
   createInfo.imageExtent = extent;
   createInfo.imageArrayLayers = 1;
-  createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+  createInfo.imageUsage =
+      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // VK_IMAGE_USAGE_TRANSFER_DST_BIT
 
   uint32_t queueFamilyIndices[] = {indices->graphicsAndComputeFamily.value(),
                                    indices->presentFamily.value()};
@@ -275,7 +277,7 @@ void SwapchainManager::recreateSwapChain(GLFWwindow *window, VkDevice &device) {
     glfwGetFramebufferSize(window, &width, &height);
     glfwWaitEvents();
   }
-
+  std::cout << "engine: Recreating the swap chain\n";
   vkDeviceWaitIdle(device);
 
   cleanupSwapChain();
@@ -291,13 +293,13 @@ void SwapchainManager::cleanupSwapChain() {
   vkDestroyImage(*device, depthImage, nullptr);
   vkFreeMemory(*device, depthImageMemory, nullptr);
 
-  for (auto& framebuffer : swapChainFramebuffers)
+  for (auto &framebuffer : swapChainFramebuffers)
     vkDestroyFramebuffer(*device, framebuffer, nullptr);
 
-  for (auto& framebuffer : quadSwapChainFramebuffers)
-      vkDestroyFramebuffer(*device, framebuffer, nullptr);
+  for (auto &framebuffer : quadSwapChainFramebuffers)
+    vkDestroyFramebuffer(*device, framebuffer, nullptr);
 
-  for (auto& imageView : swapChainImageViews) {
+  for (auto &imageView : swapChainImageViews) {
     vkDestroyImageView(*device, imageView, nullptr);
   }
 
@@ -342,10 +344,13 @@ VkSurfaceFormatKHR SwapchainManager::chooseSwapSurfaceFormat(
   for (const auto &availableFormat : availableFormats) {
     if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM &&
         availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+      std::cout << "engine: Chosen surface format: "
+                   "VK_COLOR_SPACE_SRGB_NONLINEAR_KHR\n";
       return availableFormat;
     }
   }
-
+  std::cout << "engine: Chosen surface format: default {"
+            << availableFormats[0].format << "}\n";
   return availableFormats[0];
 }
 
@@ -353,10 +358,12 @@ VkPresentModeKHR SwapchainManager::chooseSwapPresentMode(
     const std::vector<VkPresentModeKHR> &availablePresentModes) {
   for (const auto &availablePresentMode : availablePresentModes) {
     if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+      std::cout
+          << "engine: Chosen presentation mode: VK_PRESENT_MODE_MAILBOX_KHR\n";
       return availablePresentMode;
     }
   }
-
+  std::cout << "engine: Chosen presentation mode: VK_PRESENT_MODE_FIFO_KHR\n";
   return VK_PRESENT_MODE_FIFO_KHR;
 }
 

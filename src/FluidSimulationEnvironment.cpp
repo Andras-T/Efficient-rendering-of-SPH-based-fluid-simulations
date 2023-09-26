@@ -43,7 +43,7 @@ void FluidSimulationEnvironment::init() {
   commandPoolManager.createCommandBuffers(device);
 
   render.init(deviceManager, swapChainManager, commandPoolManager,
-              pipelineManager, vulkanObject, window, instance);
+              pipelineManager, vulkanObject, window, bufferManager, instance);
 
   initImGui();
 }
@@ -64,7 +64,7 @@ void FluidSimulationEnvironment::initImGui() {
   init_info.PhysicalDevice = physicalDevice;
   init_info.QueueFamily = deviceManager.getQueueFamily();
   init_info.Queue = deviceManager.getGraphicsQueue();
-  init_info.DescriptorPool = descriptorManager.getDescriptorPool();
+  init_info.DescriptorPool = descriptorManager.getQuadDescriptorPool();
   init_info.MinImageCount = swapChainManager.getMinImageCount();
   init_info.ImageCount = swapChainManager.getSwapchainImageCount();
   init_info.Subpass = 0;
@@ -102,10 +102,10 @@ void FluidSimulationEnvironment::mainLoop() {
 }
 
 void FluidSimulationEnvironment::checkInput() {
-    // might want to remove it
+  // might want to remove it
   if (ImGui::GetIO().KeyMods == ImGuiModFlags_Ctrl &&
       ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-      ;
+    ;
   }
   if (ImGui::GetIO().KeyMods == ImGuiModFlags_Ctrl &&
       ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {

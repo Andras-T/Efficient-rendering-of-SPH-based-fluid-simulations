@@ -6,76 +6,79 @@
 
 void DescriptorManager::createDescriptorSetLayout(VkDevice &device) {
   // Simulation layout bindings
-  std::array<VkDescriptorSetLayoutBinding, 6> layoutBindings{};
-  layoutBindings[0].binding = 0;
-  layoutBindings[0].descriptorCount = 1;
-  layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  layoutBindings[0].pImmutableSamplers = nullptr;
-  layoutBindings[0].stageFlags =
-      VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
+  {
+    std::array<VkDescriptorSetLayoutBinding, 6> layoutBindings{};
+    layoutBindings[0].binding = 0;
+    layoutBindings[0].descriptorCount = 1;
+    layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    layoutBindings[0].pImmutableSamplers = nullptr;
+    layoutBindings[0].stageFlags =
+        VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
 
-  layoutBindings[1].binding = 1;
-  layoutBindings[1].descriptorCount = 1;
-  layoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  layoutBindings[1].pImmutableSamplers = nullptr;
-  layoutBindings[1].stageFlags =
-      VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_VERTEX_BIT;
+    layoutBindings[1].binding = 1;
+    layoutBindings[1].descriptorCount = 1;
+    layoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    layoutBindings[1].pImmutableSamplers = nullptr;
+    layoutBindings[1].stageFlags =
+        VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_VERTEX_BIT;
 
-  layoutBindings[2].binding = 2;
-  layoutBindings[2].descriptorCount = 1;
-  layoutBindings[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  layoutBindings[2].pImmutableSamplers = nullptr;
-  layoutBindings[2].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    layoutBindings[2].binding = 2;
+    layoutBindings[2].descriptorCount = 1;
+    layoutBindings[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    layoutBindings[2].pImmutableSamplers = nullptr;
+    layoutBindings[2].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-  layoutBindings[3].binding = 3;
-  layoutBindings[3].descriptorCount = 1;
-  layoutBindings[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  layoutBindings[3].pImmutableSamplers = nullptr;
-  layoutBindings[3].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    layoutBindings[3].binding = 3;
+    layoutBindings[3].descriptorCount = 1;
+    layoutBindings[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layoutBindings[3].pImmutableSamplers = nullptr;
+    layoutBindings[3].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-  layoutBindings[4].binding = 4;
-  layoutBindings[4].descriptorCount = 1;
-  layoutBindings[4].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  layoutBindings[4].pImmutableSamplers = nullptr;
-  layoutBindings[4].stageFlags =
-      VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
+    layoutBindings[4].binding = 4;
+    layoutBindings[4].descriptorCount = 1;
+    layoutBindings[4].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layoutBindings[4].pImmutableSamplers = nullptr;
+    layoutBindings[4].stageFlags =
+        VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
 
-  layoutBindings[5].binding = 5;
-  layoutBindings[5].descriptorCount = 1;
-  layoutBindings[5].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  layoutBindings[5].pImmutableSamplers = nullptr;
-  layoutBindings[5].stageFlags =
-      VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_VERTEX_BIT;
+    layoutBindings[5].binding = 5;
+    layoutBindings[5].descriptorCount = 1;
+    layoutBindings[5].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layoutBindings[5].pImmutableSamplers = nullptr;
+    layoutBindings[5].stageFlags =
+        VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_VERTEX_BIT;
 
-  VkDescriptorSetLayoutCreateInfo layoutInfo{};
-  layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-  layoutInfo.bindingCount = static_cast<uint32_t>(layoutBindings.size());
-  layoutInfo.pBindings = layoutBindings.data();
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = static_cast<uint32_t>(layoutBindings.size());
+    layoutInfo.pBindings = layoutBindings.data();
 
-  if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr,
-                                  &descriptorSetLayout) != VK_SUCCESS) {
-    throw std::runtime_error(
-        "failed to create simulation descriptor set layout!");
+    if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr,
+                                    &descriptorSetLayout) != VK_SUCCESS) {
+      throw std::runtime_error(
+          "failed to create simulation descriptor set layout!");
+    }
   }
-
   // Quad layout bindings
-  std::array<VkDescriptorSetLayoutBinding, 1> quadLayoutBindings{};
-  quadLayoutBindings[0].binding = 0;
-  quadLayoutBindings[0].descriptorCount = 1;
-  quadLayoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  quadLayoutBindings[0].pImmutableSamplers = nullptr;
-  quadLayoutBindings[0].stageFlags =
-      VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
+  {
+    std::array<VkDescriptorSetLayoutBinding, 1> quadLayoutBindings{};
+    quadLayoutBindings[0].binding = 0;
+    quadLayoutBindings[0].descriptorCount = 1;
+    quadLayoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    quadLayoutBindings[0].pImmutableSamplers = nullptr;
+    quadLayoutBindings[0].stageFlags =
+        VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
 
-  VkDescriptorSetLayoutCreateInfo quadLayoutInfo{};
-  quadLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-  quadLayoutInfo.bindingCount =
-      static_cast<uint32_t>(quadLayoutBindings.size());
-  quadLayoutInfo.pBindings = quadLayoutBindings.data();
+    VkDescriptorSetLayoutCreateInfo quadLayoutInfo{};
+    quadLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    quadLayoutInfo.bindingCount =
+        static_cast<uint32_t>(quadLayoutBindings.size());
+    quadLayoutInfo.pBindings = quadLayoutBindings.data();
 
-  if (vkCreateDescriptorSetLayout(device, &quadLayoutInfo, nullptr,
-                                  &quadDescriptorSetLayout) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create quad descriptor set layout!");
+    if (vkCreateDescriptorSetLayout(device, &quadLayoutInfo, nullptr,
+                                    &quadDescriptorSetLayout) != VK_SUCCESS) {
+      throw std::runtime_error("failed to create quad descriptor set layout!");
+    }
   }
 }
 

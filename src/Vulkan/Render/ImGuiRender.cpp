@@ -1,6 +1,6 @@
 #include "ImGuiRender.h"
-#include "imgui_internal.h"
 #include "../Utils/Structs/ImVecUtils.h"
+#include "imgui_internal.h"
 
 void ImGuiRender::draw(VkCommandBuffer &commandBuffer) {
   ImGui_ImplVulkan_NewFrame();

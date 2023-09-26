@@ -16,12 +16,12 @@
 class Render {
 
 private:
-  size_t currentFrame = 0;
-
+  std::vector<VkSemaphore> computeFinishedSemaphores;
+  std::vector<VkSemaphore> simulationFinishedSemaphores;
   std::vector<VkSemaphore> imageAvailableSemaphores;
   std::vector<VkSemaphore> renderFinishedSemaphores;
-  std::vector<VkSemaphore> computeFinishedSemaphores;
-  std::vector<VkFence> inFlightFences;
+  std::vector<VkFence> simulationInFlightFences;
+  std::vector<VkFence> displayInFlightFences;
   std::vector<VkFence> computeInFlightFences;
 
   BufferManager *bufferManager;
@@ -40,10 +40,13 @@ private:
   FluidInstance *instance;
 
 public:
+  size_t currentFrame = 0;
+
   void init(DeviceManager &deviceManager, SwapchainManager &swapChainManager,
             CommandPoolManager &commandPoolManager,
             PipelineManager &pipelineManager, VulkanObject &vulkanObject,
-            Window &window, FluidInstance &instance);
+            Window &window, BufferManager &bufferManager,
+            FluidInstance &instance);
 
   void createSyncObjects();
 

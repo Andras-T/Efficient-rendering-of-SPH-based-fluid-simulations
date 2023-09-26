@@ -12,19 +12,19 @@ void PipelineManager::init(const char *vertPath, const char *fragPath,
                            VkDescriptorSetLayout &quadDescriptorSetLayout,
                            VkRenderPass &renderPass) {
   createQuadGraphicsPipeline(device, quadDescriptorSetLayout, renderPass);
-  createGraphicsPipeline(vertPath, fragPath, device, descriptorSetLayout,
+  createSimulationPipeline(vertPath, fragPath, device, descriptorSetLayout,
                          renderPass);
   createComputePipeline(compPath, device, descriptorSetLayout, renderPass);
 }
 
-void PipelineManager::createGraphicsPipeline(
+void PipelineManager::createSimulationPipeline(
     const char *vertPath, const char *fragPath, VkDevice &device,
     VkDescriptorSetLayout &descriptorSetLayout, VkRenderPass &renderPass) {
   VkPipelineLayoutCreateInfo pipelineLayoutInfo =
       getPipelineLayoutCreateInfo(descriptorSetLayout);
 
   if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr,
-                             &pipelineLayout) != VK_SUCCESS) {
+                             &simulationPipelineLayout) != VK_SUCCESS) {
     throw std::runtime_error("failed to create pipeline layout!");
   }
   std::string currentPath(std::filesystem::current_path().string());
@@ -78,13 +78,13 @@ void PipelineManager::createGraphicsPipeline(
   pipelineInfo.pDepthStencilState = &depthStencil;
   pipelineInfo.pColorBlendState = &colorBlending;
   pipelineInfo.pDynamicState = &dynamicState;
-  pipelineInfo.layout = pipelineLayout;
+  pipelineInfo.layout = simulationPipelineLayout;
   pipelineInfo.renderPass = renderPass;
   pipelineInfo.subpass = 0;
   pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
   if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
-                                nullptr, &graphicsPipeline) != VK_SUCCESS) {
+                                nullptr, &simulationPipeline) != VK_SUCCESS) {
     throw std::runtime_error("failed to create graphics pipeline!");
   }
 
@@ -404,8 +404,8 @@ PipelineManager::getVertexInputStateCreateInfo(
 }
 
 void PipelineManager::cleanup(VkDevice &device) {
-  vkDestroyPipeline(device, graphicsPipeline, nullptr);
-  vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+  vkDestroyPipeline(device, simulationPipeline, nullptr);
+  vkDestroyPipelineLayout(device, simulationPipelineLayout, nullptr);
 
   vkDestroyPipeline(device, computePipeline, nullptr);
   vkDestroyPipelineLayout(device, computePipelineLayout, nullptr);
