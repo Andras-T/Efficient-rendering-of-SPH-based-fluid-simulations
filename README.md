@@ -13,6 +13,10 @@ SPH is a widely used method for simulating fluid flows. It is a Lagrangian metho
 
 The project is implemented in C++ programming language and uses the Vulkan API for graphics rendering. The GLFW library is used for window and input management, and the GLM library is used for vector and matrix operations.
 
+## Goal
+
+The goal is to achieve a Screen Space Fluid Rendering which is using the Depth Image to create a smooth surface.
+
 ## Conclusion
 
 In conclusion, this project aims to provide an interactive and visually appealing simulation of fluid dynamics using Vulkan and the SPH method. It provides a good introduction to fluid simulation and the use of Vulkan for graphics programming.
@@ -25,7 +29,7 @@ To run this project, you need to have the following installed:
 - GLFW submodule
 - GLM submodule
 - ImGui submodule
-- Visual Stuido 2022
+- Visual Studio 2022
 
 ## Usage
 
