@@ -1,7 +1,12 @@
 #include "Utils.h"
+#include "../../Logger.h"
 #include "imgui_internal.h"
+#include <chrono>
+#include <iomanip>
 #include <iostream>
 #include <stdexcept>
+
+using Clock = std::chrono::system_clock;
 
 int Utils::vertexCount = 0;
 
@@ -138,9 +143,10 @@ void Utils::initializeParticles(std::vector<Particle> &particles,
                      glm::vec4(-corner, -corner, -corner, 1.0f),
                      insideWallColor, center);
 
-  std::cout << "engine: Number particles: " << MOVABLE_PARTICLE_COUNT << "\n";
-  std::cout << "engine: Number of wall particles: " << UNMOVABLE_PARTICLE_COUNT
-            << "\n";
+  Logger::getInstance().LogInfo("Number particles: " +
+                                std::to_string(MOVABLE_PARTICLE_COUNT));
+  Logger::getInstance().LogInfo("Number of wall particles: " +
+                                std::to_string(UNMOVABLE_PARTICLE_COUNT));
 }
 
 void Utils::createWallParticle(Particle &particle, glm::vec4 position,
@@ -253,4 +259,39 @@ glm::mat4 Utils::updateCamera(float deltaTime, InputState &inputState,
   return glm::lookAt(inputState.cameraPos,
                      inputState.cameraPos + inputState.cameraFront,
                      inputState.cameraUp);
+}
+
+const std::ostringstream Utils::time() {
+  auto currentTime = Clock::now();
+  auto time = Clock::to_time_t(currentTime);
+
+  std::tm tm = *std::localtime(&time);
+
+  // Extract year, month, day, hour, minute, and second
+  int year = tm.tm_year + 1900;
+  int month = tm.tm_mon + 1; // Months are 0-based
+  int day = tm.tm_mday;
+  int hour = tm.tm_hour;
+  int minute = tm.tm_min;
+  int second = tm.tm_sec;
+
+  // Get milliseconds
+  auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+                          currentTime.time_since_epoch())
+                          .count() %
+                      1000;
+
+  // Format the time string
+  std::ostringstream formattedTime;
+
+  formattedTime << std::setfill('0');
+  formattedTime << std::setw(4) << year << ":";
+  formattedTime << std::setw(2) << month << ":";
+  formattedTime << std::setw(2) << day << " ";
+  formattedTime << std::setw(2) << hour << ":";
+  formattedTime << std::setw(2) << minute << " ";
+  formattedTime << std::setw(2) << second << "s ";
+  formattedTime << std::setw(3) << milliseconds << "ms";
+
+  return formattedTime;
 }

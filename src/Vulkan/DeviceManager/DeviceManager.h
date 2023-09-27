@@ -1,6 +1,7 @@
 #pragma once
 
 #define GLFW_INCLUDE_VULKAN
+#include "../../Logger.h"
 #include "../Utils/Structs/QueueFamilyIndices.h"
 #include "../Utils/Structs/SwapChainSupportDetails.h"
 #include "GLFW/glfw3.h"
@@ -18,6 +19,8 @@ class DeviceManager {
 
   uint32_t queueFamily;
 
+  Logger &logger;
+
   const std::vector<const char *> deviceExtensions = {
       VK_KHR_SWAPCHAIN_EXTENSION_NAME,
       VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME};
@@ -26,6 +29,8 @@ class DeviceManager {
       "VK_LAYER_KHRONOS_validation"};
 
 public:
+  DeviceManager() : logger(Logger::getInstance()) {}
+
   void init(VkInstance &instance, VkSurfaceKHR &surface,
             bool enableValidationLayers);
   void createLogicalDevice(VkSurfaceKHR &surface, bool enableValidationLayers);

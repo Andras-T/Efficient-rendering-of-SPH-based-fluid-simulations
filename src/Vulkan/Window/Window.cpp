@@ -1,4 +1,6 @@
 #include "Window.h"
+#include "../../Logger.h"
+#include "../Utils/Utils.h"
 #include "stb_image.h"
 #include <filesystem>
 #include <iostream>
@@ -33,9 +35,13 @@ void Window::init() {
   glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 
   std::string iconPath =
-      std::filesystem::current_path().string() + "\\..\\..\\..\\res\\logo.png";
-  std::cout << "engine: loading icon from: " << iconPath << "\n";
-  icon.pixels = stbi_load(iconPath.c_str(), &icon.width, &icon.height, 0, 0);
+      std::filesystem::current_path().string() + "\\..\\..\\..\\res\\icon.png";
+  std::string normalizedPath = std::filesystem::canonical(iconPath).string();
+
+  Logger::getInstance().LogInfo("Loading icon from: " + normalizedPath);
+
+  icon.pixels =
+      stbi_load(normalizedPath.c_str(), &icon.width, &icon.height, 0, 0);
 
   if (icon.pixels != nullptr) {
     GLFWimage images[1];
@@ -43,8 +49,8 @@ void Window::init() {
 
     glfwSetWindowIcon(window, 1, images);
   } else {
-    std::cerr << "\x1b[31m"
-              << "Failed to load icon!\n"
+    std::cerr << Utils::time().str() << Utils::ENGINE << "\x1b[31m"
+              << " Failed to load icon!\n"
               << "\x1b[0m";
   }
 

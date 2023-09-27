@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../Logger.h"
 #include "../Utils/Structs/QueueFamilyIndices.h"
 #include "../Utils/Structs/SwapChainSupportDetails.h"
 #include "../Window/Window.h"
@@ -26,6 +27,8 @@ private:
   SwapChainSupportDetails swapChainSupportDetails;
   QueueFamilyIndices *indices;
   VkRenderPass *renderPass;
+
+  Logger &logger;
 
   uint32_t minImageCount;
 
@@ -57,6 +60,8 @@ private:
                                VkFormatFeatureFlags features);
 
 public:
+  SwapchainManager() : logger(Logger::getInstance()) {}
+
   void init(Window &window, VkSurfaceKHR &surface,
             VkPhysicalDevice &physicalDevice, VkDevice &device,
             QueueFamilyIndices &indices);

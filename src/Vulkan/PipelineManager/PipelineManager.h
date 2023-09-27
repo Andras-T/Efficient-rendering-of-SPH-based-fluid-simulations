@@ -1,6 +1,7 @@
 #pragma once
 
 #define GLFW_INCLUDE_VULKAN
+#include "../../Logger.h"
 #include "GLFW/glfw3.h"
 #include <array>
 #include <string>
@@ -17,7 +18,11 @@ class PipelineManager {
   VkPipelineLayout quadPipelineLayout;
   VkPipeline quadGraphicsPipeline;
 
+  Logger &logger;
+
 public:
+  PipelineManager() : logger(Logger::getInstance()) {}
+
   void init(const char *vertPath, const char *fragPath, const char *compPath,
             VkDevice &device, VkDescriptorSetLayout &descriptorSetLayout,
             VkDescriptorSetLayout &quadDescriptorSetLayout,

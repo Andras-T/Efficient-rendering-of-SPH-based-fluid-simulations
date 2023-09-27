@@ -27,6 +27,8 @@ void FluidInstance::InitBuffers(BufferManager &bufferManager,
       deviceManager.getDevice(), deviceManager.getPhysicalDevice(),
       modelUniformBuffers, modelUniformBuffersMemory, modelUniformBuffersMapped,
       sizeof(Model));
+
+  logger.LogInfo("VkBuffers created");
   this->center = glm::vec4(center, 1.0f);
 }
 
@@ -37,6 +39,8 @@ void FluidInstance::InitDescriptorSets(DescriptorManager &descriptorManager,
       device, descriptorSets, quadDescriptorSets, shaderStorageBuffers,
       bufferManager.getSphereBuffer(), bufferManager.getQuadBuffer(),
       uniformBuffers, attributesUniformBuffers, modelUniformBuffers);
+
+  logger.LogInfo("Descriptor sets created");
 }
 
 void FluidInstance::Render(const VkCommandBuffer &commandBuffer,

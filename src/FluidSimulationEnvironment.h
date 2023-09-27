@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Logger.h"
 #include "Vulkan/BufferManager/BufferManager.h"
 #include "Vulkan/CommandPool/CommandPoolManager.h"
 #include "Vulkan/DescriptorManager/DescriptorManager.h"
@@ -35,6 +36,8 @@ private:
   CommandPoolManager commandPoolManager;
   Render render;
 
+  Logger &logger;
+
   VkDevice device;
   VkPhysicalDevice physicalDevice;
 
@@ -47,17 +50,16 @@ private:
   const char *compPath = "\\shaders\\comp.spv";
 
 public:
+  FluidSimulationEnvironment() : logger(Logger::getInstance()) {}
+
   static void check_vk_result(VkResult err) {
     if (err == 0)
       return;
-    std::cerr << "\x1b[31m"
-              << "[vulkan] Error: VkResult = " << err << "\x1b[0m"
-              << "\n";
+    Logger::getInstance().LogError("Error: VkResult = " + std::to_string(err),
+                                   Utils::VULKAN);
+
     if (err < 0) {
-      std::cerr << "\x1b[31m"
-                << "[vulkan] Aborting"
-                << "\x1b[0m"
-                << "\n";
+      Logger::getInstance().LogError("Aborting", Utils::VULKAN);
       abort();
     }
   }

@@ -6,6 +6,7 @@
 #include "Structs/Particle.h"
 #include "glm/gtc/matrix_transform.hpp"
 #include "imgui.h"
+#include <sstream>
 #include <unordered_map>
 #include <vector>
 
@@ -18,9 +19,12 @@ private:
   static void setVertexCount(int c) { vertexCount = c; }
 
 public:
-  static const int MAX_FRAMES_IN_FLIGHT = 2;
-  static const int MOVABLE_PARTICLE_COUNT = 1000;
-  static const int UNMOVABLE_PARTICLE_COUNT = 5292 + 8;
+  static constexpr char *ENGINE = "[engine]";
+  static constexpr char *VAL_LAYER = "[validation layer]";
+  static constexpr char *VULKAN = "[vulkan]";
+  static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
+  static constexpr int MOVABLE_PARTICLE_COUNT = 1000;
+  static constexpr int UNMOVABLE_PARTICLE_COUNT = 5292 + 8;
   static constexpr float SPHERE_RADIUS = 0.065f;
   static const int PARTICLE_COUNT =
       MOVABLE_PARTICLE_COUNT + UNMOVABLE_PARTICLE_COUNT;
@@ -40,4 +44,6 @@ public:
 
   static glm::mat4 updateCamera(float deltaTime, InputState &inputState,
                                 ImGuiIO &io);
+
+  static const std::ostringstream time();
 };

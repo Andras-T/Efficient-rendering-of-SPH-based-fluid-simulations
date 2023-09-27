@@ -1,13 +1,18 @@
 #include "DeviceManager.h"
+#include "../Utils/Utils.h"
 #include <cstdint>
+#include <iostream>
 #include <set>
 #include <stdexcept>
 #include <vector>
 
 void DeviceManager::init(VkInstance &instance, VkSurfaceKHR &surface,
                          bool enableValidationLayers) {
+  logger.LogInfo("Setting up device");
   pickPhysicalDevice(instance, surface);
+  logger.LogInfo("Physical device picked");
   createLogicalDevice(surface, enableValidationLayers);
+  logger.LogInfo("Logical device picked");
 }
 
 void DeviceManager::createLogicalDevice(VkSurfaceKHR &surface,

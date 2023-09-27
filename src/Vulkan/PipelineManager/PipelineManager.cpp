@@ -1,6 +1,7 @@
 #include "PipelineManager.h"
 #include "../Utils/Structs/Particle.h"
 #include "../Utils/Structs/Quad.h"
+#include "../Utils/Utils.h"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -11,10 +12,16 @@ void PipelineManager::init(const char *vertPath, const char *fragPath,
                            VkDescriptorSetLayout &descriptorSetLayout,
                            VkDescriptorSetLayout &quadDescriptorSetLayout,
                            VkRenderPass &renderPass) {
-  createQuadGraphicsPipeline(device, quadDescriptorSetLayout, renderPass);
+
   createSimulationPipeline(vertPath, fragPath, device, descriptorSetLayout,
                            renderPass);
+  logger.LogInfo("Off screen pipeline created");
+
   createComputePipeline(compPath, device, descriptorSetLayout, renderPass);
+  logger.LogInfo("Compute pipeline created");
+
+  createQuadGraphicsPipeline(device, quadDescriptorSetLayout, renderPass);
+  logger.LogInfo("Graphics pipeline created");
 }
 
 void PipelineManager::createSimulationPipeline(
@@ -251,7 +258,7 @@ std::vector<char> PipelineManager::readFile(const std::string &filename) {
     throw std::runtime_error("failed to open file!");
   }
 
-  std::cout << "engine: reading file from: " << filename << "\n";
+  logger.LogInfo("Reading file from: " + filename);
   size_t fileSize = (size_t)file.tellg();
   std::vector<char> buffer(fileSize);
   file.seekg(0);

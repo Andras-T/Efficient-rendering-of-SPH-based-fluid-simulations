@@ -1,5 +1,6 @@
 #include "CommandPoolManager.h"
 #include "../Utils/Utils.h"
+#include <iostream>
 
 void CommandPoolManager::init(VkDevice &device,
                               QueueFamilyIndices &queueFamilyIndices) {
@@ -23,6 +24,8 @@ void CommandPoolManager::createCommandBuffers(VkDevice &device) {
   createQuadCommandBuffer(device);
   createComputeCommandBuffers(device);
   createImGuiCommandBuffers(device);
+
+  logger.LogInfo("Command buffers created");
 }
 
 void CommandPoolManager::createQuadCommandBuffer(VkDevice &device) {

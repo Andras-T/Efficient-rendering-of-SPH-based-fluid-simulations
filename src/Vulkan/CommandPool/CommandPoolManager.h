@@ -1,6 +1,7 @@
 #pragma once
 
 #define GLFW_INCLUDE_VULKAN
+#include "../../Logger.h"
 #include "../Utils/Structs/QueueFamilyIndices.h"
 #include "GLFW/glfw3.h"
 #include <stdexcept>
@@ -14,7 +15,11 @@ class CommandPoolManager {
   std::vector<VkCommandBuffer> computeCommandBuffers;
   std::vector<VkCommandBuffer> imGuiCommandBuffers;
 
+  Logger &logger;
+
 public:
+  CommandPoolManager() : logger(Logger::getInstance()) {}
+
   void init(VkDevice &device, QueueFamilyIndices &queueFamilyIndices);
 
   void createCommandBuffers(VkDevice &device);

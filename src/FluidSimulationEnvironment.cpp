@@ -4,7 +4,8 @@
 #include "imgui_internal.h"
 
 void FluidSimulationEnvironment::init() {
-  std::cout << "engine: setting up fluid simulations environment\n";
+  logger.LogInfo("Setting up fluid simulations environment");
+
   window.init();
 
   vulkanObject.init(*window.get_GLFW_Window(), enableValidationLayers);
@@ -50,6 +51,7 @@ void FluidSimulationEnvironment::init() {
 }
 
 void FluidSimulationEnvironment::initImGui() {
+  logger.LogInfo("Setting up ImGui");
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
   ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -92,7 +94,8 @@ void FluidSimulationEnvironment::run() {
 }
 
 void FluidSimulationEnvironment::mainLoop() {
-  std::cout << "engine: fluid simulations environment main loop called\n";
+  logger.LogInfo("Rendering loop called");
+
   while (!glfwWindowShouldClose(window.get_GLFW_Window())) {
     glfwPollEvents();
     render.drawFrame(lastFrameTime);

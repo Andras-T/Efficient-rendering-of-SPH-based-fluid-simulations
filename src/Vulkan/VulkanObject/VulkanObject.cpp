@@ -1,14 +1,18 @@
 #include "VulkanObject.h"
+#include "../Utils/Utils.h"
 #include <array>
 #include <cstdint>
 #include <cstring>
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 
 void VulkanObject::init(GLFWwindow &window, bool enableValidationLayers) {
   createInstance(enableValidationLayers);
+  logger.LogInfo("Instance created");
   setupDebugMessenger(enableValidationLayers);
   createSurface(window);
+  logger.LogInfo("Surface created");
 }
 
 void VulkanObject::createRenderPass(VkDevice &device, VkFormat &imageformat,
@@ -74,6 +78,7 @@ void VulkanObject::createRenderPass(VkDevice &device, VkFormat &imageformat,
       VK_SUCCESS) {
     throw std::runtime_error("failed to create render pass!");
   }
+  logger.LogInfo("Render pass created");
 }
 
 void VulkanObject::createInstance(bool enableValidationLayers) {
@@ -196,14 +201,12 @@ VkBool32 VulkanObject::debugCallback(
     VkDebugUtilsMessageTypeFlagsEXT messageType,
     const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
     void *pUserData) {
+
+  std::string message = pCallbackData->pMessage;
   if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-    std::cerr << "\x1b[31m"
-              << "validation layer: " << pCallbackData->pMessage << "\x1b[0m"
-              << "\n";
+    Logger::getInstance().LogInfo(message, Utils::VAL_LAYER, "\x1b[31m");
   } else {
-    std::cerr << "\x1b[33m"
-              << "validation layer: " << pCallbackData->pMessage << "\x1b[0m"
-              << "\n";
+    Logger::getInstance().LogInfo(message, Utils::VAL_LAYER, "\x1b[33m");
   }
 
   return VK_FALSE;

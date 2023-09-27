@@ -25,6 +25,7 @@ set(SOURCES
         ${VULKAN}/Render/ImGuiRender.cpp
         ${VULKAN}/FluidInstance.cpp
         src/FluidSimulationEnvironment.cpp
+        src/Logger.cpp
         src/main.cpp
 
         ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp 

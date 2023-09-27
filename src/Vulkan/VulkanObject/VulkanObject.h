@@ -2,6 +2,7 @@
 
 #define GLFW_INCLUDE_VULKAN
 
+#include "../../Logger.h"
 #include "GLFW/glfw3.h"
 #include <vector>
 
@@ -12,6 +13,8 @@ private:
   VkDebugUtilsMessengerEXT debugMessenger;
   VkSurfaceKHR surface;
   VkRenderPass renderPass;
+
+  Logger &logger;
 
   const std::vector<const char *> validationLayers = {
       "VK_LAYER_KHRONOS_validation"};
@@ -40,6 +43,8 @@ private:
   void DestroyDebugUtilsMessengerEXT();
 
 public:
+  VulkanObject() : logger(Logger::getInstance()) {}
+
   void init(GLFWwindow &window, bool enableValidationLayers);
 
   void createRenderPass(VkDevice &device, VkFormat &imageformat,

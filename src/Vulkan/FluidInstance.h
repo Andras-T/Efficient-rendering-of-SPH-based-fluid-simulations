@@ -34,7 +34,11 @@ private:
 
   glm::vec4 center = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
 
+  Logger &logger;
+
 public:
+  FluidInstance() : logger(Logger::getInstance()) {}
+
   void InitBuffers(BufferManager &bufferManager, DeviceManager &deviceManager,
                    VkCommandPool &commandPool, glm::vec3 center);
 
