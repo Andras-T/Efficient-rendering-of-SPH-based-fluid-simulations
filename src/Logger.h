@@ -11,7 +11,7 @@ private:
   Logger() { severity = Info; }
 
   Severity severity;
-  const char* endFormat = "\x1b[0m";
+  const char *endFormat = "\x1b[0m";
 
 public:
   void setSeverity(Severity severity) { this->severity = severity; }

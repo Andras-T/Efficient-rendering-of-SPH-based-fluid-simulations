@@ -11,16 +11,18 @@ void PipelineManager::init(const char *vertPath, const char *fragPath,
                            const char *compPath, VkDevice &device,
                            VkDescriptorSetLayout &descriptorSetLayout,
                            VkDescriptorSetLayout &quadDescriptorSetLayout,
-                           VkRenderPass &renderPass) {
+                           VulkanObject &vulkanObject) {
 
   createSimulationPipeline(vertPath, fragPath, device, descriptorSetLayout,
-                           renderPass);
+                           vulkanObject.getSimulationRenderPass());
   logger.LogInfo("Off screen pipeline created");
 
-  createComputePipeline(compPath, device, descriptorSetLayout, renderPass);
+  createComputePipeline(compPath, device, descriptorSetLayout,
+                        vulkanObject.getSimulationRenderPass());
   logger.LogInfo("Compute pipeline created");
 
-  createQuadGraphicsPipeline(device, quadDescriptorSetLayout, renderPass);
+  createQuadGraphicsPipeline(device, quadDescriptorSetLayout,
+                             vulkanObject.getQuadRenderPass());
   logger.LogInfo("Graphics pipeline created");
 }
 
@@ -196,7 +198,7 @@ void PipelineManager::createQuadGraphicsPipeline(
   pipelineInfo.pViewportState = &viewportState;
   pipelineInfo.pRasterizationState = &rasterizer;
   pipelineInfo.pMultisampleState = &multisampling;
-  pipelineInfo.pDepthStencilState = &depthStencil;
+  // pipelineInfo.pDepthStencilState = &depthStencil;
   pipelineInfo.pColorBlendState = &colorBlending;
   pipelineInfo.pDynamicState = &dynamicState;
   pipelineInfo.layout = quadPipelineLayout;

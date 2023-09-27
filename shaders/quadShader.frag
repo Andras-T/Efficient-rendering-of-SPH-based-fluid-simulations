@@ -1,8 +1,12 @@
 #version 450
 
 layout(location = 0) out vec4 outColor;
-layout(location = 0) in vec2 fragTexCoord;
+layout(binding = 0) uniform sampler2D depthSampler;
+layout(location = 1) in vec2 fragTexCoord;
 
 void main() {
-	outColor = vec4(fragTexCoord.x, fragTexCoord.y, (fragTexCoord.x + fragTexCoord.y) * 0.5f, 1.0f);
+	float depthValue = texture(depthSampler, fragTexCoord).r / 2.0;
+	if (depthValue < 0.001)
+		discard;
+	outColor = vec4(depthValue, depthValue, depthValue, 1.0f);
 }

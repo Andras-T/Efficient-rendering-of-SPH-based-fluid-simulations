@@ -267,7 +267,7 @@ void Render::recordCommandBuffer(VkCommandBuffer &commandBuffer,
 
   VkRenderPassBeginInfo renderPassInfo{};
   renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  renderPassInfo.renderPass = vulkanObject->getRenderPass();
+  renderPassInfo.renderPass = vulkanObject->getSimulationRenderPass();
   renderPassInfo.framebuffer =
       (swapChainManager->getSwapChainFramebuffers())[imageIndex];
   renderPassInfo.renderArea.offset = {0, 0};
@@ -321,7 +321,7 @@ void Render::recordQuad(VkCommandBuffer &commandBuffer, uint32_t imageIndex) {
 
   VkRenderPassBeginInfo renderPassInfo{};
   renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  renderPassInfo.renderPass = vulkanObject->getRenderPass();
+  renderPassInfo.renderPass = vulkanObject->getQuadRenderPass();
   renderPassInfo.framebuffer =
       (swapChainManager->getQuadSwapChainFramebuffers())[imageIndex];
   renderPassInfo.renderArea.offset = {0, 0};

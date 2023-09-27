@@ -35,8 +35,7 @@ void VulkanObject::createRenderPass(VkDevice &device, VkFormat &imageformat,
   depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
   depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
   depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  depthAttachment.finalLayout =
-      VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+  depthAttachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
 
   VkAttachmentReference colorAttachmentRef{};
   colorAttachmentRef.attachment = 0;
@@ -44,40 +43,79 @@ void VulkanObject::createRenderPass(VkDevice &device, VkFormat &imageformat,
 
   VkAttachmentReference depthAttachmentRef{};
   depthAttachmentRef.attachment = 1;
-  depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+  depthAttachmentRef.layout = VK_IMAGE_LAYOUT_GENERAL;
 
-  VkSubpassDescription subpass{};
-  subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-  subpass.colorAttachmentCount = 1;
-  subpass.pColorAttachments = &colorAttachmentRef;
-  subpass.pDepthStencilAttachment = &depthAttachmentRef;
+  VkSubpassDescription simulationSubpass{};
+  simulationSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+  simulationSubpass.colorAttachmentCount = 1;
+  simulationSubpass.pColorAttachments = &colorAttachmentRef;
+  simulationSubpass.pDepthStencilAttachment = &depthAttachmentRef;
 
-  VkSubpassDependency dependency{};
-  dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-  dependency.dstSubpass = 0;
-  dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-                            VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-  dependency.srcAccessMask = 0;
-  dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-                            VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-  dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-                             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+  VkSubpassDescription quadSubpass{};
+  quadSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+  quadSubpass.colorAttachmentCount = 1;
+  quadSubpass.pColorAttachments = &colorAttachmentRef;
 
-  std::array<VkAttachmentDescription, 2> attachments = {colorAttachment,
-                                                        depthAttachment};
-  VkRenderPassCreateInfo renderPassInfo{};
-  renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-  renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-  renderPassInfo.pAttachments = attachments.data();
-  renderPassInfo.subpassCount = 1;
-  renderPassInfo.pSubpasses = &subpass;
-  renderPassInfo.dependencyCount = 1;
-  renderPassInfo.pDependencies = &dependency;
+  VkSubpassDependency simulationDependency{};
+  simulationDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+  simulationDependency.dstSubpass = 0;
+  simulationDependency.srcStageMask =
+      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+      VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+  simulationDependency.srcAccessMask = 0;
+  simulationDependency.dstStageMask =
+      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+      VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+  simulationDependency.dstAccessMask =
+      VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+      VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-  if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("failed to create render pass!");
+  VkSubpassDependency quadDependency{};
+  quadDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+  quadDependency.dstSubpass = 0;
+  quadDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+                                VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+  quadDependency.srcAccessMask = 0;
+  quadDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+                                VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+  quadDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+                                 VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+  std::array<VkAttachmentDescription, 2> simulationAttachments = {
+      colorAttachment, depthAttachment};
+
+  std::array<VkAttachmentDescription, 1> quadAttachments = {colorAttachment};
+
+  VkRenderPassCreateInfo simulationRenderPassInfo{};
+  simulationRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+  simulationRenderPassInfo.attachmentCount =
+      static_cast<uint32_t>(simulationAttachments.size());
+  simulationRenderPassInfo.pAttachments = simulationAttachments.data();
+  simulationRenderPassInfo.subpassCount = 1;
+  simulationRenderPassInfo.pSubpasses = &simulationSubpass;
+  simulationRenderPassInfo.dependencyCount = 1;
+  simulationRenderPassInfo.pDependencies = &simulationDependency;
+
+  VkRenderPassCreateInfo quadRenderPassInfo{};
+  quadRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+  quadRenderPassInfo.attachmentCount =
+      static_cast<uint32_t>(quadAttachments.size());
+  quadRenderPassInfo.pAttachments = quadAttachments.data();
+  quadRenderPassInfo.subpassCount = 1;
+  quadRenderPassInfo.pSubpasses = &quadSubpass;
+  quadRenderPassInfo.dependencyCount = 1;
+  quadRenderPassInfo.pDependencies = &quadDependency;
+
+  if (vkCreateRenderPass(device, &simulationRenderPassInfo, nullptr,
+                         &simulationRenderPass) != VK_SUCCESS) {
+    throw std::runtime_error("failed to create simulation render pass!");
   }
+
+  if (vkCreateRenderPass(device, &quadRenderPassInfo, nullptr,
+                         &quadRenderPass) != VK_SUCCESS) {
+    throw std::runtime_error("failed to create quad render pass!");
+  }
+
   logger.LogInfo("Render pass created");
 }
 

@@ -2,6 +2,7 @@
 
 #define GLFW_INCLUDE_VULKAN
 
+#include "../SwapchainManager/SwapchainManager.h"
 #include "../Utils/Utils.h"
 #include "GLFW/glfw3.h"
 #include "glm/gtc/matrix_transform.hpp"
@@ -16,8 +17,15 @@ class DescriptorManager {
   VkDescriptorPool descriptorPool;
   VkDescriptorPool quadDescriptorPool;
 
+  VkSampler depthSampler;
+
+  SwapchainManager *swapchainManager;
+
 public:
-  void init(VkDevice &device) { createDescriptorSetLayout(device); }
+  void init(VkDevice &device, SwapchainManager &swapchainManager) {
+    createDescriptorSetLayout(device);
+    this->swapchainManager = &swapchainManager;
+  }
 
   void createDescriptorSetLayout(VkDevice &device);
 

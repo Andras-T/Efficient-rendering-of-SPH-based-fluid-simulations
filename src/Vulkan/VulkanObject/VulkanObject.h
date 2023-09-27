@@ -12,7 +12,8 @@ private:
   VkInstance instance;
   VkDebugUtilsMessengerEXT debugMessenger;
   VkSurfaceKHR surface;
-  VkRenderPass renderPass;
+  VkRenderPass simulationRenderPass;
+  VkRenderPass quadRenderPass;
 
   Logger &logger;
 
@@ -58,7 +59,9 @@ public:
       const VkAllocationCallbacks *pAllocator,
       VkDebugUtilsMessengerEXT *pDebugMessenger);
 
-  VkRenderPass &getRenderPass() { return renderPass; }
+  VkRenderPass &getSimulationRenderPass() { return simulationRenderPass; }
+
+  VkRenderPass &getQuadRenderPass() { return quadRenderPass; }
 
   VkInstance &getInstance() { return instance; }
 

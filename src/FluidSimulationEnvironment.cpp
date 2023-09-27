@@ -23,17 +23,17 @@ void FluidSimulationEnvironment::init() {
                                 swapChainManager.getSwapChainImageFormat(),
                                 swapChainManager.findDepthFormat());
 
-  descriptorManager.init(device);
+  descriptorManager.init(device, swapChainManager);
 
   pipelineManager.init(vertPath, fragPath, compPath, device,
                        descriptorManager.getDescriptorSetLayout(),
                        descriptorManager.getQuadDescriptorSetLayout(),
-                       vulkanObject.getRenderPass());
+                       vulkanObject);
 
   commandPoolManager.init(device, deviceManager.getFamilyIndices());
 
   swapChainManager.createDepthResources();
-  swapChainManager.createFramebuffers(vulkanObject.getRenderPass());
+  swapChainManager.createFramebuffers(vulkanObject);
 
   descriptorManager.createDescriptorPool(device);
 
@@ -76,7 +76,7 @@ void FluidSimulationEnvironment::initImGui() {
   init_info.Allocator = nullptr;
   init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
   init_info.CheckVkResultFn = check_vk_result;
-  ImGui_ImplVulkan_Init(&init_info, vulkanObject.getRenderPass());
+  ImGui_ImplVulkan_Init(&init_info, vulkanObject.getQuadRenderPass());
 
   VkCommandBuffer commandBuffer =
       commandPoolManager.beginSingleTimeCommands(device);
@@ -119,7 +119,8 @@ void FluidSimulationEnvironment::cleanUp() {
 
   pipelineManager.cleanup(device);
 
-  vkDestroyRenderPass(device, vulkanObject.getRenderPass(), nullptr);
+  vkDestroyRenderPass(device, vulkanObject.getSimulationRenderPass(), nullptr);
+  vkDestroyRenderPass(device, vulkanObject.getQuadRenderPass(), nullptr);
 
   descriptorManager.cleanup(device);
 

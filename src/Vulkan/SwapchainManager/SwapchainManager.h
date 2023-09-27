@@ -3,6 +3,7 @@
 #include "../../Logger.h"
 #include "../Utils/Structs/QueueFamilyIndices.h"
 #include "../Utils/Structs/SwapChainSupportDetails.h"
+#include "../VulkanObject/VulkanObject.h"
 #include "../Window/Window.h"
 
 class SwapchainManager {
@@ -26,7 +27,7 @@ private:
   VkDevice *device;
   SwapChainSupportDetails swapChainSupportDetails;
   QueueFamilyIndices *indices;
-  VkRenderPass *renderPass;
+  VulkanObject *vulkanObject;
 
   Logger &logger;
 
@@ -68,7 +69,7 @@ public:
 
   void createDepthResources();
 
-  void createFramebuffers(VkRenderPass &renderPass);
+  void createFramebuffers(VulkanObject &vulkanObject);
 
   void createFramebuffers();
 
@@ -92,4 +93,8 @@ public:
   uint32_t getSwapchainImageCount() { return swapChainImages.size(); }
 
   uint32_t getMinImageCount() { return minImageCount; }
+
+  VkImage &getDepthImage() { return depthImage; }
+  VkDeviceMemory &getDepthImageMemory() { return depthImageMemory; }
+  VkImageView &getDepthImageView() { return depthImageView; }
 };

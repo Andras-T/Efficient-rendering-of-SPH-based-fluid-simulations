@@ -5,8 +5,8 @@ void Logger::LogInfo(const std::string &log, const std::string &prefix,
   auto time = Utils::time().str();
   auto indentation = time.size() + prefix.size() + 2;
   auto logStr = formatMessage(log, false, indentation).str();
-  std::cout << "\x1b[36m" << time << endFormat << "\x1b[32m " << prefix << endFormat << " "
-            << color << logStr << endFormat << "\n";
+  std::cout << "\x1b[36m" << time << endFormat << "\x1b[32m " << prefix
+            << endFormat << " " << color << logStr << endFormat << "\n";
 }
 
 void Logger::LogDiag(const std::string &log, const std::string &prefix,
@@ -35,7 +35,8 @@ void Logger::LogError(const std::string &log, const std::string &prefix) {
   auto time = Utils::time().str();
   auto indentation = time.size() + prefix.size() + 2;
   auto logStr = formatMessage(log, false, indentation).str();
-  std::cout << "\x1b[36m" << time << endFormat << "\x1b[32m " << prefix << endFormat << " "
+  std::cout << "\x1b[36m" << time << endFormat << "\x1b[32m " << prefix
+            << endFormat << " "
             << "\x1b[31m" << logStr << endFormat << "\n";
 }
 

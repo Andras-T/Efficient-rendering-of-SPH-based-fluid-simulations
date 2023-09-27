@@ -41,8 +41,6 @@ void ImGuiRender::createAppearanceMenu(int width, int height) {
 
   ImGui::SliderFloat("Font size", &ImGui::GetIO().FontGlobalScale, 0.5f, 2.0f);
 
-  ImGui::SliderFloat3("Font size", &ImGui::GetIO().FontGlobalScale, 0.5f, 2.0f);
-
   ImGui::SliderFloat3("Background Color", (float *)backgroundColor.float32,
                       0.0f, 1.0f);
 

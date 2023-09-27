@@ -2,6 +2,7 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include "../../Logger.h"
+#include "../VulkanObject/VulkanObject.h"
 #include "GLFW/glfw3.h"
 #include <array>
 #include <string>
@@ -26,7 +27,7 @@ public:
   void init(const char *vertPath, const char *fragPath, const char *compPath,
             VkDevice &device, VkDescriptorSetLayout &descriptorSetLayout,
             VkDescriptorSetLayout &quadDescriptorSetLayout,
-            VkRenderPass &renderPass);
+            VulkanObject &vulkanObject);
 
   void createSimulationPipeline(const char *vertPath, const char *fragPath,
                                 VkDevice &device,

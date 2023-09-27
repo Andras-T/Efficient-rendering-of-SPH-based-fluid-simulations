@@ -111,10 +111,12 @@ void SwapchainManager::createSwapChain() {
 
 void SwapchainManager::createDepthResources() {
   VkFormat depthFormat = findDepthFormat();
-  createImage(
-      swapChainExtent.width, swapChainExtent.height, depthFormat,
-      VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);
+  createImage(swapChainExtent.width, swapChainExtent.height, depthFormat,
+              VK_IMAGE_TILING_OPTIMAL,
+              VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
+                  VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage,
+              depthImageMemory);
   depthImageView =
       createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
   logger.LogInfo("Depth Resources created");
@@ -184,92 +186,100 @@ VkImageView SwapchainManager::createImageView(VkImage image, VkFormat format,
   return imageView;
 }
 
-void SwapchainManager::createFramebuffers(VkRenderPass &renderPass) {
-  this->renderPass = &renderPass;
-  swapChainFramebuffers.resize(swapChainImageViews.size());
+void SwapchainManager::createFramebuffers(VulkanObject &vulkanObject) {
+  this->vulkanObject = &vulkanObject;
+  // Simulation framebuffer
+  {
+    swapChainFramebuffers.resize(swapChainImageViews.size());
+    for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+      std::array<VkImageView, 2> attachments = {swapChainImageViews[i],
+                                                depthImageView};
 
-  for (size_t i = 0; i < swapChainImageViews.size(); i++) {
-    std::array<VkImageView, 2> attachments = {swapChainImageViews[i],
-                                              depthImageView};
+      VkFramebufferCreateInfo framebufferInfo{};
+      framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+      framebufferInfo.renderPass = vulkanObject.getSimulationRenderPass();
+      framebufferInfo.attachmentCount =
+          static_cast<uint32_t>(attachments.size());
+      framebufferInfo.pAttachments = attachments.data();
+      framebufferInfo.width = swapChainExtent.width;
+      framebufferInfo.height = swapChainExtent.height;
+      framebufferInfo.layers = 1;
 
-    VkFramebufferCreateInfo framebufferInfo{};
-    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.renderPass = renderPass;
-    framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-    framebufferInfo.pAttachments = attachments.data();
-    framebufferInfo.width = swapChainExtent.width;
-    framebufferInfo.height = swapChainExtent.height;
-    framebufferInfo.layers = 1;
-
-    if (vkCreateFramebuffer(*device, &framebufferInfo, nullptr,
-                            &swapChainFramebuffers[i]) != VK_SUCCESS) {
-      throw std::runtime_error("failed to create framebuffer!");
+      if (vkCreateFramebuffer(*device, &framebufferInfo, nullptr,
+                              &swapChainFramebuffers[i]) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create framebuffer!");
+      }
     }
   }
+  // Quad framebuffer
+  {
+    quadSwapChainFramebuffers.resize(swapChainImageViews.size());
+    for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+      std::array<VkImageView, 1> attachments = {swapChainImageViews[i]};
 
-  quadSwapChainFramebuffers.resize(swapChainImageViews.size());
+      VkFramebufferCreateInfo framebufferInfo{};
+      framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+      framebufferInfo.renderPass = vulkanObject.getQuadRenderPass();
+      framebufferInfo.attachmentCount =
+          static_cast<uint32_t>(attachments.size());
+      framebufferInfo.pAttachments = attachments.data();
+      framebufferInfo.width = swapChainExtent.width;
+      framebufferInfo.height = swapChainExtent.height;
+      framebufferInfo.layers = 1;
 
-  for (size_t i = 0; i < swapChainImageViews.size(); i++) {
-    std::array<VkImageView, 2> attachments = {swapChainImageViews[i],
-                                              depthImageView};
-
-    VkFramebufferCreateInfo framebufferInfo{};
-    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.renderPass = renderPass;
-    framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-    framebufferInfo.pAttachments = attachments.data();
-    framebufferInfo.width = swapChainExtent.width;
-    framebufferInfo.height = swapChainExtent.height;
-    framebufferInfo.layers = 1;
-
-    if (vkCreateFramebuffer(*device, &framebufferInfo, nullptr,
-                            &quadSwapChainFramebuffers[i]) != VK_SUCCESS) {
-      throw std::runtime_error("failed to create framebuffer!");
+      if (vkCreateFramebuffer(*device, &framebufferInfo, nullptr,
+                              &quadSwapChainFramebuffers[i]) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create quad framebuffer!");
+      }
     }
   }
   logger.LogInfo("Framebuffers created");
 }
 
 void SwapchainManager::createFramebuffers() {
-  swapChainFramebuffers.resize(swapChainImageViews.size());
+  // Simulation framebuffer
+  {
+    swapChainFramebuffers.resize(swapChainImageViews.size());
+    for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+      std::array<VkImageView, 2> attachments = {swapChainImageViews[i],
+                                                depthImageView};
 
-  for (size_t i = 0; i < swapChainImageViews.size(); i++) {
-    std::array<VkImageView, 2> attachments = {swapChainImageViews[i],
-                                              depthImageView};
+      VkFramebufferCreateInfo framebufferInfo{};
+      framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+      framebufferInfo.renderPass = vulkanObject->getSimulationRenderPass();
+      framebufferInfo.attachmentCount =
+          static_cast<uint32_t>(attachments.size());
+      framebufferInfo.pAttachments = attachments.data();
+      framebufferInfo.width = swapChainExtent.width;
+      framebufferInfo.height = swapChainExtent.height;
+      framebufferInfo.layers = 1;
 
-    VkFramebufferCreateInfo framebufferInfo{};
-    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.renderPass = *renderPass;
-    framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-    framebufferInfo.pAttachments = attachments.data();
-    framebufferInfo.width = swapChainExtent.width;
-    framebufferInfo.height = swapChainExtent.height;
-    framebufferInfo.layers = 1;
-
-    if (vkCreateFramebuffer(*device, &framebufferInfo, nullptr,
-                            &swapChainFramebuffers[i]) != VK_SUCCESS) {
-      throw std::runtime_error("failed to create framebuffer!");
+      if (vkCreateFramebuffer(*device, &framebufferInfo, nullptr,
+                              &swapChainFramebuffers[i]) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create framebuffer!");
+      }
     }
   }
+  // Quad framebuffer
+  {
+    quadSwapChainFramebuffers.resize(swapChainImageViews.size());
+    for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+      std::array<VkImageView, 1> attachments = {swapChainImageViews[i]};
 
-  quadSwapChainFramebuffers.resize(swapChainImageViews.size());
+      VkFramebufferCreateInfo framebufferInfo{};
+      framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+      framebufferInfo.renderPass = vulkanObject->getQuadRenderPass();
+      framebufferInfo.attachmentCount =
+          static_cast<uint32_t>(attachments.size());
+      framebufferInfo.pAttachments = attachments.data();
+      framebufferInfo.width = swapChainExtent.width;
+      framebufferInfo.height = swapChainExtent.height;
+      framebufferInfo.layers = 1;
 
-  for (size_t i = 0; i < swapChainImageViews.size(); i++) {
-    std::array<VkImageView, 2> attachments = {swapChainImageViews[i],
-                                              depthImageView};
-
-    VkFramebufferCreateInfo framebufferInfo{};
-    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.renderPass = *renderPass;
-    framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-    framebufferInfo.pAttachments = attachments.data();
-    framebufferInfo.width = swapChainExtent.width;
-    framebufferInfo.height = swapChainExtent.height;
-    framebufferInfo.layers = 1;
-
-    if (vkCreateFramebuffer(*device, &framebufferInfo, nullptr,
-                            &quadSwapChainFramebuffers[i]) != VK_SUCCESS) {
-      throw std::runtime_error("failed to create framebuffer!");
+      if (vkCreateFramebuffer(*device, &framebufferInfo, nullptr,
+                              &quadSwapChainFramebuffers[i]) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create framebuffer!");
+      }
     }
   }
 }
