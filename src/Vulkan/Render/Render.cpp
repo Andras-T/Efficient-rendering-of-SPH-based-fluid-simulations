@@ -327,12 +327,15 @@ void Render::recordQuad(VkCommandBuffer &commandBuffer, uint32_t imageIndex) {
   renderPassInfo.renderArea.offset = {0, 0};
   renderPassInfo.renderArea.extent = swapChainManager->getSwapChainExtent();
 
-  std::array<VkClearValue, 2> clearValues{};
+  std::array<VkClearValue, 1> clearValues{};
   clearValues[0].color = imGuiRender.backgroundColor;
   ;
-  clearValues[1].depthStencil = {1.0f, 0};
+  // clearValues[1].depthStencil = {1.0f, 0};
   renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
   renderPassInfo.pClearValues = clearValues.data();
+
+  // swapChainManager->transitionImageLayout(swapChainManager->getDepthImage(),
+  // VK_IMAGE_LAYOUT_GENERAL, )
 
   vkCmdBeginRenderPass(commandBuffer, &renderPassInfo,
                        VK_SUBPASS_CONTENTS_INLINE);
@@ -368,6 +371,11 @@ void Render::recordQuad(VkCommandBuffer &commandBuffer, uint32_t imageIndex) {
   imGuiRender.draw(commandBuffer);
 
   vkCmdEndRenderPass(commandBuffer);
+
+  /*VkClearDepthStencilValue clearValue = { 1.0f, 0 };
+  VkImageSubresourceRange range = { VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 };
+  vkCmdClearDepthStencilImage(commandBuffer, swapChainManager->getDepthImage(),
+  VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &range);*/
 
   if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
     throw std::runtime_error("failed to record command buffer!");

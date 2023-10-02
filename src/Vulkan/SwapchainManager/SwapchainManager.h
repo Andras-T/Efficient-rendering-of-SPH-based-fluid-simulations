@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../Logger.h"
+#include "../CommandPool/CommandPoolManager.h"
 #include "../Utils/Structs/QueueFamilyIndices.h"
 #include "../Utils/Structs/SwapChainSupportDetails.h"
 #include "../VulkanObject/VulkanObject.h"
@@ -70,6 +71,11 @@ public:
   void createDepthResources();
 
   void createFramebuffers(VulkanObject &vulkanObject);
+
+  void transitionImageLayout(VkImage image, VkFormat format,
+                             VkImageLayout oldLayout, VkImageLayout newLayout,
+                             CommandPoolManager &commandPoolManager,
+                             VkDevice &device, VkQueue &graphicsQueue);
 
   void createFramebuffers();
 

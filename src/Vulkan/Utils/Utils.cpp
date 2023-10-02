@@ -28,7 +28,7 @@ uint32_t Utils::findMemoryType(uint32_t typeFilter,
 
 void Utils::initializeParticles(std::vector<Particle> &particles,
                                 glm::vec3 center) {
-  const double side = 1.35;
+  const double side = 1.75;
   const double Volume = side * side * side;
   const double particleVolume = Volume / MOVABLE_PARTICLE_COUNT;
   const double particleLength = pow(particleVolume, 1.0 / 3.0);
@@ -60,20 +60,13 @@ void Utils::initializeParticles(std::vector<Particle> &particles,
               << MOVABLE_PARTICLE_COUNT - counter << " counter: " << counter
               << "\x1b[0m";
 
-  const float dist_from_each = 0.075f;
+  const float dist_from_each = 0.105f;
   glm::vec4 insideWallColor = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
   glm::vec4 outsideWallColor = insideWallColor;
   glm::vec4 testColor(1, 0, 0, 0.02);
 
-  float lowest = -0.75;
-  float highest = 0.75;
-
-  // int c = 0;
-  // for (float y = lowest; y <= highest + 0.001f; y += 0.075f) {
-  //  for (float z = lowest; z <= highest + 0.001f; z += 0.075f) {
-  //    ++c;
-  //  }
-  //}
+  float lowest = -1.5;
+  float highest = 1.5;
 
   for (float y = lowest; y <= highest + 0.001f; y += dist_from_each) {
     for (float z = lowest; z <= highest + 0.001f; z += dist_from_each) {
@@ -116,37 +109,55 @@ void Utils::initializeParticles(std::vector<Particle> &particles,
   }
 
   // additional particles in the corner of the cube so the fluid won't get stuck
-  float corner = 0.7f;
-  createWallParticle(particles[counter++],
-                     glm::vec4(corner, corner, corner, 1.0f), insideWallColor,
-                     center);
-  createWallParticle(particles[counter++],
-                     glm::vec4(corner, corner, -corner, 1.0f), insideWallColor,
-                     center);
-  createWallParticle(particles[counter++],
-                     glm::vec4(corner, -corner, corner, 1.0f), insideWallColor,
-                     center);
-  createWallParticle(particles[counter++],
-                     glm::vec4(corner, -corner, -corner, 1.0f), insideWallColor,
-                     center);
+  float dLow = lowest + 0.5f * dist_from_each;
+  float dHigh = highest - 0.5f * dist_from_each;
+  for (float y = lowest + 0.0015f; y <= highest - 0.0015f; y += 0.105f) {
+      createWallParticle(particles[counter++],
+          glm::vec4(dLow, y, dLow, 1.0f),
+          insideWallColor, center);
+      createWallParticle(particles[counter++],
+          glm::vec4(dLow, y, dHigh, 1.0f),
+          insideWallColor, center);
+      createWallParticle(particles[counter++],
+          glm::vec4(dHigh, y, dLow, 1.0f),
+          insideWallColor, center);
+      createWallParticle(particles[counter++],
+          glm::vec4(dHigh, y, dHigh, 1.0f),
+          insideWallColor, center);
 
-  createWallParticle(particles[counter++],
-                     glm::vec4(-corner, corner, corner, 1.0f), insideWallColor,
-                     center);
-  createWallParticle(particles[counter++],
-                     glm::vec4(-corner, corner, -corner, 1.0f), insideWallColor,
-                     center);
-  createWallParticle(particles[counter++],
-                     glm::vec4(-corner, -corner, corner, 1.0f), insideWallColor,
-                     center);
-  createWallParticle(particles[counter++],
-                     glm::vec4(-corner, -corner, -corner, 1.0f),
-                     insideWallColor, center);
+      createWallParticle(particles[counter++],
+          glm::vec4(y, dLow, dLow, 1.0f),
+          insideWallColor, center);
+      createWallParticle(particles[counter++],
+          glm::vec4(y, dLow, dHigh, 1.0f),
+          insideWallColor, center);
+      createWallParticle(particles[counter++],
+          glm::vec4(y, dHigh, dLow, 1.0f),
+          insideWallColor, center);
+      createWallParticle(particles[counter++],
+          glm::vec4(y, dHigh, dHigh, 1.0f),
+          insideWallColor, center);
+
+      createWallParticle(particles[counter++],
+          glm::vec4(dLow, dLow, y, 1.0f),
+          insideWallColor, center);
+      createWallParticle(particles[counter++],
+          glm::vec4(dLow, dHigh, y, 1.0f),
+          insideWallColor, center);
+      createWallParticle(particles[counter++],
+          glm::vec4(dHigh, dLow, y, 1.0f),
+          insideWallColor, center);
+      createWallParticle(particles[counter++],
+          glm::vec4(dHigh, dHigh, y, 1.0f),
+          insideWallColor, center);
+  }
 
   Logger::getInstance().LogInfo("Number particles: " +
                                 std::to_string(MOVABLE_PARTICLE_COUNT));
   Logger::getInstance().LogInfo("Number of wall particles: " +
                                 std::to_string(UNMOVABLE_PARTICLE_COUNT));
+  Logger::getInstance().LogInfo("Number of particles: " +
+      std::to_string(PARTICLE_COUNT));
 }
 
 void Utils::createWallParticle(Particle &particle, glm::vec4 position,

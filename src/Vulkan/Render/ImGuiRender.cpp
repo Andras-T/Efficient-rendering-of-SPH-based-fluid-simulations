@@ -41,22 +41,15 @@ void ImGuiRender::createAppearanceMenu(int width, int height) {
 
   ImGui::SliderFloat("Font size", &ImGui::GetIO().FontGlobalScale, 0.5f, 2.0f);
 
-  ImGui::SliderFloat3("Background Color", (float *)backgroundColor.float32,
-                      0.0f, 1.0f);
-
   ImGui::Checkbox("Wall", &uniformData.wall);
   uniformData.model.wall = uniformData.wall ? 1 : 0;
 
   ImGui::Spacing();
 
   ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-  if (ImGui::CollapsingHeader("Color Picker")) {
-    ImGui::ColorPicker3("Particle color", (float *)&uniformData.model.color);
+  if (ImGui::CollapsingHeader("Color Picker"))
+    ImGui::ColorPicker3("Background Color", (float *)backgroundColor.float32);
 
-    ImGui::Spacing();
-
-    ImGui::ColorPicker3("Wall color", (float *)&uniformData.model.wallColor);
-  }
   ImGui::End();
 }
 
@@ -141,13 +134,13 @@ void ImGuiRender::createTransformationsMenu(int width, int height) {
   ImGui::Checkbox("Free camera", &inputState.freeCam);
   ImGui::SliderFloat("Speed", &inputState.cameraSpeed, 0.01f, 10.0f);
   {
-    ImGui::SliderFloat("Scale", &uniformData.transformations.s, 0.001f, 5.0f);
+    ImGui::SliderFloat("Scale", &uniformData.transformations.s, 0.001f, 10.0f);
     ImGui::SliderFloat("Scale X", &uniformData.transformations.scale.x, 0.001f,
-                       5.0f);
+                       10.0f);
     ImGui::SliderFloat("Scale Y", &uniformData.transformations.scale.y, 0.001f,
-                       5.0f);
+                       10.0f);
     ImGui::SliderFloat("Scale Z", &uniformData.transformations.scale.z, 0.001f,
-                       5.0f);
+                       10.0f);
     ImGui::SliderFloat("Rotate", &uniformData.transformations.rotations.z, 0.0f,
                        720.0f);
     ImGui::SliderFloat3("Translate",

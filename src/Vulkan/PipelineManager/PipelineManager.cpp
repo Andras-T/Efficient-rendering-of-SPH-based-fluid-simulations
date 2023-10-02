@@ -51,10 +51,27 @@ void PipelineManager::createSimulationPipeline(
       getPipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT,
                                        fragShaderModule, "main")};
 
-  auto bindingDescription = Particle::getBindingDescription();
-  auto attributeDescriptions = Particle::getAttributeDescriptions();
-  VkPipelineVertexInputStateCreateInfo vertexInputInfo =
-      getVertexInputStateCreateInfo(bindingDescription, attributeDescriptions);
+  VkVertexInputBindingDescription bindingDescription{};
+  bindingDescription.binding = 0;
+  bindingDescription.stride = sizeof(glm::vec4);
+  bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+  std::array<VkVertexInputAttributeDescription, 1> attributeDescriptions{};
+
+  attributeDescriptions[0].binding = 0;
+  attributeDescriptions[0].location = 0;
+  attributeDescriptions[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+  attributeDescriptions[0].offset = 0;
+
+  VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+  vertexInputInfo.sType =
+      VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+  vertexInputInfo.vertexBindingDescriptionCount = 1;
+  vertexInputInfo.vertexAttributeDescriptionCount =
+      static_cast<uint32_t>(attributeDescriptions.size());
+  vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+  vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+
   VkPipelineInputAssemblyStateCreateInfo inputAssembly =
       getInputAssemblyCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
   VkPipelineViewportStateCreateInfo viewportState =
@@ -349,7 +366,7 @@ PipelineManager::getDepthStencilStateCreateInfo(uint32_t enabledepthTest,
   depthStencil.depthBoundsTestEnable = VK_FALSE;
   depthStencil.stencilTestEnable = VK_TRUE;
   depthStencil.minDepthBounds = 0.0f;  // Optional
-  depthStencil.maxDepthBounds = 10.0f; // Optional
+  depthStencil.maxDepthBounds = 1.0f; // Optional
   return depthStencil;
 }
 

@@ -11,6 +11,13 @@ struct Particle {
     float density;
 };
 
+layout(binding = 0) uniform UniformBufferObject {
+    mat4 model;
+    mat4 view;
+    mat4 proj;
+    float deltaTime;
+} ubo;
+
 layout(std140, binding = 1) readonly buffer ParticleSSBOIn {
     Particle particlesIn[];
 };
@@ -31,20 +38,13 @@ layout(binding = 3) uniform Attributes {
     float pad;  // just padding
 } attributes;
 
-layout(binding = 5) uniform UniformBufferObject {
-    mat4 model;
-    mat4 view;
-    mat4 proj;
-    float deltaTime;
-} ubo;
-
 layout(push_constant) uniform Constants {
     int stageIndex;
 } constants;
 
 layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 
-const uint NUMBER_OF_PARTICLES = 6300;
+const uint NUMBER_OF_PARTICLES = 14536;
 
 // Smoothing length
 float h;
@@ -96,29 +96,30 @@ vec3 getAcc(vec3 position, float rho, uint index, vec3 vel) {
 vec3 vel;
 vec4 pos;
 
-void checkBoundaryBox() {
-    if (pos.z < attributes.center.z - 0.701f) {
-        vel.z = -0.05 * vel.z;
-        pos.z = attributes.center.z - 0.701f;
-    } else if (pos.z > attributes.center.z + 0.701f) {
-        vel.z = -0.05 * vel.z;
-        pos.z = attributes.center.z + 0.701f;
+void checkBoundaryBox(float dist) {
+    float slowingFactor = -0.025;
+    if (pos.z < attributes.center.z - dist) {
+        vel.z = slowingFactor * vel.z;
+        pos.z = attributes.center.z - dist;
+    } else if (pos.z > attributes.center.z + dist) {
+        vel.z = slowingFactor * vel.z;
+        pos.z = attributes.center.z + dist;
     }
 
-    if (pos.y < attributes.center.y - 0.701f) {
-        vel.y = -0.05 * vel.y;
-        pos.y = attributes.center.y - 0.701f;
-    } else if (pos.y > attributes.center.y + 0.701f) {
-        vel.y = -0.05 * vel.y;
-        pos.y = attributes.center.y + 0.701f;
+    if (pos.y < attributes.center.y - dist) {
+        vel.y = slowingFactor * vel.y;
+        pos.y = attributes.center.y - dist;
+    } else if (pos.y > attributes.center.y + dist) {
+        vel.y = slowingFactor * vel.y;
+        pos.y = attributes.center.y + dist;
     }
 
-    if (pos.x < attributes.center.x - 0.701f) {
-        vel.x = -0.05 * vel.x;
-        pos.x = attributes.center.x - 0.701f;
-    } else if (pos.x > attributes.center.x + 0.701f) {
-        vel.x = -0.05 * vel.x;
-        pos.x = attributes.center.x + 0.701f;
+    if (pos.x < attributes.center.x - dist) {
+        vel.x = slowingFactor * vel.x;
+        pos.x = attributes.center.x - dist;
+    } else if (pos.x > attributes.center.x + dist) {
+        vel.x = slowingFactor * vel.x;
+        pos.x = attributes.center.x + dist;
     }
 }
 
@@ -148,9 +149,18 @@ void main() {
                 if (length(vel) > 0.005f)
                     vel = 0.0 * vel;
                 pos = particleIn.position + vec4(particleIn.velocity, 0.0) * (ubo.deltaTime);
-                checkBoundaryBox();
-                particlesOut[index].velocity = vel;
-                particlesOut[index].position = pos;
+
+                float dist = 1.451f;
+                checkBoundaryBox(dist);
+
+                if (isnan(pos.x) || isnan(pos.y) || isnan(pos.z) || isnan(pos.w) ||
+                isnan(vel.x) || isnan(vel.y) || isnan(vel.z)) {
+                    particlesOut[index].velocity = particlesIn[index].velocity * 0.025f;
+                    particlesOut[index].position = vec4(normalize(attributes.center.xyz - particlesIn[index].position.xyz) * (dist * 0.0025) + particlesIn[index].position.xyz, 1);
+                } else {
+                    particlesOut[index].velocity = vel;
+                    particlesOut[index].position = pos;
+                }
             }
         }
     }

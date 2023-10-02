@@ -7,13 +7,13 @@
 void DescriptorManager::createDescriptorSetLayout(VkDevice &device) {
   // Simulation layout bindings
   {
-    std::array<VkDescriptorSetLayoutBinding, 6> layoutBindings{};
+    std::array<VkDescriptorSetLayoutBinding, 5> layoutBindings{};
     layoutBindings[0].binding = 0;
     layoutBindings[0].descriptorCount = 1;
-    layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     layoutBindings[0].pImmutableSamplers = nullptr;
     layoutBindings[0].stageFlags =
-        VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
+        VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_VERTEX_BIT;
 
     layoutBindings[1].binding = 1;
     layoutBindings[1].descriptorCount = 1;
@@ -40,13 +40,6 @@ void DescriptorManager::createDescriptorSetLayout(VkDevice &device) {
     layoutBindings[4].pImmutableSamplers = nullptr;
     layoutBindings[4].stageFlags =
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
-
-    layoutBindings[5].binding = 5;
-    layoutBindings[5].descriptorCount = 1;
-    layoutBindings[5].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    layoutBindings[5].pImmutableSamplers = nullptr;
-    layoutBindings[5].stageFlags =
-        VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_VERTEX_BIT;
 
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -85,10 +78,10 @@ void DescriptorManager::createDescriptorSetLayout(VkDevice &device) {
 void DescriptorManager::createDescriptorPool(VkDevice &device) {
   // Simulation descriptor pool
   {
-    std::array<VkDescriptorPoolSize, 6> poolSizes{};
-
-    poolSizes[0].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    poolSizes[0].descriptorCount = static_cast<uint32_t>(1);
+    std::array<VkDescriptorPoolSize, 5> poolSizes{};
+    poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSizes[0].descriptorCount =
+        static_cast<uint32_t>(Utils::MAX_FRAMES_IN_FLIGHT);
 
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     poolSizes[1].descriptorCount =
@@ -104,10 +97,6 @@ void DescriptorManager::createDescriptorPool(VkDevice &device) {
 
     poolSizes[4].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSizes[4].descriptorCount =
-        static_cast<uint32_t>(Utils::MAX_FRAMES_IN_FLIGHT);
-
-    poolSizes[5].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSizes[5].descriptorCount =
         static_cast<uint32_t>(Utils::MAX_FRAMES_IN_FLIGHT);
 
     VkDescriptorPoolCreateInfo poolInfo{};
@@ -168,20 +157,20 @@ void DescriptorManager::createDescriptorSets(
     }
 
     for (size_t i = 0; i < Utils::MAX_FRAMES_IN_FLIGHT; i++) {
-      std::array<VkWriteDescriptorSet, 6> descriptorWrites{};
+      std::array<VkWriteDescriptorSet, 5> descriptorWrites{};
 
-      VkDescriptorBufferInfo sphereBufferInfo{};
-      sphereBufferInfo.buffer = sphereBuffers;
-      sphereBufferInfo.offset = 0;
-      sphereBufferInfo.range = VK_WHOLE_SIZE;
+      VkDescriptorBufferInfo uniformBufferInfo{};
+      uniformBufferInfo.buffer = uniformBuffers[i];
+      uniformBufferInfo.offset = 0;
+      uniformBufferInfo.range = VK_WHOLE_SIZE;
 
       descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
       descriptorWrites[0].dstSet = descriptorSets[i];
       descriptorWrites[0].dstBinding = 0;
       descriptorWrites[0].dstArrayElement = 0;
-      descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+      descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
       descriptorWrites[0].descriptorCount = 1;
-      descriptorWrites[0].pBufferInfo = &sphereBufferInfo;
+      descriptorWrites[0].pBufferInfo = &uniformBufferInfo;
 
       VkDescriptorBufferInfo storageBufferInfoLastFrame{};
       storageBufferInfoLastFrame.buffer =
@@ -236,20 +225,7 @@ void DescriptorManager::createDescriptorSets(
       descriptorWrites[4].descriptorCount = 1;
       descriptorWrites[4].pBufferInfo = &modelUniformBufferInfo;
 
-      VkDescriptorBufferInfo uniformBufferInfo{};
-      uniformBufferInfo.buffer = uniformBuffers[i];
-      uniformBufferInfo.offset = 0;
-      uniformBufferInfo.range = VK_WHOLE_SIZE;
-
-      descriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-      descriptorWrites[5].dstSet = descriptorSets[i];
-      descriptorWrites[5].dstBinding = 5;
-      descriptorWrites[5].dstArrayElement = 0;
-      descriptorWrites[5].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-      descriptorWrites[5].descriptorCount = 1;
-      descriptorWrites[5].pBufferInfo = &uniformBufferInfo;
-
-      vkUpdateDescriptorSets(device, 6, descriptorWrites.data(), 0, nullptr);
+      vkUpdateDescriptorSets(device, 5, descriptorWrites.data(), 0, nullptr);
     }
   }
   // Quad Descriptor sets

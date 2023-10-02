@@ -39,15 +39,15 @@ void FluidInstance::InitDescriptorSets(DescriptorManager &descriptorManager,
       device, descriptorSets, quadDescriptorSets, shaderStorageBuffers,
       bufferManager.getSphereBuffer(), bufferManager.getQuadBuffer(),
       uniformBuffers, attributesUniformBuffers, modelUniformBuffers);
-
+  this->bufferManager = &bufferManager;
   logger.LogInfo("Descriptor sets created");
 }
 
 void FluidInstance::Render(const VkCommandBuffer &commandBuffer,
                            VkPipelineLayout &layout, uint32_t currentFrame) {
   VkDeviceSize offsets[] = {0};
-  vkCmdBindVertexBuffers(commandBuffer, 0, 1,
-                         &shaderStorageBuffers[currentFrame], offsets);
+  vkCmdBindVertexBuffers(commandBuffer, 0, 1, &bufferManager->getSphereBuffer(),
+                         offsets);
   vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           layout, 0, 1, &descriptorSets[currentFrame], 0,
                           nullptr);
