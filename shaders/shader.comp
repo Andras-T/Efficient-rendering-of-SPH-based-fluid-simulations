@@ -11,12 +11,12 @@ struct Particle {
     float density;
 };
 
-layout(binding = 0) uniform UniformBufferObject {
+layout(binding = 0) uniform MVP {
     mat4 model;
     mat4 view;
     mat4 proj;
     float deltaTime;
-} ubo;
+} mvp;
 
 layout(std140, binding = 1) readonly buffer ParticleSSBOIn {
     Particle particlesIn[];
@@ -130,9 +130,9 @@ void main() {
     h = clamp(attributes.smootingLength, 0.001f, 0.20f);
     m = attributes.mass * 0.00000000000001;
 
-    vec4 gravityObject = transpose(inverse(ubo.model)) * vec4(gravity, 0.0);
+    vec4 gravityObject = transpose(inverse(mvp.model)) * vec4(gravity, 0.0);
     float g = attributes.gravity * 0.0000000007;
-    vec4 transformedGravity = (inverse(ubo.model)) * vec4(vec3(0.0, 0.0, -g), 0.0);
+    vec4 transformedGravity = (inverse(mvp.model)) * vec4(vec3(0.0, 0.0, -g), 0.0);
     gravity = normalize(transformedGravity.xyz) * length(vec3(0.0, 0.0, -g));
    
     if (attributes.stop == 0) {
@@ -142,13 +142,13 @@ void main() {
             particlesOut[index].acc = getAcc(particleIn.position.xyz, particleIn.density, index, particleIn.velocity);
         } else if (constants.stageIndex == 3) {
             if (particleIn.movable > 0.5) {
-                vel = particleIn.velocity + particleIn.acc * ubo.deltaTime;
+                vel = particleIn.velocity + particleIn.acc * mvp.deltaTime;
                 
                 if (length(vel) > 0.0035f)
                     vel = 0.1 * vel;
                 if (length(vel) > 0.005f)
                     vel = 0.0 * vel;
-                pos = particleIn.position + vec4(particleIn.velocity, 0.0) * (ubo.deltaTime);
+                pos = particleIn.position + vec4(particleIn.velocity, 0.0) * (mvp.deltaTime);
 
                 float dist = 1.451f;
                 checkBoundaryBox(dist);

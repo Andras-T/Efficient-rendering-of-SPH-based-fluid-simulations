@@ -112,44 +112,32 @@ void Utils::initializeParticles(std::vector<Particle> &particles,
   float dLow = lowest + 0.5f * dist_from_each;
   float dHigh = highest - 0.5f * dist_from_each;
   for (float y = lowest + 0.0015f; y <= highest - 0.0015f; y += 0.105f) {
-      createWallParticle(particles[counter++],
-          glm::vec4(dLow, y, dLow, 1.0f),
-          insideWallColor, center);
-      createWallParticle(particles[counter++],
-          glm::vec4(dLow, y, dHigh, 1.0f),
-          insideWallColor, center);
-      createWallParticle(particles[counter++],
-          glm::vec4(dHigh, y, dLow, 1.0f),
-          insideWallColor, center);
-      createWallParticle(particles[counter++],
-          glm::vec4(dHigh, y, dHigh, 1.0f),
-          insideWallColor, center);
+    createWallParticle(particles[counter++], glm::vec4(dLow, y, dLow, 1.0f),
+                       insideWallColor, center);
+    createWallParticle(particles[counter++], glm::vec4(dLow, y, dHigh, 1.0f),
+                       insideWallColor, center);
+    createWallParticle(particles[counter++], glm::vec4(dHigh, y, dLow, 1.0f),
+                       insideWallColor, center);
+    createWallParticle(particles[counter++], glm::vec4(dHigh, y, dHigh, 1.0f),
+                       insideWallColor, center);
 
-      createWallParticle(particles[counter++],
-          glm::vec4(y, dLow, dLow, 1.0f),
-          insideWallColor, center);
-      createWallParticle(particles[counter++],
-          glm::vec4(y, dLow, dHigh, 1.0f),
-          insideWallColor, center);
-      createWallParticle(particles[counter++],
-          glm::vec4(y, dHigh, dLow, 1.0f),
-          insideWallColor, center);
-      createWallParticle(particles[counter++],
-          glm::vec4(y, dHigh, dHigh, 1.0f),
-          insideWallColor, center);
+    createWallParticle(particles[counter++], glm::vec4(y, dLow, dLow, 1.0f),
+                       insideWallColor, center);
+    createWallParticle(particles[counter++], glm::vec4(y, dLow, dHigh, 1.0f),
+                       insideWallColor, center);
+    createWallParticle(particles[counter++], glm::vec4(y, dHigh, dLow, 1.0f),
+                       insideWallColor, center);
+    createWallParticle(particles[counter++], glm::vec4(y, dHigh, dHigh, 1.0f),
+                       insideWallColor, center);
 
-      createWallParticle(particles[counter++],
-          glm::vec4(dLow, dLow, y, 1.0f),
-          insideWallColor, center);
-      createWallParticle(particles[counter++],
-          glm::vec4(dLow, dHigh, y, 1.0f),
-          insideWallColor, center);
-      createWallParticle(particles[counter++],
-          glm::vec4(dHigh, dLow, y, 1.0f),
-          insideWallColor, center);
-      createWallParticle(particles[counter++],
-          glm::vec4(dHigh, dHigh, y, 1.0f),
-          insideWallColor, center);
+    createWallParticle(particles[counter++], glm::vec4(dLow, dLow, y, 1.0f),
+                       insideWallColor, center);
+    createWallParticle(particles[counter++], glm::vec4(dLow, dHigh, y, 1.0f),
+                       insideWallColor, center);
+    createWallParticle(particles[counter++], glm::vec4(dHigh, dLow, y, 1.0f),
+                       insideWallColor, center);
+    createWallParticle(particles[counter++], glm::vec4(dHigh, dHigh, y, 1.0f),
+                       insideWallColor, center);
   }
 
   Logger::getInstance().LogInfo("Number particles: " +
@@ -157,7 +145,7 @@ void Utils::initializeParticles(std::vector<Particle> &particles,
   Logger::getInstance().LogInfo("Number of wall particles: " +
                                 std::to_string(UNMOVABLE_PARTICLE_COUNT));
   Logger::getInstance().LogInfo("Number of particles: " +
-      std::to_string(PARTICLE_COUNT));
+                                std::to_string(PARTICLE_COUNT));
 }
 
 void Utils::createWallParticle(Particle &particle, glm::vec4 position,
@@ -286,7 +274,6 @@ const std::ostringstream Utils::time() {
   int minute = tm.tm_min;
   int second = tm.tm_sec;
 
-  // Get milliseconds
   auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
                           currentTime.time_since_epoch())
                           .count() %

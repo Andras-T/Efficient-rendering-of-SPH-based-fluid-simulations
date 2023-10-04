@@ -1,3 +1,4 @@
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "ImGuiRender.h"
 #include "../Utils/Structs/ImVecUtils.h"
 #include "imgui_internal.h"

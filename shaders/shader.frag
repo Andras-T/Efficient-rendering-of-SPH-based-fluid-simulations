@@ -24,5 +24,6 @@ void main() {
         } 
     } else {
         outColor = model.color;
+        //gl_FragDepth = 0.8f;
     }
 }

@@ -76,8 +76,7 @@ void SwapchainManager::createSwapChain() {
   createInfo.imageColorSpace = surfaceFormat.colorSpace;
   createInfo.imageExtent = extent;
   createInfo.imageArrayLayers = 1;
-  createInfo.imageUsage =
-      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // VK_IMAGE_USAGE_TRANSFER_DST_BIT
+  createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
   uint32_t queueFamilyIndices[] = {indices->graphicsAndComputeFamily.value(),
                                    indices->presentFamily.value()};
@@ -111,12 +110,11 @@ void SwapchainManager::createSwapChain() {
 
 void SwapchainManager::createDepthResources() {
   VkFormat depthFormat = findDepthFormat();
-  createImage(swapChainExtent.width, swapChainExtent.height, depthFormat,
-              VK_IMAGE_TILING_OPTIMAL,
-              VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
-                  VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage,
-              depthImageMemory);
+  createImage(
+      swapChainExtent.width, swapChainExtent.height, depthFormat,
+      VK_IMAGE_TILING_OPTIMAL,
+      VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);
   depthImageView =
       createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
   logger.LogInfo("Depth Resources created");
@@ -186,53 +184,6 @@ VkImageView SwapchainManager::createImageView(VkImage image, VkFormat format,
   return imageView;
 }
 
-void SwapchainManager::transitionImageLayout(
-    VkImage image, VkFormat format, VkImageLayout oldLayout,
-    VkImageLayout newLayout, CommandPoolManager &commandPoolManager,
-    VkDevice &device, VkQueue &graphicsQueue) {
-  VkCommandBuffer commandBuffer =
-      commandPoolManager.beginSingleTimeCommands(device);
-
-  VkImageMemoryBarrier barrier{};
-  barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-  barrier.oldLayout = oldLayout;
-  barrier.newLayout = newLayout;
-  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.image = image;
-  barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-  barrier.subresourceRange.baseMipLevel = 0;
-  barrier.subresourceRange.levelCount = 1;
-  barrier.subresourceRange.baseArrayLayer = 0;
-  barrier.subresourceRange.layerCount = 1;
-
-  VkPipelineStageFlags sourceStage;
-  VkPipelineStageFlags destinationStage;
-
-  if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
-      newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-    barrier.srcAccessMask = 0;
-    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-  } else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
-             newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-    sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-  } else {
-    throw std::invalid_argument("unsupported layout transition!");
-  }
-
-  vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0,
-                       nullptr, 0, nullptr, 1, &barrier);
-  commandPoolManager.endSingleTimeCommands(commandBuffer, graphicsQueue,
-                                           device);
-}
-
 void SwapchainManager::createFramebuffers(VulkanObject &vulkanObject) {
   this->vulkanObject = &vulkanObject;
   // Simulation framebuffer
@@ -283,54 +234,6 @@ void SwapchainManager::createFramebuffers(VulkanObject &vulkanObject) {
   logger.LogInfo("Framebuffers created");
 }
 
-void SwapchainManager::createFramebuffers() {
-  // Simulation framebuffer
-  {
-    swapChainFramebuffers.resize(swapChainImageViews.size());
-    for (size_t i = 0; i < swapChainImageViews.size(); i++) {
-      std::array<VkImageView, 2> attachments = {swapChainImageViews[i],
-                                                depthImageView};
-
-      VkFramebufferCreateInfo framebufferInfo{};
-      framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-      framebufferInfo.renderPass = vulkanObject->getSimulationRenderPass();
-      framebufferInfo.attachmentCount =
-          static_cast<uint32_t>(attachments.size());
-      framebufferInfo.pAttachments = attachments.data();
-      framebufferInfo.width = swapChainExtent.width;
-      framebufferInfo.height = swapChainExtent.height;
-      framebufferInfo.layers = 1;
-
-      if (vkCreateFramebuffer(*device, &framebufferInfo, nullptr,
-                              &swapChainFramebuffers[i]) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create framebuffer!");
-      }
-    }
-  }
-  // Quad framebuffer
-  {
-    quadSwapChainFramebuffers.resize(swapChainImageViews.size());
-    for (size_t i = 0; i < swapChainImageViews.size(); i++) {
-      std::array<VkImageView, 1> attachments = {swapChainImageViews[i]};
-
-      VkFramebufferCreateInfo framebufferInfo{};
-      framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-      framebufferInfo.renderPass = vulkanObject->getQuadRenderPass();
-      framebufferInfo.attachmentCount =
-          static_cast<uint32_t>(attachments.size());
-      framebufferInfo.pAttachments = attachments.data();
-      framebufferInfo.width = swapChainExtent.width;
-      framebufferInfo.height = swapChainExtent.height;
-      framebufferInfo.layers = 1;
-
-      if (vkCreateFramebuffer(*device, &framebufferInfo, nullptr,
-                              &quadSwapChainFramebuffers[i]) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create framebuffer!");
-      }
-    }
-  }
-}
-
 void SwapchainManager::recreateSwapChain(GLFWwindow *window, VkDevice &device) {
   int width = 0, height = 0;
   glfwGetFramebufferSize(window, &width, &height);
@@ -346,7 +249,7 @@ void SwapchainManager::recreateSwapChain(GLFWwindow *window, VkDevice &device) {
   createSwapChain();
   createImageViews();
   createDepthResources();
-  createFramebuffers();
+  createFramebuffers(*vulkanObject);
   logger.LogInfo("Swap chain recreated");
 }
 
@@ -370,8 +273,8 @@ void SwapchainManager::cleanupSwapChain() {
 
 VkFormat SwapchainManager::findDepthFormat() {
   return findSupportedFormat(
-      {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT/*,
-       VK_FORMAT_D24_UNORM_S8_UINT*/ },
+      {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
+       VK_FORMAT_D24_UNORM_S8_UINT},
       VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 

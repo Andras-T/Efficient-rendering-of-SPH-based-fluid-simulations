@@ -37,7 +37,7 @@ void main() {
     Particle p = particlesIn[instanceIndex];
     
     vec4 vertexPosition = inPosition + p.position;
-    gl_Position = ubo.proj * ubo.view * ubo.model * vertexPosition;
+    gl_Position = vertexPosition;
     
     fragColor = p.color;
 }

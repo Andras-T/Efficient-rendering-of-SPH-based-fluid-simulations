@@ -1,3 +1,4 @@
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "PipelineManager.h"
 #include "../Utils/Structs/Particle.h"
 #include "../Utils/Structs/Quad.h"
@@ -81,7 +82,7 @@ void PipelineManager::createSimulationPipeline(
   VkPipelineMultisampleStateCreateInfo multisampling =
       getMultisampleStateCreateInfo();
   VkPipelineDepthStencilStateCreateInfo depthStencil =
-      getDepthStencilStateCreateInfo(VK_TRUE, VK_TRUE, VK_TRUE, VK_TRUE);
+      getDepthStencilStateCreateInfo(VK_TRUE, VK_TRUE, VK_TRUE, VK_FALSE);
   VkPipelineColorBlendAttachmentState colorBlendAttachment =
       getColorBlendAttachmentState(VK_FALSE);
   VkPipelineColorBlendStateCreateInfo colorBlending =
@@ -215,7 +216,6 @@ void PipelineManager::createQuadGraphicsPipeline(
   pipelineInfo.pViewportState = &viewportState;
   pipelineInfo.pRasterizationState = &rasterizer;
   pipelineInfo.pMultisampleState = &multisampling;
-  // pipelineInfo.pDepthStencilState = &depthStencil;
   pipelineInfo.pColorBlendState = &colorBlending;
   pipelineInfo.pDynamicState = &dynamicState;
   pipelineInfo.layout = quadPipelineLayout;
@@ -363,10 +363,10 @@ PipelineManager::getDepthStencilStateCreateInfo(uint32_t enabledepthTest,
   depthStencil.depthTestEnable = enabledepthTest;
   depthStencil.depthWriteEnable = enabledepthWrite;
   depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
-  depthStencil.depthBoundsTestEnable = VK_FALSE;
-  depthStencil.stencilTestEnable = VK_TRUE;
-  depthStencil.minDepthBounds = 0.0f;  // Optional
-  depthStencil.maxDepthBounds = 1.0f; // Optional
+  depthStencil.depthBoundsTestEnable = enabledepthBoundsTest;
+  depthStencil.stencilTestEnable = enableStencilTest;
+  depthStencil.minDepthBounds = 0.0f;
+  depthStencil.maxDepthBounds = 1.0f;
   return depthStencil;
 }
 

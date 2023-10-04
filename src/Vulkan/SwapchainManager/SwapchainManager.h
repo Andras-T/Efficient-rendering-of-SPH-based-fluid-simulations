@@ -72,13 +72,6 @@ public:
 
   void createFramebuffers(VulkanObject &vulkanObject);
 
-  void transitionImageLayout(VkImage image, VkFormat format,
-                             VkImageLayout oldLayout, VkImageLayout newLayout,
-                             CommandPoolManager &commandPoolManager,
-                             VkDevice &device, VkQueue &graphicsQueue);
-
-  void createFramebuffers();
-
   void recreateSwapChain(GLFWwindow *window, VkDevice &device);
 
   void cleanupSwapChain();

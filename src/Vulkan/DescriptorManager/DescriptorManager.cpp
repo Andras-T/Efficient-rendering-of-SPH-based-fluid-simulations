@@ -159,10 +159,10 @@ void DescriptorManager::createDescriptorSets(
     for (size_t i = 0; i < Utils::MAX_FRAMES_IN_FLIGHT; i++) {
       std::array<VkWriteDescriptorSet, 5> descriptorWrites{};
 
-      VkDescriptorBufferInfo uniformBufferInfo{};
-      uniformBufferInfo.buffer = uniformBuffers[i];
-      uniformBufferInfo.offset = 0;
-      uniformBufferInfo.range = VK_WHOLE_SIZE;
+      VkDescriptorBufferInfo MVPInfo{};
+      MVPInfo.buffer = uniformBuffers[i];
+      MVPInfo.offset = 0;
+      MVPInfo.range = VK_WHOLE_SIZE;
 
       descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
       descriptorWrites[0].dstSet = descriptorSets[i];
@@ -170,7 +170,7 @@ void DescriptorManager::createDescriptorSets(
       descriptorWrites[0].dstArrayElement = 0;
       descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
       descriptorWrites[0].descriptorCount = 1;
-      descriptorWrites[0].pBufferInfo = &uniformBufferInfo;
+      descriptorWrites[0].pBufferInfo = &MVPInfo;
 
       VkDescriptorBufferInfo storageBufferInfoLastFrame{};
       storageBufferInfoLastFrame.buffer =
@@ -246,7 +246,7 @@ void DescriptorManager::createDescriptorSets(
       throw std::runtime_error("failed to allocate descriptor sets!");
     }
 
-    VkSamplerCreateInfo samplerInfo = {};
+    VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     samplerInfo.magFilter = VK_FILTER_LINEAR;
     samplerInfo.minFilter = VK_FILTER_LINEAR;
@@ -257,12 +257,9 @@ void DescriptorManager::createDescriptorSets(
     samplerInfo.maxAnisotropy = 1.0f;
     samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
     samplerInfo.unnormalizedCoordinates = VK_FALSE;
-    samplerInfo.compareEnable = VK_FALSE;
-    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+    samplerInfo.compareEnable = VK_TRUE;
+    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS; // VK_COMPARE_OP_ALWAYS // VK_COMPARE_OP_LESS
     samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    samplerInfo.mipLodBias = 0.0f;
-    samplerInfo.minLod = 0.0f;
-    samplerInfo.maxLod = 1.0f;
 
     if (vkCreateSampler(device, &samplerInfo, nullptr, &depthSampler) !=
         VK_SUCCESS) {
@@ -273,7 +270,8 @@ void DescriptorManager::createDescriptorSets(
       std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
 
       VkDescriptorImageInfo depthImageInfo = {};
-      depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+      depthImageInfo.imageLayout =
+          VK_IMAGE_LAYOUT_GENERAL;
       depthImageInfo.imageView = swapchainManager->getDepthImageView();
       depthImageInfo.sampler = depthSampler;
 
@@ -289,6 +287,72 @@ void DescriptorManager::createDescriptorSets(
       vkUpdateDescriptorSets(device, 1, descriptorWrites.data(), 0, nullptr);
     }
   }
+}
+
+void DescriptorManager::recreateDescriptorSets(
+    VkDevice& device, std::vector<VkDescriptorSet>& quadDescriptorSets) {
+    
+        // Quad Descriptor sets
+        {
+            std::vector<VkDescriptorSetLayout> quadLayouts(Utils::MAX_FRAMES_IN_FLIGHT,
+                quadDescriptorSetLayout);
+
+            VkDescriptorSetAllocateInfo quadAllocInfo{};
+            quadAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+            quadAllocInfo.descriptorPool = quadDescriptorPool;
+            quadAllocInfo.descriptorSetCount =
+                static_cast<uint32_t>(Utils::MAX_FRAMES_IN_FLIGHT);
+            quadAllocInfo.pSetLayouts = quadLayouts.data();
+
+            quadDescriptorSets.resize(Utils::MAX_FRAMES_IN_FLIGHT);
+            if (vkAllocateDescriptorSets(device, &quadAllocInfo,
+                quadDescriptorSets.data()) != VK_SUCCESS) {
+                throw std::runtime_error("failed to allocate descriptor sets!");
+            }
+
+            vkDestroySampler(device, depthSampler, nullptr);
+
+            VkSamplerCreateInfo samplerInfo{};
+            samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+            samplerInfo.magFilter = VK_FILTER_LINEAR;
+            samplerInfo.minFilter = VK_FILTER_LINEAR;
+            samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            samplerInfo.anisotropyEnable = VK_FALSE;
+            samplerInfo.maxAnisotropy = 1.0f;
+            samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+            samplerInfo.unnormalizedCoordinates = VK_FALSE;
+            samplerInfo.compareEnable = VK_TRUE;
+            samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS; // VK_COMPARE_OP_ALWAYS // VK_COMPARE_OP_LESS
+            samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+
+            if (vkCreateSampler(device, &samplerInfo, nullptr, &depthSampler) !=
+                VK_SUCCESS) {
+                throw std::runtime_error("failed to create depth sampler!");
+            }
+
+            for (size_t i = 0; i < Utils::MAX_FRAMES_IN_FLIGHT; i++) {
+                std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
+
+                VkDescriptorImageInfo depthImageInfo = {};
+                depthImageInfo.imageLayout =
+                    VK_IMAGE_LAYOUT_GENERAL;
+                depthImageInfo.imageView = swapchainManager->getDepthImageView();
+                depthImageInfo.sampler = depthSampler;
+
+                descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                descriptorWrites[0].dstSet = quadDescriptorSets[i];
+                descriptorWrites[0].dstBinding = 0;
+                descriptorWrites[0].dstArrayElement = 0;
+                descriptorWrites[0].descriptorType =
+                    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                descriptorWrites[0].descriptorCount = 1;
+                descriptorWrites[0].pImageInfo = &depthImageInfo;
+
+                vkUpdateDescriptorSets(device, 1, descriptorWrites.data(), 0, nullptr);
+            }
+        }
 }
 
 void DescriptorManager::cleanup(VkDevice &device) {

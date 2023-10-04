@@ -17,105 +17,127 @@ void VulkanObject::init(GLFWwindow &window, bool enableValidationLayers) {
 
 void VulkanObject::createRenderPass(VkDevice &device, VkFormat &imageformat,
                                     VkFormat depthformat) {
-  VkAttachmentDescription colorAttachment{};
-  colorAttachment.format = imageformat;
-  colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-  colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-  colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-  colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-  colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-  colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+  // Simulation Render pass
+  {
+    VkAttachmentDescription colorAttachment{};
+    colorAttachment.format = imageformat;
+    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL;
 
-  VkAttachmentDescription depthAttachment{};
-  depthAttachment.format = depthformat;
-  depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-  depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-  depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-  depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-  depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-  depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  depthAttachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+    VkAttachmentDescription depthAttachment{};
+    depthAttachment.format = depthformat;
+    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    depthAttachment.finalLayout =
+        VK_IMAGE_LAYOUT_GENERAL;
 
-  VkAttachmentReference colorAttachmentRef{};
-  colorAttachmentRef.attachment = 0;
-  colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    VkAttachmentReference colorAttachmentRef{};
+    colorAttachmentRef.attachment = 0;
+    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-  VkAttachmentReference depthAttachmentRef{};
-  depthAttachmentRef.attachment = 1;
-  depthAttachmentRef.layout = VK_IMAGE_LAYOUT_GENERAL;
+    VkAttachmentReference depthAttachmentRef{};
+    depthAttachmentRef.attachment = 1;
+    depthAttachmentRef.layout =
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-  VkSubpassDescription simulationSubpass{};
-  simulationSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-  simulationSubpass.colorAttachmentCount = 1;
-  simulationSubpass.pColorAttachments = &colorAttachmentRef;
-  simulationSubpass.pDepthStencilAttachment = &depthAttachmentRef;
+    VkSubpassDescription simulationSubpass{};
+    simulationSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    simulationSubpass.colorAttachmentCount = 1;
+    simulationSubpass.pColorAttachments = &colorAttachmentRef;
+    simulationSubpass.pDepthStencilAttachment = &depthAttachmentRef;
 
-  VkSubpassDescription quadSubpass{};
-  quadSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-  quadSubpass.colorAttachmentCount = 1;
-  quadSubpass.pColorAttachments = &colorAttachmentRef;
+    VkSubpassDependency simulationDependency{};
+    simulationDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    simulationDependency.dstSubpass = 0;
+    simulationDependency.srcStageMask =
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    simulationDependency.srcAccessMask = 0;
+    simulationDependency.dstStageMask =
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    simulationDependency.dstAccessMask =
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-  VkSubpassDependency simulationDependency{};
-  simulationDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-  simulationDependency.dstSubpass = 0;
-  simulationDependency.srcStageMask =
-      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-      VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-  simulationDependency.srcAccessMask = 0;
-  simulationDependency.dstStageMask =
-      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-      VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-  simulationDependency.dstAccessMask =
-      VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-      VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    std::array<VkAttachmentDescription, 2> simulationAttachments = {
+        colorAttachment, depthAttachment};
 
-  VkSubpassDependency quadDependency{};
-  quadDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-  quadDependency.dstSubpass = 0;
-  quadDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-                                VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-  quadDependency.srcAccessMask = 0;
-  quadDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-                                VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-  quadDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-                                 VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    VkRenderPassCreateInfo simulationRenderPassInfo{};
+    simulationRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    simulationRenderPassInfo.attachmentCount =
+        static_cast<uint32_t>(simulationAttachments.size());
+    simulationRenderPassInfo.pAttachments = simulationAttachments.data();
+    simulationRenderPassInfo.subpassCount = 1;
+    simulationRenderPassInfo.pSubpasses = &simulationSubpass;
+    simulationRenderPassInfo.dependencyCount = 1;
+    simulationRenderPassInfo.pDependencies = &simulationDependency;
 
-  std::array<VkAttachmentDescription, 2> simulationAttachments = {
-      colorAttachment, depthAttachment};
-
-  std::array<VkAttachmentDescription, 1> quadAttachments = {colorAttachment};
-
-  VkRenderPassCreateInfo simulationRenderPassInfo{};
-  simulationRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-  simulationRenderPassInfo.attachmentCount =
-      static_cast<uint32_t>(simulationAttachments.size());
-  simulationRenderPassInfo.pAttachments = simulationAttachments.data();
-  simulationRenderPassInfo.subpassCount = 1;
-  simulationRenderPassInfo.pSubpasses = &simulationSubpass;
-  simulationRenderPassInfo.dependencyCount = 1;
-  simulationRenderPassInfo.pDependencies = &simulationDependency;
-
-  VkRenderPassCreateInfo quadRenderPassInfo{};
-  quadRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-  quadRenderPassInfo.attachmentCount =
-      static_cast<uint32_t>(quadAttachments.size());
-  quadRenderPassInfo.pAttachments = quadAttachments.data();
-  quadRenderPassInfo.subpassCount = 1;
-  quadRenderPassInfo.pSubpasses = &quadSubpass;
-  quadRenderPassInfo.dependencyCount = 1;
-  quadRenderPassInfo.pDependencies = &quadDependency;
-
-  if (vkCreateRenderPass(device, &simulationRenderPassInfo, nullptr,
-                         &simulationRenderPass) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create simulation render pass!");
+    if (vkCreateRenderPass(device, &simulationRenderPassInfo, nullptr,
+                           &simulationRenderPass) != VK_SUCCESS) {
+      throw std::runtime_error("failed to create simulation render pass!");
+    }
   }
 
-  if (vkCreateRenderPass(device, &quadRenderPassInfo, nullptr,
-                         &quadRenderPass) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create quad render pass!");
-  }
+  // Quad Render pass
+  {
+    VkAttachmentDescription colorAttachment{};
+    colorAttachment.format = imageformat;
+    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
+    VkAttachmentReference colorAttachmentRef{};
+    colorAttachmentRef.attachment = 0;
+    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription quadSubpass{};
+    quadSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    quadSubpass.colorAttachmentCount = 1;
+    quadSubpass.pColorAttachments = &colorAttachmentRef;
+
+    VkSubpassDependency quadDependency{};
+    quadDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    quadDependency.dstSubpass = 0;
+    quadDependency.srcStageMask =
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    quadDependency.srcAccessMask = 0;
+    quadDependency.dstStageMask =
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    quadDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+    std::array<VkAttachmentDescription, 1> quadAttachments = {colorAttachment};
+
+    VkRenderPassCreateInfo quadRenderPassInfo{};
+    quadRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    quadRenderPassInfo.attachmentCount =
+        static_cast<uint32_t>(quadAttachments.size());
+    quadRenderPassInfo.pAttachments = quadAttachments.data();
+    quadRenderPassInfo.subpassCount = 1;
+    quadRenderPassInfo.pSubpasses = &quadSubpass;
+    quadRenderPassInfo.dependencyCount = 1;
+    quadRenderPassInfo.pDependencies = &quadDependency;
+
+    if (vkCreateRenderPass(device, &quadRenderPassInfo, nullptr,
+                           &quadRenderPass) != VK_SUCCESS) {
+      throw std::runtime_error("failed to create quad render pass!");
+    }
+  }
   logger.LogInfo("Render pass created");
 }
 

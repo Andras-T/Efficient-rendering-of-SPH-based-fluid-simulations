@@ -1,3 +1,4 @@
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "FluidSimulationEnvironment.h"
 #include "Vulkan/Utils/Utils.h"
 #include "imgui_impl_glfw.h"
@@ -45,7 +46,7 @@ void FluidSimulationEnvironment::init() {
   commandPoolManager.createCommandBuffers(device);
 
   render.init(deviceManager, swapChainManager, commandPoolManager,
-              pipelineManager, vulkanObject, window, bufferManager, instance);
+              pipelineManager, vulkanObject, window, bufferManager, instance, descriptorManager);
 
   initImGui();
 }

@@ -1,7 +1,7 @@
 #pragma once
 
 #define GLFW_INCLUDE_VULKAN
-
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "../SwapchainManager/SwapchainManager.h"
 #include "../Utils/Utils.h"
 #include "GLFW/glfw3.h"
@@ -39,6 +39,8 @@ public:
                             std::vector<VkBuffer> &uniformBuffers,
                             std::vector<VkBuffer> &attributesUniformBuffers,
                             std::vector<VkBuffer> &modelUniformBuffers);
+
+  void recreateDescriptorSets(VkDevice& device, std::vector<VkDescriptorSet>& quadDescriptorSets);
 
   void cleanup(VkDevice &device);
 

@@ -74,7 +74,7 @@ void FluidInstance::updateUniformBuffer(uint32_t currentImage,
   if (inputState.freeCam) {
     view = Utils::updateCamera(time, inputState, uniformData.io);
   } else {
-    glm::vec3 cameraPos = inputState.fixedCamPos + glm::vec3(0.0f, -5.0f, 2.0f);
+    glm::vec3 cameraPos = inputState.fixedCamPos + glm::vec3(0.0f, -1.0f, 2.0f);
     glm::vec3 cameraTarget = inputState.fixedCamPos;
     glm::vec3 cameraUp = glm::vec3(0.0f, 0.0f, 1.0f);
 
@@ -101,9 +101,9 @@ void FluidInstance::updateUniformBuffer(uint32_t currentImage,
   ubo.model = glm::translate(glm::mat4(1.0f), transformations.translate) *
               translateBack * rotationMatrix * scaleMatrix * translateToCenter;
   ubo.view = view;
-  ubo.proj =
-      glm::perspective(glm::radians(45.0f),
-                       extent2D->width / (float)extent2D->height, 0.01f, 15.0f);
+  ubo.proj = glm::perspective(glm::radians(45.0f),
+                              extent2D->width / (float)extent2D->height,
+                              0.01f, 15.0f);
   ubo.proj[1][1] *= -1;
   ubo.deltaTime = static_cast<float>(lastFrameTime) * 2.0f;
 
