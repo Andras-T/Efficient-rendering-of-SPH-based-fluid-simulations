@@ -40,7 +40,8 @@ public:
                             std::vector<VkBuffer> &attributesUniformBuffers,
                             std::vector<VkBuffer> &modelUniformBuffers);
 
-  void recreateDescriptorSets(VkDevice& device, std::vector<VkDescriptorSet>& quadDescriptorSets);
+  void recreateDescriptorSets(VkDevice &device,
+                              std::vector<VkDescriptorSet> &quadDescriptorSets);
 
   void cleanup(VkDevice &device);
 

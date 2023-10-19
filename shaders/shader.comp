@@ -2,166 +2,197 @@
 
 #define PI 3.1415926538
 
+uint currentIndex;
+float smootingLength_;
+float mass_;
+vec3 transformedGravity_;
+vec3 velocity_;
+vec4 position_;
+
 struct Particle {
-    vec4 position;
-    vec4 color;
-    vec3 velocity;
-    float movable;
-    vec3 acc;
-    float density;
+  vec4 position;
+  vec4 color;
+  vec3 velocity;
+  float movable;
+  vec3 acceleration;
+  float density;
 };
 
 layout(binding = 0) uniform MVP {
-    mat4 model;
-    mat4 view;
-    mat4 proj;
-    float deltaTime;
-} mvp;
+  mat4 model;
+  mat4 view;
+  mat4 proj;
+  vec3 cameraPos;
+  float deltaTime;
+}
+mvp;
 
 layout(std140, binding = 1) readonly buffer ParticleSSBOIn {
-    Particle particlesIn[];
+  Particle particlesIn[];
 };
 
-layout(std140, binding = 2) buffer ParticleSSBOOut {
-    Particle particlesOut[];
-};
+layout(std140, binding = 2) buffer ParticleSSBOOut { Particle particlesOut[]; };
 
 layout(binding = 3) uniform Attributes {
-    vec4 center;
-    float smootingLength;
-    float mass;
-    float stateConstant;
-    float polytropicIndex;
-    float damping;
-    float gravity;
-    int stop;   // stop simulation
-    float pad;  // just padding
-} attributes;
+  vec3 center;
+  int numberOfParticles;
+  float smootingLength;
+  float mass;
+  float stateConstant;
+  float polytropicIndex;
+  float damping;
+  float gravity;
+  float timeStep;
+  int stop;
+}
+attributes;
 
-layout(push_constant) uniform Constants {
-    int stageIndex;
-} constants;
+layout(push_constant) uniform Constants { int stageIndex; }
+constants;
 
-layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
-
-const uint NUMBER_OF_PARTICLES = 14536;
-
-// Smoothing length
-float h;
-float m;
-vec3 gravity = vec3(0.0, -1.0, 0.0);
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 
 float W(vec3 position) {
-    float r = length(position);
-    float w = pow(1.0 / (h * sqrt(PI)), 3) * exp(-r * r / (h * h));
-    return w;
+  float r = length(position);
+  return pow(1.0 / (smootingLength_ * sqrt(PI)), 3) *
+         exp(-r * r / (smootingLength_ * smootingLength_));
 }
 
 vec3 gradW(vec3 position) {
-    float r = length(position);
-    float n = -2.0 * exp(-r * r / (h * h)) / pow(h, 5) / pow(PI, 1.5);
-    return n * position;
+  float r = length(position);
+  float n = -2.0 * exp(-r * r / (smootingLength_ * smootingLength_)) /
+            pow(smootingLength_, 5) / pow(PI, 1.5);
+  return n * position;
 }
 
 float getDensity(vec3 position) {
-    float w_sum = 0.0f;
-    for (int i = 0; i < NUMBER_OF_PARTICLES; i++) {
-        Particle p = particlesIn[i];
-        vec3 dist = position - p.position.xyz;
-        if (length(dist) <= h){
-            w_sum += m * W(dist);
-        }
+  float density = 0.0f;
+  for (int i = 0; i < attributes.numberOfParticles; i++) {
+    Particle neighbor = particlesIn[i];
+    vec3 dist = position - neighbor.position.xyz;
+    if (length(dist) <= smootingLength_) {
+      density += mass_ * W(dist);
     }
-    return w_sum;
+  }
+  return density;
 }
 
-vec3 getAcc(vec3 position, float rho, uint index, vec3 vel) {
-    vec3 acc = vec3(0.0, 0.0, 0.0);
-    float n = attributes.polytropicIndex;
-    float pressure = attributes.stateConstant * pow(rho, (1 + 1 / n));
-    for (uint i = 0; i < NUMBER_OF_PARTICLES; i++) {
-        Particle p = particlesIn[i];
-        vec3 r = position - p.position.xyz;
-        float dist = length(r);
-        if (dist <= h && i != index) {
-            vec3 dW = gradW(r);
-            float dP = pressure / (rho * rho) + (attributes.stateConstant * pow(p.density, (1 + 1 / n))) / (p.density * p.density);
-            acc -= m * dP * dW;
-        }
+vec3 getAcc(vec3 position, float rho, vec3 velocity) {
+  vec3 acceleration = vec3(0.0, 0.0, 0.0);
+  float polytropicIndex = attributes.polytropicIndex;
+  float pressure =
+      attributes.stateConstant * pow(rho, (1 + 1 / polytropicIndex));
+  for (uint i = 0; i < attributes.numberOfParticles; i++) {
+    Particle neighbor = particlesIn[i];
+    vec3 distance = position - neighbor.position.xyz;
+    float dist = length(distance);
+    if (dist <= smootingLength_ && i != currentIndex) {
+      vec3 dW = gradW(distance);
+      float dP = pressure / (rho * rho) +
+                 (attributes.stateConstant *
+                  pow(neighbor.density, (1 + 1 / polytropicIndex))) /
+                     (neighbor.density * neighbor.density);
+      acceleration -= mass_ * dP * dW;
     }
-    acc -= (attributes.damping * 0.00001) * vel;
-    return (acc + gravity);
+  }
+  acceleration -= (attributes.damping * 0.000002) * velocity;
+  acceleration -= (attributes.damping * 0.000001) * acceleration;
+  return acceleration + transformedGravity_ * (1 + attributes.damping / 1000);
 }
-
-vec3 vel;
-vec4 pos;
 
 void checkBoundaryBox(float dist) {
-    float slowingFactor = -0.025;
-    if (pos.z < attributes.center.z - dist) {
-        vel.z = slowingFactor * vel.z;
-        pos.z = attributes.center.z - dist;
-    } else if (pos.z > attributes.center.z + dist) {
-        vel.z = slowingFactor * vel.z;
-        pos.z = attributes.center.z + dist;
-    }
+  float slowingFactor = -0.025;
+  if (position_.z < attributes.center.z - dist) {
+    velocity_.z = slowingFactor * velocity_.z;
+    position_.z = attributes.center.z - dist;
+  } else if (position_.z > attributes.center.z + dist) {
+    velocity_.z = slowingFactor * velocity_.z;
+    position_.z = attributes.center.z + dist;
+  }
 
-    if (pos.y < attributes.center.y - dist) {
-        vel.y = slowingFactor * vel.y;
-        pos.y = attributes.center.y - dist;
-    } else if (pos.y > attributes.center.y + dist) {
-        vel.y = slowingFactor * vel.y;
-        pos.y = attributes.center.y + dist;
-    }
+  if (position_.y < attributes.center.y - dist) {
+    velocity_.y = slowingFactor * velocity_.y;
+    position_.y = attributes.center.y - dist;
+  } else if (position_.y > attributes.center.y + dist) {
+    velocity_.y = slowingFactor * velocity_.y;
+    position_.y = attributes.center.y + dist;
+  }
 
-    if (pos.x < attributes.center.x - dist) {
-        vel.x = slowingFactor * vel.x;
-        pos.x = attributes.center.x - dist;
-    } else if (pos.x > attributes.center.x + dist) {
-        vel.x = slowingFactor * vel.x;
-        pos.x = attributes.center.x + dist;
+  if (position_.x < attributes.center.x - dist) {
+    velocity_.x = slowingFactor * velocity_.x;
+    position_.x = attributes.center.x - dist;
+  } else if (position_.x > attributes.center.x + dist) {
+    velocity_.x = slowingFactor * velocity_.x;
+    position_.x = attributes.center.x + dist;
+  }
+}
+
+void stageOne() {
+  Particle particleIn = particlesIn[currentIndex];
+  particlesOut[currentIndex].density = getDensity(particleIn.position.xyz);
+}
+
+void stageTwo() {
+  Particle particleIn = particlesIn[currentIndex];
+  particlesOut[currentIndex].acceleration =
+      getAcc(particleIn.position.xyz, particleIn.density, particleIn.velocity);
+}
+
+void stageThree() {
+  Particle particleIn = particlesIn[currentIndex];
+  if (particleIn.movable > 0.5) {
+    velocity_ = particleIn.velocity +
+                particleIn.acceleration * (mvp.deltaTime * attributes.timeStep);
+
+    if (length(velocity_) > 0.004f)
+      velocity_ = 0.1 * velocity_;
+    if (length(velocity_) > 0.005f)
+      velocity_ = 0.0 * velocity_;
+
+    position_ = particleIn.position + vec4(particleIn.velocity, 0.0) *
+                                          (mvp.deltaTime * attributes.timeStep);
+
+    float maxDistance = 1.625f;
+    checkBoundaryBox(maxDistance);
+
+    if (isnan(position_.x) || isnan(position_.y) || isnan(position_.z) ||
+        isnan(position_.w) || isnan(velocity_.x) || isnan(velocity_.y) ||
+        isnan(velocity_.z) || length(velocity_) < 0.0000001f) {
+      particlesOut[currentIndex].velocity =
+          particlesIn[currentIndex].velocity * 0.025f;
+
+      particlesOut[currentIndex].position =
+          vec4(normalize(attributes.center.xyz -
+                         particlesIn[currentIndex].position.xyz) *
+                       (maxDistance * 0.0025) +
+                   particlesIn[currentIndex].position.xyz,
+               1);
+      return;
     }
+    particlesOut[currentIndex].velocity = velocity_;
+    particlesOut[currentIndex].position = position_;
+  }
 }
 
 void main() {
-    uint index = gl_GlobalInvocationID.x;
-    Particle particleIn = particlesIn[index];
-    
-    h = clamp(attributes.smootingLength, 0.001f, 0.20f);
-    m = attributes.mass * 0.00000000000001;
+  if (attributes.stop == 0) {
+    currentIndex = gl_GlobalInvocationID.x;
+    smootingLength_ = clamp(attributes.smootingLength, 0.001f, 0.25f);
+    mass_ = attributes.mass * 0.000000000000002f;
 
-    vec4 gravityObject = transpose(inverse(mvp.model)) * vec4(gravity, 0.0);
-    float g = attributes.gravity * 0.0000000007;
-    vec4 transformedGravity = (inverse(mvp.model)) * vec4(vec3(0.0, 0.0, -g), 0.0);
-    gravity = normalize(transformedGravity.xyz) * length(vec3(0.0, 0.0, -g));
-   
-    if (attributes.stop == 0) {
-        if (constants.stageIndex == 1) {
-            particlesOut[index].density = getDensity(particleIn.position.xyz);
-        } else if (constants.stageIndex == 2) {
-            particlesOut[index].acc = getAcc(particleIn.position.xyz, particleIn.density, index, particleIn.velocity);
-        } else if (constants.stageIndex == 3) {
-            if (particleIn.movable > 0.5) {
-                vel = particleIn.velocity + particleIn.acc * mvp.deltaTime;
-                
-                if (length(vel) > 0.0035f)
-                    vel = 0.1 * vel;
-                if (length(vel) > 0.005f)
-                    vel = 0.0 * vel;
-                pos = particleIn.position + vec4(particleIn.velocity, 0.0) * (mvp.deltaTime);
+    vec4 transformedGravity4 =
+        (inverse(mvp.model)) *
+        vec4(0.0f, 0.0f, attributes.gravity * -0.0000000007f, 0.0f);
+    transformedGravity_ =
+        normalize(transformedGravity4.xyz) *
+        length(vec3(0.0f, 0.0f, attributes.gravity * -0.0000000007f));
 
-                float dist = 1.451f;
-                checkBoundaryBox(dist);
-
-                if (isnan(pos.x) || isnan(pos.y) || isnan(pos.z) || isnan(pos.w) ||
-                isnan(vel.x) || isnan(vel.y) || isnan(vel.z)) {
-                    particlesOut[index].velocity = particlesIn[index].velocity * 0.025f;
-                    particlesOut[index].position = vec4(normalize(attributes.center.xyz - particlesIn[index].position.xyz) * (dist * 0.0025) + particlesIn[index].position.xyz, 1);
-                } else {
-                    particlesOut[index].velocity = vel;
-                    particlesOut[index].position = pos;
-                }
-            }
-        }
+    if (constants.stageIndex == 1) {
+      stageOne();
+    } else if (constants.stageIndex == 2) {
+      stageTwo();
+    } else if (constants.stageIndex == 3) {
+      stageThree();
     }
+  }
 }

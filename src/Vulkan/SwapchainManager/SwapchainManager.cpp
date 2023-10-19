@@ -117,7 +117,9 @@ void SwapchainManager::createDepthResources() {
       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);
   depthImageView =
       createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
-  logger.LogInfo("Depth Resources created");
+  logger.LogInfo("Depth Resources created {" +
+                 std::to_string(swapChainExtent.width) + ", " +
+                 std::to_string(swapChainExtent.height) + ")");
 }
 
 void SwapchainManager::createImage(uint32_t width, uint32_t height,

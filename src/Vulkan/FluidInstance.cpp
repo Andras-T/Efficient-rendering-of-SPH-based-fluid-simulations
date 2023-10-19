@@ -11,7 +11,8 @@
 
 void FluidInstance::InitBuffers(BufferManager &bufferManager,
                                 DeviceManager &deviceManager,
-                                VkCommandPool &commandPool, glm::vec3 center) {
+                                VkCommandPool &commandPool, glm::vec3 center,
+                                GLFWwindow *window) {
   bufferManager.createShaderStorageBuffers(deviceManager, commandPool,
                                            shaderStorageBuffers,
                                            shaderStorageBuffersMemory, center);
@@ -29,7 +30,8 @@ void FluidInstance::InitBuffers(BufferManager &bufferManager,
       sizeof(Model));
 
   logger.LogInfo("VkBuffers created");
-  this->center = glm::vec4(center, 1.0f);
+  this->center = center;
+  this->window = window;
 }
 
 void FluidInstance::InitDescriptorSets(DescriptorManager &descriptorManager,
@@ -74,8 +76,8 @@ void FluidInstance::updateUniformBuffer(uint32_t currentImage,
   if (inputState.freeCam) {
     view = Utils::updateCamera(time, inputState, uniformData.io);
   } else {
-    glm::vec3 cameraPos = inputState.fixedCamPos + glm::vec3(0.0f, -1.0f, 2.0f);
-    glm::vec3 cameraTarget = inputState.fixedCamPos;
+    glm::vec3 cameraPos = inputState.cameraPos;
+    glm::vec3 cameraTarget = inputState.fixedCamTarget;
     glm::vec3 cameraUp = glm::vec3(0.0f, 0.0f, 1.0f);
 
     view = glm::lookAt(cameraPos, cameraTarget, cameraUp);
@@ -94,8 +96,7 @@ void FluidInstance::updateUniformBuffer(uint32_t currentImage,
                   glm::vec3(0.0f, 1.0f, 0.0f)) *
       glm::rotate(glm::mat4(1.0f), glm::radians(transformations.rotations.z),
                   glm::vec3(0.0f, 0.0f, 1.0f));
-  glm::mat4 translateBack = glm::translate(
-      glm::mat4(1.0f), glm::vec3(center.x / 2, center.y / 2, center.z / 2));
+  glm::mat4 translateBack = glm::translate(glm::mat4(1.0f), center / 2.0f);
 
   UniformBufferObject ubo{};
   ubo.model = glm::translate(glm::mat4(1.0f), transformations.translate) *
@@ -103,11 +104,16 @@ void FluidInstance::updateUniformBuffer(uint32_t currentImage,
   ubo.view = view;
   ubo.proj = glm::perspective(glm::radians(45.0f),
                               extent2D->width / (float)extent2D->height,
-                              0.01f, 15.0f);
+                              0.00025f, 1.0f);
   ubo.proj[1][1] *= -1;
+  ubo.cameraPos = inputState.cameraPos;
   ubo.deltaTime = static_cast<float>(lastFrameTime) * 2.0f;
 
   uniformData.attributes.center = this->center;
+
+  int width, height;
+  glfwGetFramebufferSize(window, &width, &height);
+  uniformData.model.windowSize = glm::vec2(width, height);
 
   memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
   memcpy(attributesUniformBuffersMapped[currentImage], &uniformData.attributes,

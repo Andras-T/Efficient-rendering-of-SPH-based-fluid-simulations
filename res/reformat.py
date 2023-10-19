@@ -1,10 +1,11 @@
 import os
 import subprocess
 
-file_extensions = [".cpp", ".h"]
+file_extensions = [".cpp", ".h", ".frag", ".vert", ".comp"]
 project_directory = os.getcwd() + "\..\src"
+shader_directory = os.getcwd() + "\..\shaders"
 
-def find_cpp_files(directory):
+def find_files(directory):
     cpp_files = []
     for root, dirs, files in os.walk(directory):
         for file in files:
@@ -12,7 +13,7 @@ def find_cpp_files(directory):
                 cpp_files.append(os.path.join(root, file))
     return cpp_files
 
-def format_cpp_files(files):
+def clang_format_files(files):
     for file in files:
         try:
             subprocess.run(["clang-format", "-i", file], check=True)
@@ -21,5 +22,7 @@ def format_cpp_files(files):
             print(f"Error formatting {file}: {e}")
 
 if __name__ == "__main__":
-    cpp_files = find_cpp_files(project_directory)
-    format_cpp_files(cpp_files)
+    cpp_files = find_files(project_directory)
+    clang_format_files(cpp_files)
+    shader_files = find_files(shader_directory)
+    clang_format_files(shader_files)

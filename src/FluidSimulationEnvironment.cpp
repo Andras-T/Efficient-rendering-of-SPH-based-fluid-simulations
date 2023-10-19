@@ -40,13 +40,14 @@ void FluidSimulationEnvironment::init() {
 
   instance.InitBuffers(bufferManager, deviceManager,
                        commandPoolManager.getCommandPool(),
-                       glm::vec3(0.0f, 0.0f, 0.0f));
+                       glm::vec3(0.0f, 0.0f, 0.0f), window.get_GLFW_Window());
   instance.InitDescriptorSets(descriptorManager, device, bufferManager);
 
   commandPoolManager.createCommandBuffers(device);
 
   render.init(deviceManager, swapChainManager, commandPoolManager,
-              pipelineManager, vulkanObject, window, bufferManager, instance, descriptorManager);
+              pipelineManager, vulkanObject, window, bufferManager, instance,
+              descriptorManager);
 
   initImGui();
 }

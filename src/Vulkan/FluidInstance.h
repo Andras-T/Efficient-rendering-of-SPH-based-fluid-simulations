@@ -32,8 +32,9 @@ private:
   std::vector<VkDeviceMemory> modelUniformBuffersMemory;
   std::vector<void *> modelUniformBuffersMapped;
 
-  glm::vec4 center = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
+  glm::vec3 center = glm::vec3(0.0f, 0.0f, 0.0f);
 
+  GLFWwindow *window;
   BufferManager *bufferManager;
   Logger &logger;
 
@@ -41,7 +42,8 @@ public:
   FluidInstance() : logger(Logger::getInstance()) {}
 
   void InitBuffers(BufferManager &bufferManager, DeviceManager &deviceManager,
-                   VkCommandPool &commandPool, glm::vec3 center);
+                   VkCommandPool &commandPool, glm::vec3 center,
+                   GLFWwindow *window);
 
   void InitDescriptorSets(DescriptorManager &descriptorManager,
                           VkDevice &device, BufferManager &bufferManager);

@@ -22,10 +22,11 @@ public:
   static constexpr char *ENGINE = "[engine]";
   static constexpr char *VAL_LAYER = "[validation layer]";
   static constexpr char *VULKAN = "[vulkan]";
+
   static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
   static constexpr int MOVABLE_PARTICLE_COUNT = 4096;
-  static constexpr int UNMOVABLE_PARTICLE_COUNT = 10092 + 116 * 3;
-  static constexpr float SPHERE_RADIUS = 0.065f;
+  static constexpr int UNMOVABLE_PARTICLE_COUNT = 15552;
+  static constexpr float SPHERE_RADIUS = 0.055f;
   static const int PARTICLE_COUNT =
       MOVABLE_PARTICLE_COUNT + UNMOVABLE_PARTICLE_COUNT;
   static int vertexCount;

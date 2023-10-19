@@ -1,0 +1,50 @@
+//float sumX = 0.0f;
+	//float sumY = 0.0f;
+	//int xCount = 0;
+	//int yCount = 0;
+	//
+	//float x = fragTexCoord.x;
+	//float y = fragTexCoord.y;
+	//
+	//for (int i = -50; i < 50; i++) {
+	//	float blurY = y + i * 0.001f;
+	//	if (blurY >= 0.0f && blurY <= 1.0f) {
+	//		float depth = texture(depthSampler, vec2(x, blurY)).r;
+	//		sumY += depth;
+	//		yCount++;
+	//	}
+	//
+	//	float blurX = x + i * 0.001f;
+	//	if (blurX >= 0.0f && blurX <= 1.0f) {
+	//		float depthX = texture(depthSampler, vec2(blurX, y)).r;
+	//		sumX += depthX;
+	//		xCount += 1;
+	//	}
+	//}
+	//
+	//
+	//float depthValue = 1.0f - (sumX / xCount + sumY / yCount);
+
+	//float sum = 0.0f;
+	//float depth = texture(depthSampler, fragTexCoord).r;
+	//if (depth < 1.0f) {
+	//	for (int i = -kernelSize / 2; i <= kernelSize / 2; i++) {
+	//		//sum += texture(depthSampler, fragTexCoord + vec2(0.001f * float(i), 0.0)).r * weights[i + kernelSize / 2] * 0.5f;
+	//		//sum += texture(depthSampler, fragTexCoord + vec2(0.0, 0.01f * float(i))).r * weights[i + kernelSize / 2] * 0.5f;
+	//		sum += texture(depthSampler, fragTexCoord + vec2(0.001f * float(i), 0.0)).r * 0.5f * w[i + kernelSize / 2];
+	//		sum += texture(depthSampler, fragTexCoord + vec2(0.0, 0.01f * float(i))).r * 0.5f * w[i + kernelSize / 2];
+	//	}
+	//} 
+	//float depthValue = sum;
+
+
+
+    //if (average < 0.998f) {
+    //    float depthColor = (1.0f - average) * 50.0f;
+    //    if (depthColor  > 0.1f)
+    //        outColor = vec4(0.05f, 0.1f, 0.1f + depthColor, 1.0f);
+    //    else
+    //        outColor = vec4(0.5f, 0.7f, 0.7f, 1.0f);
+    //} else {
+    //    outColor = vec4(0.5f, 0.7f, 0.7f, 1.0f);
+    //}

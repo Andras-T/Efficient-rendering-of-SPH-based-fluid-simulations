@@ -117,7 +117,6 @@ void ImGuiRender::menuShortcuts() {
   else if (ImGui::GetIO().KeyMods == ImGuiModFlags_Alt &&
            ImGui::IsKeyPressed(ImGuiKey_Enter, ImGuiKeyOwner_Any))
     window->changeDisplayMode();
-  inputState.fixedCamPos = instance->getCenter();
 }
 
 void ImGuiRender::createTransformationsMenu(int width, int height) {
@@ -133,36 +132,45 @@ void ImGuiRender::createTransformationsMenu(int width, int height) {
   ImGui::Begin("Transformations", nullptr, ImGuiWindowFlags_NoResize);
 
   ImGui::Checkbox("Free camera", &inputState.freeCam);
-  ImGui::SliderFloat("Speed", &inputState.cameraSpeed, 0.01f, 10.0f);
+  ImGui::SliderFloat("Speed", &inputState.cameraSpeed, 0.001f, 0.1f);
   {
-    ImGui::SliderFloat("Scale", &uniformData.transformations.s, 0.001f, 10.0f);
+    ImGui::SliderFloat("Scale", &uniformData.transformations.s, 0.001f, 1.0f);
     ImGui::SliderFloat("Scale X", &uniformData.transformations.scale.x, 0.001f,
-                       10.0f);
+                       1.0f);
     ImGui::SliderFloat("Scale Y", &uniformData.transformations.scale.y, 0.001f,
-                       10.0f);
+                       1.0f);
     ImGui::SliderFloat("Scale Z", &uniformData.transformations.scale.z, 0.001f,
-                       10.0f);
-    ImGui::SliderFloat("Rotate", &uniformData.transformations.rotations.z, 0.0f,
-                       720.0f);
+                       1.0f);
+    ImGui::SliderFloat("Rotate X", &uniformData.transformations.rotations.x,
+                       0.0f, 720.0f);
+    ImGui::SliderFloat("Rotate Y", &uniformData.transformations.rotations.y,
+                       0.0f, 720.0f);
+    ImGui::SliderFloat("Rotate Z", &uniformData.transformations.rotations.z,
+                       0.0f, 720.0f);
     ImGui::SliderFloat3("Translate",
-                        (float *)&uniformData.transformations.translate, -10.0f,
-                        10.0f);
+                        (float *)&uniformData.transformations.translate,
+                        -0.001f, 0.001f);
 
     ImGui::Spacing();
 
     ImGui::DragFloat("Smoothing length", &uniformData.attributes.smootingLength,
-                     0.001f, 0.0f, 0.25f, "%.3f", 0);
+                     0.001f, 0.001f, 0.25f, "%.3f", 0);
     ImGui::DragFloat("particle mass", &uniformData.attributes.mass, 0.1f, 0.0f,
-                     500.0f, "%.3f", 0);
+                     2000.0f, "%.2f", 0);
     if (uniformData.attributes.mass == 0)
       uniformData.attributes.mass = 0.1f;
     ImGui::DragFloat("Equation of state constant",
-                     &uniformData.attributes.stateConstant, 0.5f, 0.0f, 5000.0f,
-                     "%.1f", 0);
-    ImGui::SliderFloat("gravity", &uniformData.attributes.gravity, -500.0f,
-                       1000.0f);
+                     &uniformData.attributes.stateConstant, 0.1f, 0.01f,
+                     5000.0f, "%.2f", 0);
+    ImGui::DragFloat("gravity", &uniformData.attributes.gravity, 0.5f, -500.0f,
+                     2500.0f, "%.1f", 0);
     ImGui::DragFloat("damping", &uniformData.attributes.damping, 0.5f, 0.0f,
-                     100.0f, "%.1f", 0);
+                     300.0f, "%.1f", 0);
+    ImGui::DragFloat("polytropic index",
+                     &uniformData.attributes.polytropicIndex, 0.01f, 0.001f,
+                     10.0f, "%.1f", 0);
+    ImGui::DragFloat("Time step", &uniformData.attributes.timeStep, 0.05f,
+                     0.01f, 5.0f, "%.2f", 0);
 
     ImGui::Spacing();
     ImGui::Spacing();

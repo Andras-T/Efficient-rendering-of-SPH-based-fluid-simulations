@@ -45,7 +45,7 @@ public:
             CommandPoolManager &commandPoolManager,
             PipelineManager &pipelineManager, VulkanObject &vulkanObject,
             Window &window, BufferManager &bufferManager,
-            FluidInstance &instance, DescriptorManager& descriptorManager);
+            FluidInstance &instance, DescriptorManager &descriptorManager);
 
   void createSyncObjects();
 

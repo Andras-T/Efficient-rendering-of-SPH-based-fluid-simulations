@@ -54,13 +54,25 @@ void DescriptorManager::createDescriptorSetLayout(VkDevice &device) {
   }
   // Quad layout bindings
   {
-    std::array<VkDescriptorSetLayoutBinding, 1> quadLayoutBindings{};
+    std::array<VkDescriptorSetLayoutBinding, 3> quadLayoutBindings{};
     quadLayoutBindings[0].binding = 0;
     quadLayoutBindings[0].descriptorCount = 1;
     quadLayoutBindings[0].descriptorType =
         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     quadLayoutBindings[0].pImmutableSamplers = nullptr;
     quadLayoutBindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    quadLayoutBindings[1].binding = 1;
+    quadLayoutBindings[1].descriptorCount = 1;
+    quadLayoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    quadLayoutBindings[1].pImmutableSamplers = nullptr;
+    quadLayoutBindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    quadLayoutBindings[2].binding = 2;
+    quadLayoutBindings[2].descriptorCount = 1;
+    quadLayoutBindings[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    quadLayoutBindings[2].pImmutableSamplers = nullptr;
+    quadLayoutBindings[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
     VkDescriptorSetLayoutCreateInfo quadLayoutInfo{};
     quadLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -113,9 +125,15 @@ void DescriptorManager::createDescriptorPool(VkDevice &device) {
   }
   // Quad descriptor pool
   {
-    std::array<VkDescriptorPoolSize, 1> quadPoolSizes{};
+    std::array<VkDescriptorPoolSize, 3> quadPoolSizes{};
     quadPoolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     quadPoolSizes[0].descriptorCount = static_cast<uint32_t>(1);
+
+    quadPoolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    quadPoolSizes[1].descriptorCount = static_cast<uint32_t>(1);
+
+    quadPoolSizes[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    quadPoolSizes[2].descriptorCount = static_cast<uint32_t>(1);
 
     VkDescriptorPoolCreateInfo quadPoolInfo{};
     quadPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -246,6 +264,101 @@ void DescriptorManager::createDescriptorSets(
       throw std::runtime_error("failed to allocate descriptor sets!");
     }
 
+    // 2D sampler info
+    {
+      VkSamplerCreateInfo samplerInfo{};
+      samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+      samplerInfo.magFilter = VK_FILTER_LINEAR;
+      samplerInfo.minFilter = VK_FILTER_LINEAR;
+      samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+      samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+      samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+      samplerInfo.anisotropyEnable = VK_FALSE;
+      samplerInfo.maxAnisotropy = 1.0f;
+      samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+      samplerInfo.unnormalizedCoordinates = VK_FALSE;
+      samplerInfo.compareEnable = VK_TRUE;
+      samplerInfo.compareOp =
+          VK_COMPARE_OP_ALWAYS; // VK_COMPARE_OP_ALWAYS // VK_COMPARE_OP_LESS
+      samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+
+      if (vkCreateSampler(device, &samplerInfo, nullptr, &depthSampler) !=
+          VK_SUCCESS) {
+        throw std::runtime_error("failed to create depth sampler!");
+      }
+    }
+
+    for (size_t i = 0; i < Utils::MAX_FRAMES_IN_FLIGHT; i++) {
+      std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
+
+      VkDescriptorImageInfo depthImageInfo = {};
+      depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+      depthImageInfo.imageView = swapchainManager->getDepthImageView();
+      depthImageInfo.sampler = depthSampler;
+
+      descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      descriptorWrites[0].dstSet = quadDescriptorSets[i];
+      descriptorWrites[0].dstBinding = 0;
+      descriptorWrites[0].dstArrayElement = 0;
+      descriptorWrites[0].descriptorType =
+          VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+      descriptorWrites[0].descriptorCount = 1;
+      descriptorWrites[0].pImageInfo = &depthImageInfo;
+
+      VkDescriptorBufferInfo MVPInfo{};
+      MVPInfo.buffer = uniformBuffers[i];
+      MVPInfo.offset = 0;
+      MVPInfo.range = VK_WHOLE_SIZE;
+
+      descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      descriptorWrites[1].dstSet = quadDescriptorSets[i];
+      descriptorWrites[1].dstBinding = 1;
+      descriptorWrites[1].dstArrayElement = 0;
+      descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+      descriptorWrites[1].descriptorCount = 1;
+      descriptorWrites[1].pBufferInfo = &MVPInfo;
+
+      VkDescriptorBufferInfo modelUniformBufferInfo{};
+      modelUniformBufferInfo.buffer = modelUniformBuffers[i];
+      modelUniformBufferInfo.offset = 0;
+      modelUniformBufferInfo.range = VK_WHOLE_SIZE;
+
+      descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      descriptorWrites[2].dstSet = quadDescriptorSets[i];
+      descriptorWrites[2].dstBinding = 2;
+      descriptorWrites[2].dstArrayElement = 0;
+      descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+      descriptorWrites[2].descriptorCount = 1;
+      descriptorWrites[2].pBufferInfo = &modelUniformBufferInfo;
+
+      vkUpdateDescriptorSets(device, 3, descriptorWrites.data(), 0, nullptr);
+    }
+  }
+}
+
+void DescriptorManager::recreateDescriptorSets(
+    VkDevice &device, std::vector<VkDescriptorSet> &quadDescriptorSets) {
+
+  // Quad Descriptor sets
+  {
+    std::vector<VkDescriptorSetLayout> quadLayouts(Utils::MAX_FRAMES_IN_FLIGHT,
+                                                   quadDescriptorSetLayout);
+
+    VkDescriptorSetAllocateInfo quadAllocInfo{};
+    quadAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    quadAllocInfo.descriptorPool = quadDescriptorPool;
+    quadAllocInfo.descriptorSetCount =
+        static_cast<uint32_t>(Utils::MAX_FRAMES_IN_FLIGHT);
+    quadAllocInfo.pSetLayouts = quadLayouts.data();
+
+    quadDescriptorSets.resize(Utils::MAX_FRAMES_IN_FLIGHT);
+    if (vkAllocateDescriptorSets(device, &quadAllocInfo,
+                                 quadDescriptorSets.data()) != VK_SUCCESS) {
+      throw std::runtime_error("failed to allocate descriptor sets!");
+    }
+
+    vkDestroySampler(device, depthSampler, nullptr);
+
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     samplerInfo.magFilter = VK_FILTER_LINEAR;
@@ -258,7 +371,7 @@ void DescriptorManager::createDescriptorSets(
     samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
     samplerInfo.unnormalizedCoordinates = VK_FALSE;
     samplerInfo.compareEnable = VK_TRUE;
-    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS; // VK_COMPARE_OP_ALWAYS // VK_COMPARE_OP_LESS
+    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS; // VK_COMPARE_OP_LESS
     samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 
     if (vkCreateSampler(device, &samplerInfo, nullptr, &depthSampler) !=
@@ -270,8 +383,7 @@ void DescriptorManager::createDescriptorSets(
       std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
 
       VkDescriptorImageInfo depthImageInfo = {};
-      depthImageInfo.imageLayout =
-          VK_IMAGE_LAYOUT_GENERAL;
+      depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
       depthImageInfo.imageView = swapchainManager->getDepthImageView();
       depthImageInfo.sampler = depthSampler;
 
@@ -287,72 +399,6 @@ void DescriptorManager::createDescriptorSets(
       vkUpdateDescriptorSets(device, 1, descriptorWrites.data(), 0, nullptr);
     }
   }
-}
-
-void DescriptorManager::recreateDescriptorSets(
-    VkDevice& device, std::vector<VkDescriptorSet>& quadDescriptorSets) {
-    
-        // Quad Descriptor sets
-        {
-            std::vector<VkDescriptorSetLayout> quadLayouts(Utils::MAX_FRAMES_IN_FLIGHT,
-                quadDescriptorSetLayout);
-
-            VkDescriptorSetAllocateInfo quadAllocInfo{};
-            quadAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-            quadAllocInfo.descriptorPool = quadDescriptorPool;
-            quadAllocInfo.descriptorSetCount =
-                static_cast<uint32_t>(Utils::MAX_FRAMES_IN_FLIGHT);
-            quadAllocInfo.pSetLayouts = quadLayouts.data();
-
-            quadDescriptorSets.resize(Utils::MAX_FRAMES_IN_FLIGHT);
-            if (vkAllocateDescriptorSets(device, &quadAllocInfo,
-                quadDescriptorSets.data()) != VK_SUCCESS) {
-                throw std::runtime_error("failed to allocate descriptor sets!");
-            }
-
-            vkDestroySampler(device, depthSampler, nullptr);
-
-            VkSamplerCreateInfo samplerInfo{};
-            samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-            samplerInfo.magFilter = VK_FILTER_LINEAR;
-            samplerInfo.minFilter = VK_FILTER_LINEAR;
-            samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            samplerInfo.anisotropyEnable = VK_FALSE;
-            samplerInfo.maxAnisotropy = 1.0f;
-            samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
-            samplerInfo.unnormalizedCoordinates = VK_FALSE;
-            samplerInfo.compareEnable = VK_TRUE;
-            samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS; // VK_COMPARE_OP_ALWAYS // VK_COMPARE_OP_LESS
-            samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-
-            if (vkCreateSampler(device, &samplerInfo, nullptr, &depthSampler) !=
-                VK_SUCCESS) {
-                throw std::runtime_error("failed to create depth sampler!");
-            }
-
-            for (size_t i = 0; i < Utils::MAX_FRAMES_IN_FLIGHT; i++) {
-                std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
-
-                VkDescriptorImageInfo depthImageInfo = {};
-                depthImageInfo.imageLayout =
-                    VK_IMAGE_LAYOUT_GENERAL;
-                depthImageInfo.imageView = swapchainManager->getDepthImageView();
-                depthImageInfo.sampler = depthSampler;
-
-                descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                descriptorWrites[0].dstSet = quadDescriptorSets[i];
-                descriptorWrites[0].dstBinding = 0;
-                descriptorWrites[0].dstArrayElement = 0;
-                descriptorWrites[0].descriptorType =
-                    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-                descriptorWrites[0].descriptorCount = 1;
-                descriptorWrites[0].pImageInfo = &depthImageInfo;
-
-                vkUpdateDescriptorSets(device, 1, descriptorWrites.data(), 0, nullptr);
-            }
-        }
 }
 
 void DescriptorManager::cleanup(VkDevice &device) {
