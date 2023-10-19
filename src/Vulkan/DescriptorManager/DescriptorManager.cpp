@@ -160,7 +160,8 @@ void DescriptorManager::createDescriptorSets(
   {
     std::vector<VkDescriptorSetLayout> layouts(Utils::MAX_FRAMES_IN_FLIGHT,
                                                descriptorSetLayout);
-
+    this->modelUniformBuffers = &modelUniformBuffers;
+    this->uniformBuffers = &uniformBuffers;
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = descriptorPool;
@@ -380,7 +381,7 @@ void DescriptorManager::recreateDescriptorSets(
     }
 
     for (size_t i = 0; i < Utils::MAX_FRAMES_IN_FLIGHT; i++) {
-      std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
+      std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
 
       VkDescriptorImageInfo depthImageInfo = {};
       depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -396,7 +397,33 @@ void DescriptorManager::recreateDescriptorSets(
       descriptorWrites[0].descriptorCount = 1;
       descriptorWrites[0].pImageInfo = &depthImageInfo;
 
-      vkUpdateDescriptorSets(device, 1, descriptorWrites.data(), 0, nullptr);
+      VkDescriptorBufferInfo MVPInfo{};
+      MVPInfo.buffer = (*uniformBuffers)[i];
+      MVPInfo.offset = 0;
+      MVPInfo.range = VK_WHOLE_SIZE;
+
+      descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      descriptorWrites[1].dstSet = quadDescriptorSets[i];
+      descriptorWrites[1].dstBinding = 1;
+      descriptorWrites[1].dstArrayElement = 0;
+      descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+      descriptorWrites[1].descriptorCount = 1;
+      descriptorWrites[1].pBufferInfo = &MVPInfo;
+
+      VkDescriptorBufferInfo modelUniformBufferInfo{};
+      modelUniformBufferInfo.buffer = (*modelUniformBuffers)[i];
+      modelUniformBufferInfo.offset = 0;
+      modelUniformBufferInfo.range = VK_WHOLE_SIZE;
+
+      descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      descriptorWrites[2].dstSet = quadDescriptorSets[i];
+      descriptorWrites[2].dstBinding = 2;
+      descriptorWrites[2].dstArrayElement = 0;
+      descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+      descriptorWrites[2].descriptorCount = 1;
+      descriptorWrites[2].pBufferInfo = &modelUniformBufferInfo;
+
+      vkUpdateDescriptorSets(device, 3, descriptorWrites.data(), 0, nullptr);
     }
   }
 }

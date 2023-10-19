@@ -132,7 +132,7 @@ void ImGuiRender::createTransformationsMenu(int width, int height) {
   ImGui::Begin("Transformations", nullptr, ImGuiWindowFlags_NoResize);
 
   ImGui::Checkbox("Free camera", &inputState.freeCam);
-  ImGui::SliderFloat("Speed", &inputState.cameraSpeed, 0.001f, 0.1f);
+  ImGui::SliderFloat("Speed", &inputState.cameraSpeed, 0.1f, 10.0f);
   {
     ImGui::SliderFloat("Scale", &uniformData.transformations.s, 0.001f, 1.0f);
     ImGui::SliderFloat("Scale X", &uniformData.transformations.scale.x, 0.001f,

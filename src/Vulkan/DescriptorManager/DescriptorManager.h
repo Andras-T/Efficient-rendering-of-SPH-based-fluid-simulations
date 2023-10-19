@@ -20,6 +20,8 @@ class DescriptorManager {
   VkSampler depthSampler;
 
   SwapchainManager *swapchainManager;
+  std::vector<VkBuffer>* modelUniformBuffers;
+  std::vector<VkBuffer>* uniformBuffers;
 
 public:
   void init(VkDevice &device, SwapchainManager &swapchainManager) {

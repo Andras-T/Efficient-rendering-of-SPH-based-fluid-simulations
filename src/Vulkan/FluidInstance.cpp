@@ -104,7 +104,7 @@ void FluidInstance::updateUniformBuffer(uint32_t currentImage,
   ubo.view = view;
   ubo.proj = glm::perspective(glm::radians(45.0f),
                               extent2D->width / (float)extent2D->height,
-                              0.00025f, 1.0f);
+                              0.5f, 10.0f);
   ubo.proj[1][1] *= -1;
   ubo.cameraPos = inputState.cameraPos;
   ubo.deltaTime = static_cast<float>(lastFrameTime) * 2.0f;
