@@ -19,6 +19,9 @@ class BufferManager {
   VkBuffer quadBuffer;
   VkDeviceMemory quadMemory;
 
+  VkBuffer blurBuffer;
+  VkDeviceMemory blurMemory;
+
 public:
   void createVertexBuffer(DeviceManager &deviceManager,
                           VkCommandPool &commandPool, const void *src,
@@ -53,11 +56,15 @@ public:
   void cleanUp(VkDevice &device) {
     vkDestroyBuffer(device, sphereBuffer, nullptr);
     vkDestroyBuffer(device, quadBuffer, nullptr);
+    vkDestroyBuffer(device, blurBuffer, nullptr);
+
     vkFreeMemory(device, sphereMemory, nullptr);
     vkFreeMemory(device, quadMemory, nullptr);
+    vkFreeMemory(device, blurMemory, nullptr);
   }
 
   VkDeviceMemory &getSphereMemory() { return sphereMemory; }
   VkBuffer &getSphereBuffer() { return sphereBuffer; }
   VkBuffer &getQuadBuffer() { return quadBuffer; }
+  VkBuffer &getBlurBuffer() { return blurBuffer; }
 };

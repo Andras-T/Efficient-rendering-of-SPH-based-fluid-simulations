@@ -12,6 +12,7 @@ class CommandPoolManager {
   VkCommandPool commandPool;
   std::vector<VkCommandBuffer> commandBuffers;
   std::vector<VkCommandBuffer> quadCommandBuffers;
+  std::vector<VkCommandBuffer> blurCommandBuffers;
   std::vector<VkCommandBuffer> computeCommandBuffers;
   std::vector<VkCommandBuffer> imGuiCommandBuffers;
 
@@ -25,6 +26,8 @@ public:
   void createCommandBuffers(VkDevice &device);
 
   void createQuadCommandBuffer(VkDevice &device);
+
+  void createBlurCommandBuffer(VkDevice &device);
 
   VkCommandBuffer beginSingleTimeCommands(VkDevice &device);
 
@@ -43,6 +46,10 @@ public:
 
   std::vector<VkCommandBuffer> &getQuadCommandBuffers() {
     return quadCommandBuffers;
+  }
+
+  std::vector<VkCommandBuffer> &getBlurCommandBuffers() {
+    return blurCommandBuffers;
   }
 
   std::vector<VkCommandBuffer> &getImGuiCommandBuffers() {

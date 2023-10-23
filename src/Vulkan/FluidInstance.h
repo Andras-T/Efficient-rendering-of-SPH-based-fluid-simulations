@@ -16,6 +16,7 @@ class FluidInstance {
 private:
   std::vector<VkDescriptorSet> descriptorSets;
   std::vector<VkDescriptorSet> quadDescriptorSets;
+  std::vector<VkDescriptorSet> blurDescriptorSets;
 
   std::vector<VkBuffer> shaderStorageBuffers;
   std::vector<VkDeviceMemory> shaderStorageBuffersMemory;
@@ -66,5 +67,9 @@ public:
 
   std::vector<VkDescriptorSet> &getQuadDescriptorSets() {
     return quadDescriptorSets;
+  }
+
+  std::vector<VkDescriptorSet> &getBlurDescriptorSets() {
+    return blurDescriptorSets;
   }
 };

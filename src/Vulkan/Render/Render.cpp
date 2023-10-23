@@ -198,7 +198,8 @@ void Render::drawFrame(uint32_t lastFrameTime) {
       swapChainManager->recreateSwapChain(window->get_GLFW_Window(),
                                           deviceManager->getDevice());
       descriptorManager->recreateDescriptorSets(
-          device, instance->getQuadDescriptorSets());
+          device, instance->getQuadDescriptorSets(),
+          instance->getBlurDescriptorSets());
     } else if (result != VK_SUCCESS) {
       throw std::runtime_error("failed to present swap chain image!");
     }

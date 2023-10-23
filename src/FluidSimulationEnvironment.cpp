@@ -136,6 +136,7 @@ void FluidSimulationEnvironment::cleanUp() {
 
   vkDestroyRenderPass(device, vulkanObject.getSimulationRenderPass(), nullptr);
   vkDestroyRenderPass(device, vulkanObject.getQuadRenderPass(), nullptr);
+  vkDestroyRenderPass(device, vulkanObject.getBlurRenderPass(), nullptr);
 
   descriptorManager.cleanup(device);
 

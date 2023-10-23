@@ -8,10 +8,12 @@ REM Add new command for new shader!
 REM vertex shaders
 %GLSLC_PATH% %CURRENT_PATH%shader.vert -o %CURRENT_PATH%vert.spv
 %GLSLC_PATH% %CURRENT_PATH%quadShader.vert -o %CURRENT_PATH%quadVert.spv
+%GLSLC_PATH% %CURRENT_PATH%blurShader.vert -o %CURRENT_PATH%blurVert.spv
 
 REM fragment shaders
 %GLSLC_PATH% %CURRENT_PATH%shader.frag -o %CURRENT_PATH%frag.spv
 %GLSLC_PATH% %CURRENT_PATH%quadShader.frag -o %CURRENT_PATH%quadFrag.spv
+%GLSLC_PATH% %CURRENT_PATH%blurShader.frag -o %CURRENT_PATH%blurFrag.spv
 
 REM compute shaders
 %GLSLC_PATH% %CURRENT_PATH%shader.comp -o %CURRENT_PATH%comp.spv

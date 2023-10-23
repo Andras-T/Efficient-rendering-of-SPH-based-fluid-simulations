@@ -56,6 +56,9 @@ void BufferManager::createShaderStorageBuffers(
     createVertexBuffer(deviceManager, commandPool, quad::quadVertices.data(),
                        quadBuffer, quadMemory,
                        quad::quadVertices.size() * sizeof(float));
+    createVertexBuffer(deviceManager, commandPool, quad::quadVertices.data(),
+                       blurBuffer, blurMemory,
+                       quad::quadVertices.size() * sizeof(float));
     firstRun = false;
   }
 

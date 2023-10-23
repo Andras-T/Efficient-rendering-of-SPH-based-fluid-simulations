@@ -52,6 +52,29 @@ void DescriptorManager::createDescriptorSetLayout(VkDevice &device) {
           "failed to create simulation descriptor set layout!");
     }
   }
+
+  // Blur layout bindings
+  {
+    std::array<VkDescriptorSetLayoutBinding, 1> blurLayoutBindings{};
+    blurLayoutBindings[0].binding = 0;
+    blurLayoutBindings[0].descriptorCount = 1;
+    blurLayoutBindings[0].descriptorType =
+        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    blurLayoutBindings[0].pImmutableSamplers = nullptr;
+    blurLayoutBindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    VkDescriptorSetLayoutCreateInfo blurLayoutInfo{};
+    blurLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    blurLayoutInfo.bindingCount =
+        static_cast<uint32_t>(blurLayoutBindings.size());
+    blurLayoutInfo.pBindings = blurLayoutBindings.data();
+
+    if (vkCreateDescriptorSetLayout(device, &blurLayoutInfo, nullptr,
+                                    &blurDescriptorSetLayout) != VK_SUCCESS) {
+      throw std::runtime_error("failed to create quad descriptor set layout!");
+    }
+  }
+
   // Quad layout bindings
   {
     std::array<VkDescriptorSetLayoutBinding, 3> quadLayoutBindings{};
@@ -123,6 +146,26 @@ void DescriptorManager::createDescriptorPool(VkDevice &device) {
       throw std::runtime_error("failed to create simulation descriptor pool!");
     }
   }
+
+  // Blur descriptor pool
+  {
+    std::array<VkDescriptorPoolSize, 1> blurPoolSizes{};
+    blurPoolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    blurPoolSizes[0].descriptorCount = static_cast<uint32_t>(1);
+
+    VkDescriptorPoolCreateInfo blurPoolInfo{};
+    blurPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    blurPoolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    blurPoolInfo.poolSizeCount = static_cast<uint32_t>(blurPoolSizes.size());
+    blurPoolInfo.pPoolSizes = blurPoolSizes.data();
+    blurPoolInfo.maxSets = 1024;
+
+    if (vkCreateDescriptorPool(device, &blurPoolInfo, nullptr,
+                               &blurDescriptorPool) != VK_SUCCESS) {
+      throw std::runtime_error("failed to create blur descriptor pool!");
+    }
+  }
+
   // Quad descriptor pool
   {
     std::array<VkDescriptorPoolSize, 3> quadPoolSizes{};
@@ -144,7 +187,7 @@ void DescriptorManager::createDescriptorPool(VkDevice &device) {
 
     if (vkCreateDescriptorPool(device, &quadPoolInfo, nullptr,
                                &quadDescriptorPool) != VK_SUCCESS) {
-      throw std::runtime_error("failed to create simulation descriptor pool!");
+      throw std::runtime_error("failed to create quad descriptor pool!");
     }
   }
 }
@@ -152,8 +195,9 @@ void DescriptorManager::createDescriptorPool(VkDevice &device) {
 void DescriptorManager::createDescriptorSets(
     VkDevice &device, std::vector<VkDescriptorSet> &descriptorSets,
     std::vector<VkDescriptorSet> &quadDescriptorSets,
-    std::vector<VkBuffer> &shaderStorageBuffers, VkBuffer &sphereBuffers,
-    VkBuffer &quadBuffers, std::vector<VkBuffer> &uniformBuffers,
+    std::vector<VkDescriptorSet> &blurDescriptorSets,
+    std::vector<VkBuffer> &shaderStorageBuffers,
+    std::vector<VkBuffer> &uniformBuffers,
     std::vector<VkBuffer> &attributesUniformBuffers,
     std::vector<VkBuffer> &modelUniformBuffers) {
   // Simulation Descriptor sets
@@ -247,6 +291,70 @@ void DescriptorManager::createDescriptorSets(
       vkUpdateDescriptorSets(device, 5, descriptorWrites.data(), 0, nullptr);
     }
   }
+
+  // 2D sampler info
+  {
+    VkSamplerCreateInfo samplerInfo{};
+    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.magFilter = VK_FILTER_LINEAR;
+    samplerInfo.minFilter = VK_FILTER_LINEAR;
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.anisotropyEnable = VK_FALSE;
+    samplerInfo.maxAnisotropy = 1.0f;
+    samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    samplerInfo.compareEnable = VK_TRUE;
+    samplerInfo.compareOp =
+        VK_COMPARE_OP_ALWAYS; // VK_COMPARE_OP_ALWAYS // VK_COMPARE_OP_LESS
+    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+
+    if (vkCreateSampler(device, &samplerInfo, nullptr, &depthSampler) !=
+        VK_SUCCESS) {
+      throw std::runtime_error("failed to create depth sampler!");
+    }
+  }
+
+  // Blur Descriptor sets
+  {
+    std::vector<VkDescriptorSetLayout> blurLayouts(Utils::MAX_FRAMES_IN_FLIGHT,
+                                                   blurDescriptorSetLayout);
+
+    VkDescriptorSetAllocateInfo blurAllocInfo{};
+    blurAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    blurAllocInfo.descriptorPool = blurDescriptorPool;
+    blurAllocInfo.descriptorSetCount =
+        static_cast<uint32_t>(Utils::MAX_FRAMES_IN_FLIGHT);
+    blurAllocInfo.pSetLayouts = blurLayouts.data();
+
+    blurDescriptorSets.resize(Utils::MAX_FRAMES_IN_FLIGHT);
+    if (vkAllocateDescriptorSets(device, &blurAllocInfo,
+                                 blurDescriptorSets.data()) != VK_SUCCESS) {
+      throw std::runtime_error("failed to allocate blur descriptor sets!");
+    }
+
+    for (size_t i = 0; i < Utils::MAX_FRAMES_IN_FLIGHT; i++) {
+      std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
+
+      VkDescriptorImageInfo depthImageInfo = {};
+      depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+      depthImageInfo.imageView = swapchainManager->getDepthImageView();
+      depthImageInfo.sampler = depthSampler;
+
+      descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      descriptorWrites[0].dstSet = blurDescriptorSets[i];
+      descriptorWrites[0].dstBinding = 0;
+      descriptorWrites[0].dstArrayElement = 0;
+      descriptorWrites[0].descriptorType =
+          VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+      descriptorWrites[0].descriptorCount = 1;
+      descriptorWrites[0].pImageInfo = &depthImageInfo;
+
+      vkUpdateDescriptorSets(device, 1, descriptorWrites.data(), 0, nullptr);
+    }
+  }
+
   // Quad Descriptor sets
   {
     std::vector<VkDescriptorSetLayout> quadLayouts(Utils::MAX_FRAMES_IN_FLIGHT,
@@ -263,30 +371,6 @@ void DescriptorManager::createDescriptorSets(
     if (vkAllocateDescriptorSets(device, &quadAllocInfo,
                                  quadDescriptorSets.data()) != VK_SUCCESS) {
       throw std::runtime_error("failed to allocate descriptor sets!");
-    }
-
-    // 2D sampler info
-    {
-      VkSamplerCreateInfo samplerInfo{};
-      samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-      samplerInfo.magFilter = VK_FILTER_LINEAR;
-      samplerInfo.minFilter = VK_FILTER_LINEAR;
-      samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-      samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-      samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-      samplerInfo.anisotropyEnable = VK_FALSE;
-      samplerInfo.maxAnisotropy = 1.0f;
-      samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
-      samplerInfo.unnormalizedCoordinates = VK_FALSE;
-      samplerInfo.compareEnable = VK_TRUE;
-      samplerInfo.compareOp =
-          VK_COMPARE_OP_ALWAYS; // VK_COMPARE_OP_ALWAYS // VK_COMPARE_OP_LESS
-      samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-
-      if (vkCreateSampler(device, &samplerInfo, nullptr, &depthSampler) !=
-          VK_SUCCESS) {
-        throw std::runtime_error("failed to create depth sampler!");
-      }
     }
 
     for (size_t i = 0; i < Utils::MAX_FRAMES_IN_FLIGHT; i++) {
@@ -338,26 +422,10 @@ void DescriptorManager::createDescriptorSets(
 }
 
 void DescriptorManager::recreateDescriptorSets(
-    VkDevice &device, std::vector<VkDescriptorSet> &quadDescriptorSets) {
-
-  // Quad Descriptor sets
+    VkDevice &device, std::vector<VkDescriptorSet> &quadDescriptorSets,
+    std::vector<VkDescriptorSet> &blurDescriptorSets) {
+  // Recreate depth sampler
   {
-    std::vector<VkDescriptorSetLayout> quadLayouts(Utils::MAX_FRAMES_IN_FLIGHT,
-                                                   quadDescriptorSetLayout);
-
-    VkDescriptorSetAllocateInfo quadAllocInfo{};
-    quadAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    quadAllocInfo.descriptorPool = quadDescriptorPool;
-    quadAllocInfo.descriptorSetCount =
-        static_cast<uint32_t>(Utils::MAX_FRAMES_IN_FLIGHT);
-    quadAllocInfo.pSetLayouts = quadLayouts.data();
-
-    quadDescriptorSets.resize(Utils::MAX_FRAMES_IN_FLIGHT);
-    if (vkAllocateDescriptorSets(device, &quadAllocInfo,
-                                 quadDescriptorSets.data()) != VK_SUCCESS) {
-      throw std::runtime_error("failed to allocate descriptor sets!");
-    }
-
     vkDestroySampler(device, depthSampler, nullptr);
 
     VkSamplerCreateInfo samplerInfo{};
@@ -378,6 +446,64 @@ void DescriptorManager::recreateDescriptorSets(
     if (vkCreateSampler(device, &samplerInfo, nullptr, &depthSampler) !=
         VK_SUCCESS) {
       throw std::runtime_error("failed to create depth sampler!");
+    }
+  }
+
+  // Recreate Blur Descriptor sets
+  {
+    std::vector<VkDescriptorSetLayout> blurLayouts(Utils::MAX_FRAMES_IN_FLIGHT,
+                                                   blurDescriptorSetLayout);
+
+    VkDescriptorSetAllocateInfo blurAllocInfo{};
+    blurAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    blurAllocInfo.descriptorPool = blurDescriptorPool;
+    blurAllocInfo.descriptorSetCount =
+        static_cast<uint32_t>(Utils::MAX_FRAMES_IN_FLIGHT);
+    blurAllocInfo.pSetLayouts = blurLayouts.data();
+
+    blurDescriptorSets.resize(Utils::MAX_FRAMES_IN_FLIGHT);
+    if (vkAllocateDescriptorSets(device, &blurAllocInfo,
+                                 blurDescriptorSets.data()) != VK_SUCCESS) {
+      throw std::runtime_error("failed to allocate blur descriptor sets!");
+    }
+
+    for (size_t i = 0; i < Utils::MAX_FRAMES_IN_FLIGHT; i++) {
+      std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
+
+      VkDescriptorImageInfo depthImageInfo = {};
+      depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+      depthImageInfo.imageView = swapchainManager->getDepthImageView();
+      depthImageInfo.sampler = depthSampler;
+
+      descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      descriptorWrites[0].dstSet = blurDescriptorSets[i];
+      descriptorWrites[0].dstBinding = 0;
+      descriptorWrites[0].dstArrayElement = 0;
+      descriptorWrites[0].descriptorType =
+          VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+      descriptorWrites[0].descriptorCount = 1;
+      descriptorWrites[0].pImageInfo = &depthImageInfo;
+
+      vkUpdateDescriptorSets(device, 1, descriptorWrites.data(), 0, nullptr);
+    }
+  }
+
+  // Recreate Quad Descriptor sets
+  {
+    std::vector<VkDescriptorSetLayout> quadLayouts(Utils::MAX_FRAMES_IN_FLIGHT,
+                                                   quadDescriptorSetLayout);
+
+    VkDescriptorSetAllocateInfo quadAllocInfo{};
+    quadAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    quadAllocInfo.descriptorPool = quadDescriptorPool;
+    quadAllocInfo.descriptorSetCount =
+        static_cast<uint32_t>(Utils::MAX_FRAMES_IN_FLIGHT);
+    quadAllocInfo.pSetLayouts = quadLayouts.data();
+
+    quadDescriptorSets.resize(Utils::MAX_FRAMES_IN_FLIGHT);
+    if (vkAllocateDescriptorSets(device, &quadAllocInfo,
+                                 quadDescriptorSets.data()) != VK_SUCCESS) {
+      throw std::runtime_error("failed to allocate descriptor sets!");
     }
 
     for (size_t i = 0; i < Utils::MAX_FRAMES_IN_FLIGHT; i++) {
@@ -432,6 +558,8 @@ void DescriptorManager::cleanup(VkDevice &device) {
   vkDestroySampler(device, depthSampler, nullptr);
   vkDestroyDescriptorPool(device, descriptorPool, nullptr);
   vkDestroyDescriptorPool(device, quadDescriptorPool, nullptr);
+  vkDestroyDescriptorPool(device, blurDescriptorPool, nullptr);
   vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
   vkDestroyDescriptorSetLayout(device, quadDescriptorSetLayout, nullptr);
+  vkDestroyDescriptorSetLayout(device, blurDescriptorSetLayout, nullptr);
 }

@@ -45,9 +45,9 @@ void FluidInstance::InitDescriptorSets(DescriptorManager &descriptorManager,
                                        VkDevice &device,
                                        BufferManager &bufferManager) {
   descriptorManager.createDescriptorSets(
-      device, descriptorSets, quadDescriptorSets, shaderStorageBuffers,
-      bufferManager.getSphereBuffer(), bufferManager.getQuadBuffer(),
-      uniformBuffers, attributesUniformBuffers, modelUniformBuffers);
+      device, descriptorSets, quadDescriptorSets, blurDescriptorSets,
+      shaderStorageBuffers, uniformBuffers, attributesUniformBuffers,
+      modelUniformBuffers);
   this->bufferManager = &bufferManager;
   logger.LogInfo("Descriptor sets created");
 }

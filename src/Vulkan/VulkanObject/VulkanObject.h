@@ -14,6 +14,7 @@ private:
   VkSurfaceKHR surface;
   VkRenderPass simulationRenderPass;
   VkRenderPass quadRenderPass;
+  VkRenderPass blurRenderPass;
 
   Logger &logger;
 
@@ -62,6 +63,8 @@ public:
   VkRenderPass &getSimulationRenderPass() { return simulationRenderPass; }
 
   VkRenderPass &getQuadRenderPass() { return quadRenderPass; }
+
+  VkRenderPass &getBlurRenderPass() { return blurRenderPass; }
 
   VkInstance &getInstance() { return instance; }
 

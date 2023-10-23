@@ -22,6 +22,7 @@ void CommandPoolManager::createCommandBuffers(VkDevice &device) {
   }
 
   createQuadCommandBuffer(device);
+  createBlurCommandBuffer(device);
   createComputeCommandBuffers(device);
   createImGuiCommandBuffers(device);
 
@@ -39,7 +40,22 @@ void CommandPoolManager::createQuadCommandBuffer(VkDevice &device) {
 
   if (vkAllocateCommandBuffers(device, &allocInfo, quadCommandBuffers.data()) !=
       VK_SUCCESS) {
-    throw std::runtime_error("failed to allocate command buffers!");
+    throw std::runtime_error("failed to allocate quad command buffers!");
+  }
+}
+
+void CommandPoolManager::createBlurCommandBuffer(VkDevice &device) {
+  blurCommandBuffers.resize(Utils::MAX_FRAMES_IN_FLIGHT);
+
+  VkCommandBufferAllocateInfo allocInfo{};
+  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  allocInfo.commandPool = commandPool;
+  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  allocInfo.commandBufferCount = (uint32_t)blurCommandBuffers.size();
+
+  if (vkAllocateCommandBuffers(device, &allocInfo, blurCommandBuffers.data()) !=
+      VK_SUCCESS) {
+    throw std::runtime_error("failed to allocate blur command buffers!");
   }
 }
 

@@ -211,6 +211,30 @@ void SwapchainManager::createFramebuffers(VulkanObject &vulkanObject) {
       }
     }
   }
+
+  // Blur framebuffer
+  {
+      blurSwapChainFramebuffers.resize(swapChainImageViews.size());
+      for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+          std::array<VkImageView, 1> attachments = { swapChainImageViews[i] };
+
+          VkFramebufferCreateInfo framebufferInfo{};
+          framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+          framebufferInfo.renderPass = vulkanObject.getBlurRenderPass();
+          framebufferInfo.attachmentCount =
+              static_cast<uint32_t>(attachments.size());
+          framebufferInfo.pAttachments = attachments.data();
+          framebufferInfo.width = swapChainExtent.width;
+          framebufferInfo.height = swapChainExtent.height;
+          framebufferInfo.layers = 1;
+
+          if (vkCreateFramebuffer(*device, &framebufferInfo, nullptr,
+              &blurSwapChainFramebuffers[i]) != VK_SUCCESS) {
+              throw std::runtime_error("failed to create blur framebuffer!");
+          }
+      }
+  }
+
   // Quad framebuffer
   {
     quadSwapChainFramebuffers.resize(swapChainImageViews.size());
@@ -262,6 +286,9 @@ void SwapchainManager::cleanupSwapChain() {
 
   for (auto &framebuffer : swapChainFramebuffers)
     vkDestroyFramebuffer(*device, framebuffer, nullptr);
+
+  for (auto& framebuffer : blurSwapChainFramebuffers)
+      vkDestroyFramebuffer(*device, framebuffer, nullptr);
 
   for (auto &framebuffer : quadSwapChainFramebuffers)
     vkDestroyFramebuffer(*device, framebuffer, nullptr);
