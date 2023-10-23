@@ -40,7 +40,7 @@ set(SOURCES
         ${STB_DIR}/stb_image.cpp 
         ${STB_DIR}/stb_image.h)
 
-add_executable(FluidSimulationSPH ${SOURCES})
+add_executable(FluidSimulationSPH ${SOURCES} res/app.o)
 
 FILE(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/shaders")
 
