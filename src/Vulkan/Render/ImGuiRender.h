@@ -18,11 +18,13 @@ private:
 
   Window *window;
   InputState inputState;
-  UniformData uniformData;
+  UniformData &uniformData;
   FluidInstance *instance;
 
 public:
   VkClearColorValue backgroundColor = {0.25f, 0.25f, 0.25f, 1.0f};
+
+  ImGuiRender(UniformData &uniformData) : uniformData(uniformData) {}
 
   void init(Window &window, FluidInstance *instance) {
     this->window = &window;
@@ -42,8 +44,6 @@ public:
   void createJoyStick(int width, int height, int dockingWindowWidth);
 
   void menuShortcuts();
-
-  UniformData &getUniformData() { return uniformData; };
 
   InputState &getInputState() { return inputState; }
 };

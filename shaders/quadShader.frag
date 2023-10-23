@@ -52,7 +52,7 @@ float getBluredDepth(vec2 texcoord, float filterRadius, vec2 blurDir,
   return sum;
 }
 
-//vec3 getNormal(vec2 texcoord) {
+// vec3 getNormal(vec2 texcoord) {
 //  float offset = 0.005;
 //
 //  float leftDepth = texture(depthImage, texcoord - vec2(offset, 0.0)).x;
@@ -74,48 +74,48 @@ float getBluredDepth(vec2 texcoord, float filterRadius, vec2 blurDir,
 //}
 
 vec3 uvToEye(vec2 uv, float depth) {
-    vec4 clipPos = vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
-    vec4 eyePos = inverse(mvp.proj) * clipPos;
-    return eyePos.xyz / eyePos.w;
+  vec4 clipPos = vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+  vec4 eyePos = inverse(mvp.proj) * clipPos;
+  return eyePos.xyz / eyePos.w;
 }
 
 vec3 getEyePos(sampler2D depthTex, vec2 texCoord) {
-    float depth = texture(depthTex, texCoord).r;
-    return uvToEye(texCoord, depth);
+  float depth = texture(depthTex, texCoord).r;
+  return uvToEye(texCoord, depth);
 }
 
 vec3 getNormal(vec2 texCoord) {
-    float depth = texture(depthImage, texCoord).x;
-    if (depth >= maxDepth) {
-        discard;
-    }
+  float depth = texture(depthImage, texCoord).x;
+  if (depth >= maxDepth) {
+    discard;
+  }
 
-    vec3 posEye = uvToEye(texCoord, depth);
+  vec3 posEye = uvToEye(texCoord, depth);
 
-    vec3 ddx = getEyePos(depthImage, texCoord + vec2(texelSize, 0)) - posEye;
-    vec3 ddx2 = posEye - getEyePos(depthImage, texCoord + vec2(-texelSize, 0));
-    if (abs(ddx.z) > abs(ddx2.z)) {
-        ddx = ddx2;
-    }
+  vec3 ddx = getEyePos(depthImage, texCoord + vec2(texelSize, 0)) - posEye;
+  vec3 ddx2 = posEye - getEyePos(depthImage, texCoord + vec2(-texelSize, 0));
+  if (abs(ddx.z) > abs(ddx2.z)) {
+    ddx = ddx2;
+  }
 
-    vec3 ddy = getEyePos(depthImage, texCoord + vec2(0, texelSize)) - posEye;
-    vec3 ddy2 = posEye - getEyePos(depthImage, texCoord + vec2(0, -texelSize));
-    if (abs(ddy.z) > abs(ddy2.z)) {
-        ddy = ddy2;
-    }
+  vec3 ddy = getEyePos(depthImage, texCoord + vec2(0, texelSize)) - posEye;
+  vec3 ddy2 = posEye - getEyePos(depthImage, texCoord + vec2(0, -texelSize));
+  if (abs(ddy.z) > abs(ddy2.z)) {
+    ddy = ddy2;
+  }
 
-    vec3 n = cross(ddx, ddy);
-    return normalize(-n);
-
+  vec3 n = cross(ddx, ddy);
+  return normalize(-n);
 }
 
 void main() {
-  texelSize = 1.0f/model.windowSize.x;
+  texelSize = 1.0f / model.windowSize.x;
   float originalDepth = texture(depthImage, fragTexCoord).x;
-  float depthX = getBluredDepth(fragTexCoord, 15.0f, vec2(texelSize, 0.0f), 0.001f, 0.0f);
+  float depthX =
+      getBluredDepth(fragTexCoord, 15.0f, vec2(texelSize, 0.0f), 0.001f, 0.0f);
   vec3 normal = getNormal(fragTexCoord);
-  
-  //outColor = vec4(vec3(originalDepth), 1.0f);
-  outColor = vec4(vec3(depthX), 1.0f);
-  //outColor = vec4((normal) * 0.5f, 1.0f);
+
+  // outColor = vec4(vec3(originalDepth), 1.0f);
+  outColor = vec4(vec3(originalDepth), 1.0f);
+  // outColor = vec4((normal) * 0.5f, 1.0f);
 }

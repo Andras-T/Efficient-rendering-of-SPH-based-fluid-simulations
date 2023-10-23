@@ -2,7 +2,6 @@
 
 struct Particle {
   vec4 position;
-  vec4 color;
   vec3 velocity;
   float movable;
   vec3 acc;
@@ -29,7 +28,7 @@ layout(binding = 4) uniform Model {
 model;
 
 layout(location = 0) in vec4 inPosition;
-layout(location = 0) out vec4 fragColor;
+layout(location = 0) out float movable;
 
 layout(std140, binding = 1) readonly buffer ParticleSSBOIn {
   Particle particlesIn[];
@@ -41,6 +40,5 @@ void main() {
 
   vec4 vertexPosition = inPosition + p.position;
   gl_Position = mvp.proj * mvp.view * mvp.model * vertexPosition;
-
-  fragColor = p.color;
+  movable = p.movable;
 }

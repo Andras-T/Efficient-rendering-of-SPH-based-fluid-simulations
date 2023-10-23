@@ -34,12 +34,17 @@ private:
 
   std::vector<VkDescriptorSet> *quadDescriptorSets;
 
+  UniformData uniformData;
   ImGuiRender imGuiRender;
 
   FluidInstance *instance;
 
+  bool stopped = false;
+
 public:
   size_t currentFrame = 0;
+
+  Render() : imGuiRender(uniformData) {}
 
   void init(DeviceManager &deviceManager, SwapchainManager &swapChainManager,
             CommandPoolManager &commandPoolManager,
@@ -58,4 +63,6 @@ public:
   void recordQuad(VkCommandBuffer &commandBuffer, uint32_t imageIndex);
 
   void cleanUp();
+
+  UniformData &getUniformData() { return uniformData; }
 };

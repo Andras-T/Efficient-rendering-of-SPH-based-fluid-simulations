@@ -101,9 +101,23 @@ void FluidSimulationEnvironment::mainLoop() {
   while (!glfwWindowShouldClose(window.get_GLFW_Window())) {
     glfwPollEvents();
     render.drawFrame(lastFrameTime);
+    checkInput();
     double currentTime = glfwGetTime();
     lastFrameTime = (currentTime - Window::lastTime) * 1000.0;
     Window::lastTime = currentTime;
+  }
+}
+
+void FluidSimulationEnvironment::checkInput() {
+  glfwPollEvents();
+  if (ImGui::GetIO().KeyMods == ImGuiModFlags_Shift &&
+          ImGui::IsKeyPressed(ImGuiKey_R, ImGuiKeyOwner_Any) ||
+      render.getUniformData().resetRequest) {
+    logger.LogInfo("Reset position");
+    instance.resetInstance(bufferManager, deviceManager,
+                           commandPoolManager.getCommandPool());
+    render.getUniformData().attributes.stop = 1;
+    render.getUniformData().resetRequest = false;
   }
 }
 

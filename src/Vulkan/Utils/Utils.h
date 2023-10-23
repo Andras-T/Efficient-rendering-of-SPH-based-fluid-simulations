@@ -14,7 +14,7 @@ class Utils {
 
 private:
   static void createWallParticle(Particle &particle, glm::vec4 position,
-                                 glm::vec4 color, glm::vec3 center);
+                                 glm::vec3 center);
 
   static void setVertexCount(int c) { vertexCount = c; }
 
@@ -24,9 +24,9 @@ public:
   static constexpr char *VULKAN = "[vulkan]";
 
   static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
-  static constexpr int MOVABLE_PARTICLE_COUNT = 4096;
-  static constexpr int UNMOVABLE_PARTICLE_COUNT = 15552;
-  static constexpr float SPHERE_RADIUS = 0.055f;
+  static constexpr int MOVABLE_PARTICLE_COUNT = 1000;
+  static constexpr int UNMOVABLE_PARTICLE_COUNT = 5292;
+  static constexpr float SPHERE_RADIUS = 0.09f;
   static const int PARTICLE_COUNT =
       MOVABLE_PARTICLE_COUNT + UNMOVABLE_PARTICLE_COUNT;
   static int vertexCount;

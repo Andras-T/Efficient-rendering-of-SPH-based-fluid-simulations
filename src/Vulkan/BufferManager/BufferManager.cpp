@@ -59,7 +59,7 @@ void BufferManager::createShaderStorageBuffers(
     firstRun = false;
   }
 
-  std::vector<Particle> particles(Utils::PARTICLE_COUNT);
+  particles.resize(Utils::PARTICLE_COUNT);
   Utils::initializeParticles(particles, center);
   VkDeviceSize bufferSize = sizeof(Particle) * Utils::PARTICLE_COUNT;
 
@@ -86,6 +86,37 @@ void BufferManager::createShaderStorageBuffers(
                      VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, shaderStorageBuffers[i],
                  shaderStorageBuffersMemory[i]);
+    copyBuffer(device, commandPool, deviceManager.getGraphicsQueue(),
+               stagingBuffer, (shaderStorageBuffers)[i], bufferSize);
+  }
+
+  vkDestroyBuffer(device, stagingBuffer, nullptr);
+  vkFreeMemory(device, stagingBufferMemory, nullptr);
+}
+
+void BufferManager::resetParticles(
+    DeviceManager &deviceManager, VkCommandPool &commandPool,
+    std::vector<VkBuffer> &shaderStorageBuffers,
+    std::vector<VkDeviceMemory> &shaderStorageBuffersMemory) {
+  VkDevice &device = deviceManager.getDevice();
+  VkPhysicalDevice &physicalDevice = deviceManager.getPhysicalDevice();
+
+  VkDeviceSize bufferSize = sizeof(Particle) * Utils::PARTICLE_COUNT;
+
+  VkBuffer stagingBuffer;
+  VkDeviceMemory stagingBufferMemory;
+  createBuffer(device, physicalDevice, bufferSize,
+               VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                   VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+               stagingBuffer, stagingBufferMemory);
+
+  void *data;
+  vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
+  memcpy(data, particles.data(), (size_t)bufferSize);
+  vkUnmapMemory(device, stagingBufferMemory);
+
+  for (size_t i = 0; i < Utils::MAX_FRAMES_IN_FLIGHT; i++) {
     copyBuffer(device, commandPool, deviceManager.getGraphicsQueue(),
                stagingBuffer, (shaderStorageBuffers)[i], bufferSize);
   }

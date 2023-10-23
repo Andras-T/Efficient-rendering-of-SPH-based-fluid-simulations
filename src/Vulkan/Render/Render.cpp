@@ -1,4 +1,5 @@
 #include "Render.h"
+#include "../Utils/Structs/PushConstans.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
 #include "imgui_internal.h"
@@ -73,9 +74,9 @@ void Render::drawFrame(uint32_t lastFrameTime) {
     vkWaitForFences(device, 1, &computeInFlightFences[currentFrame], VK_TRUE,
                     UINT64_MAX);
 
-    instance->updateUniformBuffer(
-        currentFrame, lastFrameTime, &swapChainManager->getSwapChainExtent(),
-        imGuiRender.getUniformData(), imGuiRender.getInputState());
+    instance->updateUniformBuffer(currentFrame, lastFrameTime,
+                                  &swapChainManager->getSwapChainExtent(),
+                                  uniformData, imGuiRender.getInputState());
 
     vkResetFences(device, 1, &computeInFlightFences[currentFrame]);
 
@@ -243,23 +244,27 @@ void Render::recordComputeCommandBuffer(VkCommandBuffer &commandBuffer) {
 
   int groupCnt = Utils::PARTICLE_COUNT / 256;
 
-  int stageIndex = 1;
+  PushConstant pushConstant;
+
   vkCmdPushConstants(commandBuffer, pipelineManager->getComputePipelineLayout(),
-                     VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(int), &stageIndex);
+                     VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstant),
+                     &pushConstant);
   vkCmdDispatch(commandBuffer, groupCnt, 1, 1);
 
   vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
 
-  stageIndex++; // 2
+  pushConstant.stageIndex++; // 2
   vkCmdPushConstants(commandBuffer, pipelineManager->getComputePipelineLayout(),
-                     VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(int), &stageIndex);
+                     VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstant),
+                     &pushConstant);
   vkCmdDispatch(commandBuffer, groupCnt, 1, 1);
 
   vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
 
-  stageIndex++; // 3
+  pushConstant.stageIndex++; // 3
   vkCmdPushConstants(commandBuffer, pipelineManager->getComputePipelineLayout(),
-                     VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(int), &stageIndex);
+                     VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstant),
+                     &pushConstant);
   vkCmdDispatch(commandBuffer, groupCnt, 1, 1);
 
   if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {

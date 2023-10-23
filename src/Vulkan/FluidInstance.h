@@ -45,6 +45,9 @@ public:
                    VkCommandPool &commandPool, glm::vec3 center,
                    GLFWwindow *window);
 
+  void resetInstance(BufferManager &bufferManager, DeviceManager &deviceManager,
+                     VkCommandPool &commandPool);
+
   void InitDescriptorSets(DescriptorManager &descriptorManager,
                           VkDevice &device, BufferManager &bufferManager);
 

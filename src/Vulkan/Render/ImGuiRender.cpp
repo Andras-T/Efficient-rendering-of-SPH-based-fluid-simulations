@@ -154,23 +154,25 @@ void ImGuiRender::createTransformationsMenu(int width, int height) {
     ImGui::Spacing();
 
     ImGui::DragFloat("Smoothing length", &uniformData.attributes.smootingLength,
-                     0.001f, 0.001f, 0.25f, "%.3f", 0);
-    ImGui::DragFloat("particle mass", &uniformData.attributes.mass, 0.1f, 0.0f,
-                     2000.0f, "%.2f", 0);
-    if (uniformData.attributes.mass == 0)
-      uniformData.attributes.mass = 0.1f;
+                     0.001f, 0.001f, 0.5f, "%.3f", 0);
+    ImGui::DragFloat("Particle mass", &uniformData.attributes.mass, 0.01f, 0.0f,
+                     1000.0f, "%.2f", 0);
     ImGui::DragFloat("Equation of state constant",
-                     &uniformData.attributes.stateConstant, 0.1f, 0.01f,
-                     5000.0f, "%.2f", 0);
-    ImGui::DragFloat("gravity", &uniformData.attributes.gravity, 0.5f, -500.0f,
-                     2500.0f, "%.1f", 0);
-    ImGui::DragFloat("damping", &uniformData.attributes.damping, 0.5f, 0.0f,
-                     300.0f, "%.1f", 0);
-    ImGui::DragFloat("polytropic index",
+                     &uniformData.attributes.stateConstant, 0.001f, 0.01f,
+                     5000.0f, "%.3f", 0);
+    ImGui::DragFloat("Gravity", &uniformData.attributes.gravity, 0.5f, -500.0f,
+                     2500.0f, "%.2f", 0);
+    ImGui::DragFloat("Damping Acceleration",
+                     &uniformData.attributes.dampingAcceleration, 0.0001f, 0.0f,
+                     300.0f, "%.4f", 0);
+    ImGui::DragFloat("Damping Velocity",
+                     &uniformData.attributes.dampingVelocity, 0.0001f, 0.0f,
+                     300.0f, "%.4f", 0);
+    ImGui::DragFloat("Polytropic index",
                      &uniformData.attributes.polytropicIndex, 0.01f, 0.001f,
-                     10.0f, "%.1f", 0);
-    ImGui::DragFloat("Time step", &uniformData.attributes.timeStep, 0.05f,
-                     0.01f, 5.0f, "%.2f", 0);
+                     10.0f, "%.3f", 0);
+    ImGui::DragFloat("Time step", &uniformData.attributes.timeStep, 0.001f,
+                     0.001f, 5.0f, "%.3f", 0);
 
     ImGui::Spacing();
     ImGui::Spacing();
@@ -188,7 +190,8 @@ void ImGuiRender::createTransformationsMenu(int width, int height) {
 
     ImGui::Spacing();
 
-    if (ImGui::Button("Reset", ImVec2(width / 4, 40))) {
+    if (ImGui::Button("Reset attributes & transformations",
+                      ImVec2(width / 4, 40))) {
       Attributes a;
       Transformations t;
       uniformData.transformations = t;
@@ -202,7 +205,7 @@ void ImGuiRender::createTransformationsMenu(int width, int height) {
 
     ImGui::Spacing();
 
-    if (ImGui::Button("Reset  transformations", ImVec2(width / 4, 40))) {
+    if (ImGui::Button("Reset transformations", ImVec2(width / 4, 40))) {
       Transformations t;
       uniformData.transformations = t;
       InputState i;
@@ -212,11 +215,16 @@ void ImGuiRender::createTransformationsMenu(int width, int height) {
 
     ImGui::Spacing();
 
-    if (ImGui::Button("Reset  attributes", ImVec2(width / 4, 40))) {
+    if (ImGui::Button("Reset attributes", ImVec2(width / 4, 40))) {
       Attributes a;
       if (!firstTime && uniformData.attributes.stop == 0)
         a.stop = 0;
       uniformData.attributes = a;
+    }
+    ImGui::Spacing();
+
+    if (ImGui::Button("Reset position", ImVec2(width / 4, 40))) {
+      uniformData.resetRequest = true;
     }
     ImGui::Spacing();
 

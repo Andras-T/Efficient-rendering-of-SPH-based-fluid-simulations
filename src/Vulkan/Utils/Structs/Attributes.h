@@ -5,10 +5,13 @@ struct Attributes {
   int numberOfParticles = Utils::PARTICLE_COUNT;
   float smootingLength = 0.12f;
   float mass = 100.0f;
-  float stateConstant = 2750.0;
-  float polytropicIndex = 1.0f;
-  float damping = 200.0f;
-  float gravity = 650.0f;
-  float timeStep = 0.3f;
+  float stateConstant = 3000.0f;
+  float polytropicIndex = 0.990f;
+  float damping = 0.00035f;
+  float dampingAcceleration = 0.2726f;
+  float dampingVelocity = 0.0f;
+  float gravity = 4.55f;
+  float timeStep = 1.0f;
   int stop = 1;
+  glm::vec2 pad;
 };

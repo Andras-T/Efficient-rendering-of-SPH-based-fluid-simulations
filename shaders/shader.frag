@@ -1,6 +1,6 @@
 #version 450
 
-layout(location = 0) in vec4 fragColor;
+layout(location = 0) in float movable;
 layout(location = 0) out vec4 outColor;
 
 layout(binding = 4) uniform Model {
@@ -13,8 +13,7 @@ layout(binding = 4) uniform Model {
 model;
 
 void main() {
-  // part of the wall
-  if (fragColor.w < 0.0001) {
+  if (movable < 0.5) {
     // if show wall is off
     if (model.wall == 0) {
       discard;
@@ -23,6 +22,5 @@ void main() {
     }
   } else {
     outColor = model.color;
-    // gl_FragDepth = 0.8f;
   }
 }

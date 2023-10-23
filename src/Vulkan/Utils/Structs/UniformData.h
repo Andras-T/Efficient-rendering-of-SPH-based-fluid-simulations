@@ -12,4 +12,5 @@ struct UniformData {
   Transformations transformations;
   Model model;
   bool wall = false;
+  bool resetRequest = false;
 };

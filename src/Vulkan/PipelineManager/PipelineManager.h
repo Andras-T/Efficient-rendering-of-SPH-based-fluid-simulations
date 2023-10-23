@@ -108,9 +108,5 @@ private:
   VkPipelineDynamicStateCreateInfo
   getDynamicStateCreateInfo(std::vector<VkDynamicState> &dynamicStates);
 
-  VkPipelineVertexInputStateCreateInfo getVertexInputStateCreateInfo(
-      VkVertexInputBindingDescription &bindingDescription,
-      std::array<VkVertexInputAttributeDescription, 2> &attributeDescriptions);
-
 #pragma endregion
 };

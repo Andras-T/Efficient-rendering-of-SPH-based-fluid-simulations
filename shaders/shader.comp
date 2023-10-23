@@ -1,17 +1,12 @@
 #version 450
-
 #define PI 3.1415926538
 
-uint currentIndex;
-float smootingLength_;
-float mass_;
-vec3 transformedGravity_;
 vec3 velocity_;
-vec4 position_;
+vec3 position_;
+float mass_;
 
 struct Particle {
   vec4 position;
-  vec4 color;
   vec3 velocity;
   float movable;
   vec3 acceleration;
@@ -41,9 +36,12 @@ layout(binding = 3) uniform Attributes {
   float stateConstant;
   float polytropicIndex;
   float damping;
+  float dampingAcceleration;
+  float dampingVelocity;
   float gravity;
   float timeStep;
   int stop;
+  vec2 pad;
 }
 attributes;
 
@@ -52,56 +50,71 @@ constants;
 
 layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 
-float W(vec3 position) {
-  float r = length(position);
-  return pow(1.0 / (smootingLength_ * sqrt(PI)), 3) *
-         exp(-r * r / (smootingLength_ * smootingLength_));
+float W(float length) {
+  float h = attributes.smootingLength;
+  return pow(1.0 / (h * sqrt(PI)), 3) * exp((-length * length) / (h * h));
 }
 
 vec3 gradW(vec3 position) {
   float r = length(position);
-  float n = -2.0 * exp(-r * r / (smootingLength_ * smootingLength_)) /
-            pow(smootingLength_, 5) / pow(PI, 1.5);
-  return n * position;
+  float h = attributes.smootingLength;
+  return position * -2.0 * exp(-r * r / h * h) /
+         (h * h * h * h * h * pow(PI, 1.5));
 }
 
 float getDensity(vec3 position) {
   float density = 0.0f;
   for (int i = 0; i < attributes.numberOfParticles; i++) {
-    Particle neighbor = particlesIn[i];
-    vec3 dist = position - neighbor.position.xyz;
-    if (length(dist) <= smootingLength_) {
-      density += mass_ * W(dist);
-    }
+    vec3 neighborPosition = particlesIn[i].position.xyz;
+    float distance = length(position - neighborPosition);
+    if (distance <= attributes.smootingLength)
+      density += mass_ * W(distance);
   }
   return density;
 }
 
-vec3 getAcc(vec3 position, float rho, vec3 velocity) {
-  vec3 acceleration = vec3(0.0, 0.0, 0.0);
-  float polytropicIndex = attributes.polytropicIndex;
-  float pressure =
-      attributes.stateConstant * pow(rho, (1 + 1 / polytropicIndex));
-  for (uint i = 0; i < attributes.numberOfParticles; i++) {
-    Particle neighbor = particlesIn[i];
-    vec3 distance = position - neighbor.position.xyz;
-    float dist = length(distance);
-    if (dist <= smootingLength_ && i != currentIndex) {
-      vec3 dW = gradW(distance);
-      float dP = pressure / (rho * rho) +
-                 (attributes.stateConstant *
-                  pow(neighbor.density, (1 + 1 / polytropicIndex))) /
-                     (neighbor.density * neighbor.density);
-      acceleration -= mass_ * dP * dW;
-    }
-  }
-  acceleration -= (attributes.damping * 0.000002) * velocity;
-  acceleration -= (attributes.damping * 0.000001) * acceleration;
-  return acceleration + transformedGravity_ * (1 + attributes.damping / 1000);
+float getPressure(float density) {
+  return attributes.stateConstant *
+         pow(density, 1.0 + 1.0 / attributes.polytropicIndex);
 }
 
-void checkBoundaryBox(float dist) {
-  float slowingFactor = -0.025;
+vec3 getGravity() {
+  vec4 transformedGravity4 =
+      (inverse(mvp.model)) * vec4(0.0f, 0.0f, -attributes.gravity, 0.0f);
+  return normalize(transformedGravity4.xyz) *
+         length(vec3(0.0f, 0.0f, attributes.gravity)) * 0.0000001;
+}
+
+vec3 getAcceleration(vec3 position, vec3 velocity, uint currentIndex) {
+  vec3 acceleration = vec3(0.0f);
+  float density = particlesIn[currentIndex].density;
+  float pressure = getPressure(density);
+
+  for (uint i = 0; i < attributes.numberOfParticles; i++) {
+    if (i == currentIndex) {
+      continue; // Skip the current particle
+    }
+
+    vec3 neighborPosition = particlesIn[i].position.xyz;
+    vec3 toParticle = position - neighborPosition;
+
+    if (length(toParticle) <= attributes.smootingLength) {
+      float neighborDensity = particlesIn[i].density;
+      float neighborPressure = getPressure(neighborDensity);
+      vec3 gradW = gradW(toParticle);
+      float dP = pressure / (density * density) +
+                 neighborPressure / (neighborDensity * neighborDensity);
+      acceleration -=
+          mass_ * dP * gradW * (1.0 - attributes.dampingAcceleration);
+      acceleration -= attributes.damping * velocity;
+    }
+  }
+
+  return acceleration + getGravity();
+}
+
+void checkBoundary(float dist) {
+  float slowingFactor = -0.5f;
   if (position_.z < attributes.center.z - dist) {
     velocity_.z = slowingFactor * velocity_.z;
     position_.z = attributes.center.z - dist;
@@ -128,71 +141,48 @@ void checkBoundaryBox(float dist) {
 }
 
 void stageOne() {
-  Particle particleIn = particlesIn[currentIndex];
-  particlesOut[currentIndex].density = getDensity(particleIn.position.xyz);
+  Particle currentParticle = particlesIn[gl_GlobalInvocationID.x];
+  particlesOut[gl_GlobalInvocationID.x].density =
+      getDensity(currentParticle.position.xyz);
 }
 
 void stageTwo() {
-  Particle particleIn = particlesIn[currentIndex];
-  particlesOut[currentIndex].acceleration =
-      getAcc(particleIn.position.xyz, particleIn.density, particleIn.velocity);
+  Particle currentParticle = particlesIn[gl_GlobalInvocationID.x];
+  if (currentParticle.movable > 0.0f)
+    particlesOut[gl_GlobalInvocationID.x].acceleration =
+        getAcceleration(currentParticle.position.xyz, currentParticle.velocity,
+                        gl_GlobalInvocationID.x);
 }
 
 void stageThree() {
-  Particle particleIn = particlesIn[currentIndex];
-  if (particleIn.movable > 0.5) {
-    velocity_ = particleIn.velocity +
-                particleIn.acceleration * (mvp.deltaTime * attributes.timeStep);
-
-    if (length(velocity_) > 0.004f)
-      velocity_ = 0.1 * velocity_;
-    if (length(velocity_) > 0.005f)
-      velocity_ = 0.0 * velocity_;
-
-    position_ = particleIn.position + vec4(particleIn.velocity, 0.0) *
-                                          (mvp.deltaTime * attributes.timeStep);
-
-    float maxDistance = 1.625f;
-    checkBoundaryBox(maxDistance);
-
-    if (isnan(position_.x) || isnan(position_.y) || isnan(position_.z) ||
-        isnan(position_.w) || isnan(velocity_.x) || isnan(velocity_.y) ||
-        isnan(velocity_.z) || length(velocity_) < 0.0000001f) {
-      particlesOut[currentIndex].velocity =
-          particlesIn[currentIndex].velocity * 0.025f;
-
-      particlesOut[currentIndex].position =
-          vec4(normalize(attributes.center.xyz -
-                         particlesIn[currentIndex].position.xyz) *
-                       (maxDistance * 0.0025) +
-                   particlesIn[currentIndex].position.xyz,
-               1);
-      return;
-    }
-    particlesOut[currentIndex].velocity = velocity_;
-    particlesOut[currentIndex].position = position_;
+  Particle currentParticle = particlesIn[gl_GlobalInvocationID.x];
+  if (currentParticle.movable > 0.0f) {
+    velocity_ = currentParticle.velocity + currentParticle.acceleration *
+                                               attributes.timeStep *
+                                               mvp.deltaTime / 2.0f;
+    position_ = currentParticle.position.xyz +
+                currentParticle.velocity * attributes.timeStep * mvp.deltaTime;
+    velocity_ += currentParticle.acceleration * attributes.timeStep *
+                 mvp.deltaTime / 2.0f;
+    checkBoundary(0.885f);
+    particlesOut[gl_GlobalInvocationID.x].velocity =
+        velocity_ * (1.0 - attributes.dampingVelocity);
+    particlesOut[gl_GlobalInvocationID.x].position = vec4(position_, 1.0f);
   }
 }
 
 void main() {
-  if (attributes.stop == 0) {
-    currentIndex = gl_GlobalInvocationID.x;
-    smootingLength_ = clamp(attributes.smootingLength, 0.001f, 0.25f);
-    mass_ = attributes.mass * 0.000000000000002f;
-
-    vec4 transformedGravity4 =
-        (inverse(mvp.model)) *
-        vec4(0.0f, 0.0f, attributes.gravity * -0.0000000007f, 0.0f);
-    transformedGravity_ =
-        normalize(transformedGravity4.xyz) *
-        length(vec3(0.0f, 0.0f, attributes.gravity * -0.0000000007f));
-
-    if (constants.stageIndex == 1) {
-      stageOne();
-    } else if (constants.stageIndex == 2) {
-      stageTwo();
-    } else if (constants.stageIndex == 3) {
-      stageThree();
-    }
+  mass_ = attributes.mass * 0.000000000000002;
+  if (constants.stageIndex == 1 && attributes.stop != 1) {
+    stageOne();
+  } else if (constants.stageIndex == 2 && attributes.stop != 1) {
+    stageTwo();
+  } else if (constants.stageIndex == 3 && attributes.stop != 1) {
+    stageThree();
+  } else {
+    particlesOut[gl_GlobalInvocationID.x].velocity =
+        particlesIn[gl_GlobalInvocationID.x].velocity;
+    particlesOut[gl_GlobalInvocationID.x].position =
+        particlesIn[gl_GlobalInvocationID.x].position;
   }
 }

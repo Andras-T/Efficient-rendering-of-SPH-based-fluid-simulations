@@ -34,6 +34,13 @@ void FluidInstance::InitBuffers(BufferManager &bufferManager,
   this->window = window;
 }
 
+void FluidInstance::resetInstance(BufferManager &bufferManager,
+                                  DeviceManager &deviceManager,
+                                  VkCommandPool &commandPool) {
+  bufferManager.resetParticles(deviceManager, commandPool, shaderStorageBuffers,
+                               shaderStorageBuffersMemory);
+}
+
 void FluidInstance::InitDescriptorSets(DescriptorManager &descriptorManager,
                                        VkDevice &device,
                                        BufferManager &bufferManager) {
@@ -102,9 +109,9 @@ void FluidInstance::updateUniformBuffer(uint32_t currentImage,
   ubo.model = glm::translate(glm::mat4(1.0f), transformations.translate) *
               translateBack * rotationMatrix * scaleMatrix * translateToCenter;
   ubo.view = view;
-  ubo.proj = glm::perspective(glm::radians(45.0f),
-                              extent2D->width / (float)extent2D->height,
-                              0.5f, 10.0f);
+  ubo.proj =
+      glm::perspective(glm::radians(45.0f),
+                       extent2D->width / (float)extent2D->height, 0.5f, 10.0f);
   ubo.proj[1][1] *= -1;
   ubo.cameraPos = inputState.cameraPos;
   ubo.deltaTime = static_cast<float>(lastFrameTime) * 2.0f;

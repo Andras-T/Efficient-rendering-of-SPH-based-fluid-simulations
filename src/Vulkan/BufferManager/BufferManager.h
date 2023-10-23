@@ -11,6 +11,7 @@
 class BufferManager {
 
   bool firstRun = true;
+  std::vector<Particle> particles;
 
   VkBuffer sphereBuffer;
   VkDeviceMemory sphereMemory;
@@ -44,6 +45,10 @@ public:
   void copyBuffer(VkDevice &device, VkCommandPool &commandPool,
                   VkQueue &graphicsQueue, VkBuffer srcBuffer,
                   VkBuffer dstBuffer, VkDeviceSize size);
+
+  void resetParticles(DeviceManager &deviceManager, VkCommandPool &commandPool,
+                      std::vector<VkBuffer> &shaderStorageBuffers,
+                      std::vector<VkDeviceMemory> &shaderStorageBuffersMemory);
 
   void cleanUp(VkDevice &device) {
     vkDestroyBuffer(device, sphereBuffer, nullptr);

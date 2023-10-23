@@ -1,6 +1,7 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "PipelineManager.h"
 #include "../Utils/Structs/Particle.h"
+#include "../Utils/Structs/PushConstans.h"
 #include "../Utils/Structs/Quad.h"
 #include "../Utils/Utils.h"
 #include <filesystem>
@@ -128,8 +129,8 @@ void PipelineManager::createComputePipeline(
   VkPipelineShaderStageCreateInfo computeShaderStageInfo =
       getPipelineShaderStageCreateInfo(VK_SHADER_STAGE_COMPUTE_BIT,
                                        computeShaderModule, "main");
-  VkPushConstantRange pushConstantRange =
-      getPushConstantRange(VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(int));
+  VkPushConstantRange pushConstantRange = getPushConstantRange(
+      VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstant));
   VkPipelineLayoutCreateInfo pipelineLayoutInfo =
       getPipelineLayoutCreateInfo(descriptorSetLayout, 1, pushConstantRange);
 
@@ -412,21 +413,6 @@ VkPipelineDynamicStateCreateInfo PipelineManager::getDynamicStateCreateInfo(
   dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
   dynamicState.pDynamicStates = dynamicStates.data();
   return dynamicState;
-}
-
-VkPipelineVertexInputStateCreateInfo
-PipelineManager::getVertexInputStateCreateInfo(
-    VkVertexInputBindingDescription &bindingDescription,
-    std::array<VkVertexInputAttributeDescription, 2> &attributeDescriptions) {
-  VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-  vertexInputInfo.sType =
-      VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-  vertexInputInfo.vertexBindingDescriptionCount = 1;
-  vertexInputInfo.vertexAttributeDescriptionCount =
-      static_cast<uint32_t>(attributeDescriptions.size());
-  vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-  vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
-  return vertexInputInfo;
 }
 
 void PipelineManager::cleanup(VkDevice &device) {

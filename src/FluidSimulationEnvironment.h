@@ -72,5 +72,7 @@ public:
 
   void mainLoop();
 
+  void checkInput();
+
   void cleanUp();
 };

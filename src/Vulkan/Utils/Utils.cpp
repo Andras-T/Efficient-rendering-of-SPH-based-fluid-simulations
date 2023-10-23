@@ -28,7 +28,7 @@ uint32_t Utils::findMemoryType(uint32_t typeFilter,
 
 void Utils::initializeParticles(std::vector<Particle> &particles,
                                 glm::vec3 center) {
-  const double side = 1.5;
+  const double side = 1.35;
   const double Volume = side * side * side;
   const double particleVolume = Volume / MOVABLE_PARTICLE_COUNT;
   const double particleLength = pow(particleVolume, 1.0 / 3.0);
@@ -45,7 +45,6 @@ void Utils::initializeParticles(std::vector<Particle> &particles,
         float y = (offset + j * particleLength) - 1;
         float z = (offset + i * particleLength) - 1;
         particles[counter].position = glm::vec4(glm::vec3(x, y, z) + center, 1);
-        particles[counter].color = glm::vec4(0.15, 0.25, 1.0, 0.3);
         particles[counter].velocity = glm::vec3(0, 0, 0);
         particles[counter].movable = 1.0f;
         particles[counter].acc = glm::vec3(0.0, 0.0, 0.0);
@@ -66,56 +65,53 @@ void Utils::initializeParticles(std::vector<Particle> &particles,
   }
 
   const float dist_from_each = 0.1f;
-  glm::vec4 insideWallColor = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
-  glm::vec4 outsideWallColor = insideWallColor;
-  glm::vec4 testColor(1, 0, 0, 0.02);
 
-  float lowest = -1.75;
-  float highest = 1.75;
+  float lowest = -1.0;
+  float highest = 1.0;
   int unmovableParticles = 0;
   for (float y = lowest; y <= highest + 0.001f; y += dist_from_each) {
     for (float z = lowest; z <= highest + 0.001f; z += dist_from_each) {
       createWallParticle(particles[counter++], glm::vec4(lowest, y, z, 1.0f),
-                         outsideWallColor, center);
+                         center);
 
       createWallParticle(particles[counter++],
                          glm::vec4(lowest + dist_from_each, y, z, 1.0f),
-                         outsideWallColor, center);
+                         center);
 
       createWallParticle(particles[counter++], glm::vec4(highest, y, z, 1.0f),
-                         outsideWallColor, center);
+                         center);
 
       createWallParticle(particles[counter++],
                          glm::vec4(highest - dist_from_each, y, z, 1.0f),
-                         outsideWallColor, center);
+                         center);
 
       createWallParticle(particles[counter++], glm::vec4(y, lowest, z, 1.0f),
-                         outsideWallColor, center);
+                         center);
 
       createWallParticle(particles[counter++],
                          glm::vec4(y, lowest + dist_from_each, z, 1.0f),
-                         outsideWallColor, center);
+                         center);
 
       createWallParticle(particles[counter++], glm::vec4(y, highest, z, 1.0f),
-                         outsideWallColor, center);
+                         center);
 
       createWallParticle(particles[counter++],
                          glm::vec4(y, highest - dist_from_each, z, 1.0f),
-                         outsideWallColor, center);
+                         center);
 
       createWallParticle(particles[counter++], glm::vec4(y, z, lowest, 1.0f),
-                         outsideWallColor, center);
+                         center);
 
       createWallParticle(particles[counter++],
                          glm::vec4(y, z, lowest + dist_from_each, 1.0f),
-                         outsideWallColor, center);
+                         center);
 
       createWallParticle(particles[counter++], glm::vec4(y, z, highest, 1.0f),
-                         outsideWallColor, center);
+                         center);
 
       createWallParticle(particles[counter++],
                          glm::vec4(y, z, highest - dist_from_each, 1.0f),
-                         outsideWallColor, center);
+                         center);
 
       unmovableParticles += 12;
     }
@@ -124,8 +120,8 @@ void Utils::initializeParticles(std::vector<Particle> &particles,
   if (counter != PARTICLE_COUNT) {
     Logger::getInstance().LogError(
         "Failed to initialize " + std::to_string(PARTICLE_COUNT - counter) +
-        "particles (only: " + std::to_string(counter) +
-        " particles initialized, unmovable: " +
+        " particles (only: " + std::to_string(counter) +
+        " particles initialized, unmovable should be: " +
         std::to_string(unmovableParticles) + ")");
     throw std::runtime_error("Failed to initialize particles");
   } else {
@@ -138,10 +134,9 @@ void Utils::initializeParticles(std::vector<Particle> &particles,
 }
 
 void Utils::createWallParticle(Particle &particle, glm::vec4 position,
-                               glm::vec4 color, glm::vec3 center) {
+                               glm::vec3 center) {
   particle.position = position + glm::vec4(center, 0);
   particle.velocity = glm::vec3(0.0f);
-  particle.color = color;
   particle.movable = 0.0f;
   particle.acc = glm::vec3(0.0, 0.0, 0.0);
 }
