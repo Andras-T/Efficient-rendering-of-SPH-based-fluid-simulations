@@ -45,10 +45,6 @@ private:
 
   double lastFrameTime = 0.0f;
 
-  const char *vertPath = "\\shaders\\vert.spv";
-  const char *fragPath = "\\shaders\\frag.spv";
-  const char *compPath = "\\shaders\\comp.spv";
-
 public:
   FluidSimulationEnvironment() : logger(Logger::getInstance()) {}
 

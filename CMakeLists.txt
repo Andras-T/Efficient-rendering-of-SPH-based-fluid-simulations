@@ -17,6 +17,7 @@ set(SOURCES
         ${VULKAN}/DescriptorManager/DescriptorManager.cpp
         ${VULKAN}/DeviceManager/DeviceManager.cpp
         ${VULKAN}/PipelineManager/PipelineManager.cpp
+        ${VULKAN}/PipelineManager/Pipeline.cpp
         ${VULKAN}/Render/Render.cpp
         ${VULKAN}/SwapchainManager/SwapchainManager.cpp
         ${VULKAN}/Utils/Utils.cpp

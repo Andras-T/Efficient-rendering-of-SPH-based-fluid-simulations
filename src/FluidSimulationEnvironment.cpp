@@ -26,8 +26,7 @@ void FluidSimulationEnvironment::init() {
 
   descriptorManager.init(device, swapChainManager);
 
-  pipelineManager.init(vertPath, fragPath, compPath, device,
-                       descriptorManager.getDescriptorSetLayout(),
+  pipelineManager.init(device, descriptorManager.getDescriptorSetLayout(),
                        descriptorManager.getQuadDescriptorSetLayout(),
                        vulkanObject);
 

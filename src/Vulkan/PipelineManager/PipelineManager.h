@@ -4,28 +4,48 @@
 #include "../../Logger.h"
 #include "../VulkanObject/VulkanObject.h"
 #include "GLFW/glfw3.h"
+#include "Pipeline.h"
 #include <array>
 #include <string>
 #include <vector>
 
 class PipelineManager {
 
-  VkPipelineLayout simulationPipelineLayout;
-  VkPipeline simulationPipeline;
+  std::string vertPath = "\\shaders\\vert.spv";
+  std::string fragPath = "\\shaders\\frag.spv";
+  std::string compPath = "\\shaders\\comp.spv";
+  std::string quadVertPath = "\\shaders\\quadVert.spv";
+  std::string quadFragPath = "\\shaders\\quadFrag.spv";
+  std::string blurVertPath = "\\shaders\\blurVert.spv";
+  std::string blurFragPath = "\\shaders\\blurFrag.spv";
 
-  VkPipelineLayout computePipelineLayout;
-  VkPipeline computePipeline;
-
-  VkPipelineLayout quadPipelineLayout;
-  VkPipeline quadGraphicsPipeline;
+  Pipeline simulationPipeline;
+  Pipeline computePipeline;
+  // Pipeline blurPipeline;
+  Pipeline quadPipeline;
 
   Logger &logger;
 
 public:
-  PipelineManager() : logger(Logger::getInstance()) {}
+  PipelineManager()
+      : simulationPipeline(std::string("Simulation"),
+                           optional<std::string>(vertPath),
+                           optional<std::string>(fragPath),
+                           optional<std::string>(std::nullopt)),
+        computePipeline(std::string("Compute"),
+                        optional<std::string>(std::nullopt),
+                        optional<std::string>(std::nullopt),
+                        optional<std::string>(compPath)),
+        // blurPipeline(std::string("Blur"),
+        //             optional<std::string>(quadVertPath),
+        //             optional<std::string>(quadFragPath),
+        //             optional<std::string>(std::nullopt)),
+        quadPipeline(std::string("Quad"), optional<std::string>(quadVertPath),
+                     optional<std::string>(quadFragPath),
+                     optional<std::string>(std::nullopt)),
+        logger(Logger::getInstance()) {}
 
-  void init(const char *vertPath, const char *fragPath, const char *compPath,
-            VkDevice &device, VkDescriptorSetLayout &descriptorSetLayout,
+  void init(VkDevice &device, VkDescriptorSetLayout &descriptorSetLayout,
             VkDescriptorSetLayout &quadDescriptorSetLayout,
             VulkanObject &vulkanObject);
 
@@ -50,18 +70,24 @@ public:
 #pragma region getterFunctions
 
   VkPipelineLayout &getSimulationPipelineLayout() {
-    return simulationPipelineLayout;
+    return simulationPipeline.getPipelineLayout();
   }
 
-  VkPipelineLayout &getComputePipelineLayout() { return computePipelineLayout; }
+  VkPipelineLayout &getComputePipelineLayout() {
+    return computePipeline.getPipelineLayout();
+  }
 
-  VkPipelineLayout &getQuadPipelineLayout() { return quadPipelineLayout; }
+  VkPipelineLayout &getQuadPipelineLayout() {
+    return quadPipeline.getPipelineLayout();
+  }
 
-  VkPipeline &getSimulationPipeline() { return simulationPipeline; }
+  VkPipeline &getSimulationPipeline() {
+    return simulationPipeline.getPipeline();
+  }
 
-  VkPipeline &getComputePipeline() { return computePipeline; }
+  VkPipeline &getComputePipeline() { return computePipeline.getPipeline(); }
 
-  VkPipeline &getQuadGraphicsPipeline() { return quadGraphicsPipeline; }
+  VkPipeline &getQuadGraphicsPipeline() { return quadPipeline.getPipeline(); }
 
 #pragma endregion
 
