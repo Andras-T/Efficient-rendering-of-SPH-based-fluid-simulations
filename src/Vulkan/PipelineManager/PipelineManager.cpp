@@ -1,7 +1,6 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "PipelineManager.h"
 #include "../Utils/Structs/Particle.h"
-#include "../Utils/Structs/PushConstants.h"
 #include "../Utils/Structs/Quad.h"
 #include "../Utils/Utils.h"
 #include <filesystem>
@@ -12,6 +11,7 @@
 void PipelineManager::init(VkDevice &device,
                            VkDescriptorSetLayout &descriptorSetLayout,
                            VkDescriptorSetLayout &quadDescriptorSetLayout,
+                           VkDescriptorSetLayout &blurDescriptorSetLayout,
                            VulkanObject &vulkanObject) {
   // Off screen pipeline
   {
@@ -38,6 +38,19 @@ void PipelineManager::init(VkDevice &device,
     logger.LogInfo("Compute pipeline created");
   }
 
+  // Blur pipeline
+  {
+    DepthStencilOptions depthStencilOptions(VK_FALSE, VK_FALSE, VK_FALSE,
+                                            VK_FALSE);
+
+    blurPipeline.init(
+        &device, blurDescriptorSetLayout, vulkanObject.getBlurRenderPass(),
+        quad::getBindingDescription(), VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
+        depthStencilOptions);
+
+    logger.LogInfo("Blur pipeline created");
+  }
+
   // Quad Graphics pipeline
   {
     DepthStencilOptions depthStencilOptions(VK_FALSE, VK_FALSE, VK_FALSE,
@@ -48,7 +61,7 @@ void PipelineManager::init(VkDevice &device,
         quad::getBindingDescription(), VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
         depthStencilOptions);
 
-    logger.LogInfo("Graphics pipeline created");
+    logger.LogInfo("Quad pipeline created");
   }
 }
 
@@ -56,4 +69,5 @@ void PipelineManager::cleanup(VkDevice &device) {
   simulationPipeline.cleanUp();
   computePipeline.cleanUp();
   quadPipeline.cleanUp();
+  blurPipeline.cleanUp();
 }

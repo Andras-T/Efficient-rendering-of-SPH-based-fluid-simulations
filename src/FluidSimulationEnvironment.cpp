@@ -28,11 +28,12 @@ void FluidSimulationEnvironment::init() {
 
   pipelineManager.init(device, descriptorManager.getDescriptorSetLayout(),
                        descriptorManager.getQuadDescriptorSetLayout(),
+                       descriptorManager.getBlurDescriptorSetLayout(),
                        vulkanObject);
 
-  commandPoolManager.init(device, deviceManager.getFamilyIndices());
+  commandPoolManager.init(deviceManager, deviceManager.getFamilyIndices());
 
-  swapChainManager.createDepthResources();
+  swapChainManager.createDepthResources(commandPoolManager);
   swapChainManager.createFramebuffers(vulkanObject);
 
   descriptorManager.createDescriptorPool(device);
@@ -42,7 +43,7 @@ void FluidSimulationEnvironment::init() {
                        glm::vec3(0.0f, 0.0f, 0.0f), window.get_GLFW_Window());
   instance.InitDescriptorSets(descriptorManager, device, bufferManager);
 
-  commandPoolManager.createCommandBuffers(device);
+  commandPoolManager.createCommandBuffers();
 
   render.init(deviceManager, swapChainManager, commandPoolManager,
               pipelineManager, vulkanObject, window, bufferManager, instance,
@@ -79,11 +80,10 @@ void FluidSimulationEnvironment::initImGui() {
   init_info.CheckVkResultFn = check_vk_result;
   ImGui_ImplVulkan_Init(&init_info, vulkanObject.getQuadRenderPass());
 
-  VkCommandBuffer commandBuffer =
-      commandPoolManager.beginSingleTimeCommands(device);
+  VkCommandBuffer commandBuffer = commandPoolManager.beginSingleTimeCommands();
   ImGui_ImplVulkan_CreateFontsTexture(commandBuffer);
-  commandPoolManager.endSingleTimeCommands(
-      commandBuffer, deviceManager.getGraphicsQueue(), device);
+  commandPoolManager.endSingleTimeCommands(commandBuffer,
+                                           deviceManager.getGraphicsQueue());
 
   vkDeviceWaitIdle(deviceManager.getDevice());
   ImGui_ImplVulkan_DestroyFontUploadObjects();
@@ -121,10 +121,8 @@ void FluidSimulationEnvironment::checkInput() {
 }
 
 void FluidSimulationEnvironment::cleanUp() {
-  VkResult err = vkDeviceWaitIdle(device);
-  check_vk_result(err);
-
-  check_vk_result(err);
+  logger.LogInfo("Cleaning the environment");
+  check_vk_result(vkDeviceWaitIdle(device));
 
   ImGui_ImplVulkan_Shutdown();
   ImGui_ImplGlfw_Shutdown();
@@ -146,9 +144,10 @@ void FluidSimulationEnvironment::cleanUp() {
 
   render.cleanUp();
 
-  commandPoolManager.cleanup(device);
+  commandPoolManager.cleanup();
 
   deviceManager.cleanup();
 
   vulkanObject.cleanup(enableValidationLayers);
+  logger.LogInfo("Cleaning finished");
 }

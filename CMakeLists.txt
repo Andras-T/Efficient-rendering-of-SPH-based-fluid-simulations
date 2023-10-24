@@ -20,6 +20,7 @@ set(SOURCES
         ${VULKAN}/PipelineManager/Pipeline.cpp
         ${VULKAN}/Render/Render.cpp
         ${VULKAN}/SwapchainManager/SwapchainManager.cpp
+        ${VULKAN}/SwapchainManager/Image.cpp
         ${VULKAN}/Utils/Utils.cpp
         ${VULKAN}/VulkanObject/VulkanObject.cpp
         ${VULKAN}/Window/Window.cpp

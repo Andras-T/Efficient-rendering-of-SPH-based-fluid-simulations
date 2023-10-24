@@ -41,6 +41,7 @@ void DeviceManager::createLogicalDevice(VkSurfaceKHR &surface,
   deviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
   deviceFeatures2.pNext = &syncFeature;
   deviceFeatures2.features.depthBounds = VK_TRUE;
+  deviceFeatures2.features.fragmentStoresAndAtomics = VK_TRUE;
 
   VkDeviceCreateInfo createInfo{};
   createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

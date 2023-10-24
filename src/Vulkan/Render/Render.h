@@ -6,6 +6,7 @@
 #include "../FluidInstance.h"
 #include "../PipelineManager/PipelineManager.h"
 #include "../SwapchainManager/SwapchainManager.h"
+#include "../Utils/Structs/PushConstants/BlurStageConstant.h"
 #include "../VulkanObject/VulkanObject.h"
 #include "../Window/Window.h"
 #include "ImGuiRender.h"
@@ -17,11 +18,16 @@ class Render {
 private:
   std::vector<VkSemaphore> computeFinishedSemaphores;
   std::vector<VkSemaphore> simulationFinishedSemaphores;
+  std::vector<VkSemaphore> blur1FinishedSemaphores;
+  std::vector<VkSemaphore> blur2FinishedSemaphores;
   std::vector<VkSemaphore> imageAvailableSemaphores;
   std::vector<VkSemaphore> renderFinishedSemaphores;
+
   std::vector<VkFence> simulationInFlightFences;
-  std::vector<VkFence> displayInFlightFences;
   std::vector<VkFence> computeInFlightFences;
+  std::vector<VkFence> blur1InFlightFences;
+  std::vector<VkFence> blur2InFlightFences;
+  std::vector<VkFence> displayInFlightFences;
 
   BufferManager *bufferManager;
   CommandPoolManager *commandPoolManager;
@@ -39,6 +45,7 @@ private:
 
   FluidInstance *instance;
 
+  BlurStage pushConstant;
   bool stopped = false;
 
 public:
@@ -60,7 +67,11 @@ public:
 
   void recordCommandBuffer(VkCommandBuffer &commandBuffer, uint32_t imageIndex);
 
-  void recordQuad(VkCommandBuffer &commandBuffer, uint32_t imageIndex);
+  void recordQuadCommandBuffer(VkCommandBuffer &commandBuffer,
+                               uint32_t imageIndex);
+
+  void recordBlurCommandBuffer(VkCommandBuffer &commandBuffer,
+                               uint32_t imageIndex);
 
   void cleanUp();
 

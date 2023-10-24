@@ -62,9 +62,15 @@ public:
     return quadDescriptorSetLayout;
   }
 
+  VkDescriptorSetLayout &getBlurDescriptorSetLayout() {
+    return blurDescriptorSetLayout;
+  }
+
   VkDescriptorPool &getDescriptorPool() { return descriptorPool; }
 
   VkDescriptorPool &getQuadDescriptorPool() { return quadDescriptorPool; }
+
+  VkDescriptorPool &getBlurDescriptorPool() { return blurDescriptorPool; }
 
 #pragma endregion
 };

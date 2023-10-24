@@ -21,7 +21,7 @@ class PipelineManager {
 
   Pipeline simulationPipeline;
   Pipeline computePipeline;
-  // Pipeline blurPipeline;
+  Pipeline blurPipeline;
   Pipeline quadPipeline;
 
   Logger &logger;
@@ -36,10 +36,9 @@ public:
                         optional<std::string>(std::nullopt),
                         optional<std::string>(std::nullopt),
                         optional<std::string>(compPath)),
-        // blurPipeline(std::string("Blur"),
-        //             optional<std::string>(quadVertPath),
-        //             optional<std::string>(quadFragPath),
-        //             optional<std::string>(std::nullopt)),
+        blurPipeline(std::string("Blur"), optional<std::string>(blurVertPath),
+                     optional<std::string>(blurFragPath),
+                     optional<std::string>(std::nullopt)),
         quadPipeline(std::string("Quad"), optional<std::string>(quadVertPath),
                      optional<std::string>(quadFragPath),
                      optional<std::string>(std::nullopt)),
@@ -47,47 +46,38 @@ public:
 
   void init(VkDevice &device, VkDescriptorSetLayout &descriptorSetLayout,
             VkDescriptorSetLayout &quadDescriptorSetLayout,
+            VkDescriptorSetLayout &blurDescriptorSetLayout,
             VulkanObject &vulkanObject);
-
-  void createSimulationPipeline(const char *vertPath, const char *fragPath,
-                                VkDevice &device,
-                                VkDescriptorSetLayout &descriptorSetLayout,
-                                VkRenderPass &renderPass);
-
-  void createComputePipeline(const char *compPath, VkDevice &device,
-                             VkDescriptorSetLayout &descriptorSetLayout,
-                             VkRenderPass &renderPass);
-
-  void createQuadGraphicsPipeline(VkDevice &device,
-                                  VkDescriptorSetLayout &descriptorSetLayout,
-                                  VkRenderPass &renderPass);
-
-  VkShaderModule createShaderModule(const std::vector<char> &code,
-                                    VkDevice &device);
 
   void cleanup(VkDevice &device);
 
 #pragma region getterFunctions
 
+  VkPipeline &getSimulationPipeline() {
+    return simulationPipeline.getPipeline();
+  }
+
   VkPipelineLayout &getSimulationPipelineLayout() {
     return simulationPipeline.getPipelineLayout();
   }
+
+  VkPipeline &getComputePipeline() { return computePipeline.getPipeline(); }
 
   VkPipelineLayout &getComputePipelineLayout() {
     return computePipeline.getPipelineLayout();
   }
 
+  VkPipeline &getQuadPipeline() { return quadPipeline.getPipeline(); }
+
   VkPipelineLayout &getQuadPipelineLayout() {
     return quadPipeline.getPipelineLayout();
   }
 
-  VkPipeline &getSimulationPipeline() {
-    return simulationPipeline.getPipeline();
+  VkPipeline &getBlurPipeline() { return blurPipeline.getPipeline(); }
+
+  VkPipelineLayout &getBlurPipelineLayout() {
+    return blurPipeline.getPipelineLayout();
   }
-
-  VkPipeline &getComputePipeline() { return computePipeline.getPipeline(); }
-
-  VkPipeline &getQuadGraphicsPipeline() { return quadPipeline.getPipeline(); }
 
 #pragma endregion
 

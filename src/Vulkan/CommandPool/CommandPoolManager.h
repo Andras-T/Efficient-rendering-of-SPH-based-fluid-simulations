@@ -1,40 +1,50 @@
 #pragma once
 
 #define GLFW_INCLUDE_VULKAN
-#include "../../Logger.h"
-#include "../Utils/Structs/QueueFamilyIndices.h"
 #include "GLFW/glfw3.h"
 #include <stdexcept>
 #include <vector>
+
+#include "../../Logger.h"
+#include "../DeviceManager/DeviceManager.h"
+#include "../Utils/Structs/QueueFamilyIndices.h"
 
 class CommandPoolManager {
 
   VkCommandPool commandPool;
   std::vector<VkCommandBuffer> commandBuffers;
   std::vector<VkCommandBuffer> quadCommandBuffers;
-  std::vector<VkCommandBuffer> blurCommandBuffers;
+  std::vector<VkCommandBuffer> blur1CommandBuffers;
+  std::vector<VkCommandBuffer> blur2CommandBuffers;
   std::vector<VkCommandBuffer> computeCommandBuffers;
   std::vector<VkCommandBuffer> imGuiCommandBuffers;
 
   Logger &logger;
 
+  VkDevice *device;
+  DeviceManager *deviceManager;
+
 public:
   CommandPoolManager() : logger(Logger::getInstance()) {}
 
-  void init(VkDevice &device, QueueFamilyIndices &queueFamilyIndices);
+  void init(DeviceManager &deviceManager,
+            QueueFamilyIndices &queueFamilyIndices);
 
-  void createCommandBuffers(VkDevice &device);
+  void createCommandBuffers();
 
-  void createQuadCommandBuffer(VkDevice &device);
+  void createQuadCommandBuffer();
 
-  void createBlurCommandBuffer(VkDevice &device);
+  void createBlurCommandBuffer();
 
-  VkCommandBuffer beginSingleTimeCommands(VkDevice &device);
+  VkCommandBuffer beginSingleTimeCommands();
 
   void endSingleTimeCommands(VkCommandBuffer commandBuffer,
-                             VkQueue &graphicsQueue, VkDevice &device);
+                             VkQueue &graphicsQueue);
 
-  void cleanup(VkDevice &device);
+  void transitionImageLayout(VkImage image, VkFormat format,
+                             VkImageLayout oldLayout, VkImageLayout newLayout);
+
+  void cleanup();
 
   VkCommandPool &getCommandPool() { return commandPool; }
 
@@ -48,8 +58,12 @@ public:
     return quadCommandBuffers;
   }
 
-  std::vector<VkCommandBuffer> &getBlurCommandBuffers() {
-    return blurCommandBuffers;
+  std::vector<VkCommandBuffer> &getBlur1CommandBuffers() {
+    return blur1CommandBuffers;
+  }
+
+  std::vector<VkCommandBuffer>& getBlur2CommandBuffers() {
+      return blur2CommandBuffers;
   }
 
   std::vector<VkCommandBuffer> &getImGuiCommandBuffers() {
@@ -57,9 +71,8 @@ public:
   }
 
 private:
-  void createCommandPool(VkDevice &device,
-                         QueueFamilyIndices &queueFamilyIndices);
+  void createCommandPool(QueueFamilyIndices &queueFamilyIndices);
 
-  void createComputeCommandBuffers(VkDevice &device);
-  void createImGuiCommandBuffers(VkDevice &device);
+  void createComputeCommandBuffers();
+  void createImGuiCommandBuffers();
 };

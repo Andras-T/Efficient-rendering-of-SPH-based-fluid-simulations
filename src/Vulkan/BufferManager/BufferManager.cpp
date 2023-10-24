@@ -26,8 +26,8 @@ void BufferManager::createVertexBuffer(DeviceManager &deviceManager,
   vkUnmapMemory(device, deviceMemory_);
 
   createBuffer(device, physicalDevice, bufferSize,
-               VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-                   VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+
+               VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
                    VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, buffer, deviceMemory);
   copyBuffer(device, commandPool, deviceManager.getGraphicsQueue(), buffer_,
@@ -54,11 +54,12 @@ void BufferManager::createShaderStorageBuffers(
     createVertexBuffer(deviceManager, commandPool, sphereVertices.data(),
                        sphereBuffer, sphereMemory, sphereBufferSize);
     createVertexBuffer(deviceManager, commandPool, quad::quadVertices.data(),
-                       quadBuffer, quadMemory,
-                       quad::quadVertices.size() * sizeof(float));
-    createVertexBuffer(deviceManager, commandPool, quad::quadVertices.data(),
                        blurBuffer, blurMemory,
                        quad::quadVertices.size() * sizeof(float));
+    createVertexBuffer(deviceManager, commandPool, quad::quadVertices.data(),
+                       quadBuffer, quadMemory,
+                       quad::quadVertices.size() * sizeof(float));
+
     firstRun = false;
   }
 

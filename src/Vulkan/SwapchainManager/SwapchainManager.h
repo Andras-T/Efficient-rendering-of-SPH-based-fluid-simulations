@@ -6,6 +6,7 @@
 #include "../Utils/Structs/SwapChainSupportDetails.h"
 #include "../VulkanObject/VulkanObject.h"
 #include "../Window/Window.h"
+#include "Image.h"
 
 class SwapchainManager {
 
@@ -20,9 +21,8 @@ private:
   std::vector<VkFramebuffer> quadSwapChainFramebuffers;
   std::vector<VkFramebuffer> blurSwapChainFramebuffers;
 
-  VkImage depthImage;
-  VkDeviceMemory depthImageMemory;
-  VkImageView depthImageView;
+  Image depthImage;
+  Image blurImage;
 
   Window *window;
   VkSurfaceKHR *surface;
@@ -40,14 +40,6 @@ private:
 
   SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice *phDevice,
                                                 VkSurfaceKHR &surface);
-
-  void createImage(uint32_t width, uint32_t height, VkFormat format,
-                   VkImageTiling tiling, VkImageUsageFlags usage,
-                   VkMemoryPropertyFlags properties, VkImage &image,
-                   VkDeviceMemory &imageMemory);
-
-  VkImageView createImageView(VkImage image, VkFormat format,
-                              VkImageAspectFlags aspectFlags);
 
   void createImageViews();
 
@@ -70,11 +62,12 @@ public:
             VkPhysicalDevice &physicalDevice, VkDevice &device,
             QueueFamilyIndices &indices);
 
-  void createDepthResources();
+  void createDepthResources(CommandPoolManager &commandPoolManager);
 
   void createFramebuffers(VulkanObject &vulkanObject);
 
-  void recreateSwapChain(GLFWwindow *window, VkDevice &device);
+  void recreateSwapChain(GLFWwindow *window, VkDevice &device,
+                         CommandPoolManager &commandPoolManager);
 
   void cleanupSwapChain();
 
@@ -91,11 +84,19 @@ public:
     return quadSwapChainFramebuffers;
   }
 
+  std::vector<VkFramebuffer> &getBlurSwapChainFramebuffers() {
+    return blurSwapChainFramebuffers;
+  }
+
   uint32_t getSwapchainImageCount() { return swapChainImages.size(); }
 
   uint32_t getMinImageCount() { return minImageCount; }
 
-  VkImage &getDepthImage() { return depthImage; }
-  VkDeviceMemory &getDepthImageMemory() { return depthImageMemory; }
-  VkImageView &getDepthImageView() { return depthImageView; }
+  VkImage &getDepthImage() { return depthImage.getImage(); }
+  VkDeviceMemory &getDepthImageMemory() { return depthImage.getImageMemory(); }
+  VkImageView &getDepthImageView() { return depthImage.getImageView(); }
+
+  VkImage &getBlurImage() { return blurImage.getImage(); }
+  VkDeviceMemory &getBlurImageMemory() { return blurImage.getImageMemory(); }
+  VkImageView &getBlurImageView() { return blurImage.getImageView(); }
 };

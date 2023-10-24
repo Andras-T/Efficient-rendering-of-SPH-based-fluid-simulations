@@ -1,5 +1,7 @@
 #include "Pipeline.h"
-#include "../Utils/Structs/PushConstants.h"
+#include "../Utils/Structs/PushConstants/BlurStageConstant.h"
+#include "../Utils/Structs/PushConstants/ComputeStageConstant.h"
+
 #include <filesystem>
 #include <fstream>
 
@@ -15,10 +17,13 @@ void Pipeline::init(VkDevice *device,
   pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
   pipelineLayoutInfo.setLayoutCount = 1;
   pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
-  if (name._Equal(PushConstant::getOwner())) {
+  if (name._Equal(ComputeStage::getOwner())) {
     pipelineLayoutInfo.pushConstantRangeCount = 1;
     pipelineLayoutInfo.pPushConstantRanges =
-        &PushConstant::getPushConstantRange();
+        &ComputeStage::getPushConstantRange();
+  } else if (name._Equal(BlurStage::getOwner())) {
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges = &BlurStage::getPushConstantRange();
   }
 
   if (vkCreatePipelineLayout(*device, &pipelineLayoutInfo, nullptr, &layout) !=
