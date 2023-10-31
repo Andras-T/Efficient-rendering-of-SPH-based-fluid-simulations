@@ -48,8 +48,9 @@ void BufferManager::createShaderStorageBuffers(
     std::vector<glm::vec4> sphereVertices;
     float sphereRadius = Utils::SPHERE_RADIUS;
     int latitudeSegments = 12, longitudeSegments = 12;
-    Utils::createSphere(sphereVertices, sphereRadius, latitudeSegments,
-                        longitudeSegments);
+    //Utils::createSphere(sphereVertices, sphereRadius, latitudeSegments,
+    //                    longitudeSegments);
+    Utils::createQuad(sphereVertices);
     VkDeviceSize sphereBufferSize = sizeof(glm::vec4) * sphereVertices.size();
     createVertexBuffer(deviceManager, commandPool, sphereVertices.data(),
                        sphereBuffer, sphereMemory, sphereBufferSize);

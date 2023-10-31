@@ -9,7 +9,7 @@
 #include "BufferManager/BufferManager.h"
 #include "DescriptorManager/DescriptorManager.h"
 #include "DeviceManager/DeviceManager.h"
-#include "Utils/Structs/UniformData.h"
+#include "Utils/Structs/Uniforms/UniformData.h"
 
 class FluidInstance {
 

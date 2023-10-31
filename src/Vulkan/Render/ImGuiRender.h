@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../FluidInstance.h"
-#include "../Utils/Structs/UniformData.h"
+#include "../Utils/Structs/Uniforms/UniformData.h"
 #include "../Utils/Utils.h"
 #include "../Window/Window.h"
 #include "imgui_impl_glfw.h"

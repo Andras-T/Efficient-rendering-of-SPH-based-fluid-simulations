@@ -5,6 +5,7 @@
 *.slo
 *.lo
 *.o
+!res/app.o
 *.obj
 
 # Precompiled Headers
@@ -39,4 +40,6 @@ out/build/x64-Debug/*
 
 desktop.ini
 .vs/
+.vshistory/
 *.rdc
+*.patch

@@ -189,6 +189,15 @@ void Utils::createSphere(std::vector<glm::vec4> &vertices, float radius,
   setVertexCount(vertices.size());
 }
 
+void Utils::createQuad(std::vector<glm::vec4>& vertices) {
+  vertices.push_back(glm::vec4(-0.075f, -0.075f, 0.0f, 1.0f));
+  vertices.push_back(glm::vec4(0.075f, -0.075f, 0.0f, 1.0f));
+  vertices.push_back(glm::vec4(-0.075f, 0.075f, 0.0f, 1.0f));
+  vertices.push_back(glm::vec4(0.075f, 0.075f, 0.0f, 1.0f));
+
+  setVertexCount(vertices.size());
+}
+
 glm::mat4 Utils::updateCamera(float deltaTime, InputState &inputState,
                               ImGuiIO &io) {
   float movementSpeed = inputState.cameraSpeed * deltaTime;

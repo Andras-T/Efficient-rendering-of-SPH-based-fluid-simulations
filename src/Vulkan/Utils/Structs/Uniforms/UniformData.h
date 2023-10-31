@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Attributes.h"
-#include "InputState.h"
+#include "../InputState.h"
 #include "Model.h"
 #include "Transformations.h"
 #include "imgui.h"

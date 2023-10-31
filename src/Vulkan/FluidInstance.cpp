@@ -3,10 +3,11 @@
 #include <chrono>
 #include <iostream>
 
-#include "Utils/Structs/Attributes.h"
-#include "Utils/Structs/Model.h"
-#include "Utils/Structs/Transformations.h"
-#include "Utils/Structs/UniformBufferObject.h"
+#include "Utils/Structs/Uniforms/Attributes.h"
+#include "Utils/Structs/Uniforms/Model.h"
+#include "Utils/Structs/Uniforms/MVP.h"
+#include "Utils/Structs/Uniforms/Transformations.h"
+#include "Utils/Structs/Uniforms/UniformData.h"
 #include "Utils/Utils.h"
 
 void FluidInstance::InitBuffers(BufferManager &bufferManager,
@@ -19,7 +20,7 @@ void FluidInstance::InitBuffers(BufferManager &bufferManager,
   bufferManager.createUniformBuffers(
       deviceManager.getDevice(), deviceManager.getPhysicalDevice(),
       uniformBuffers, uniformBuffersMemory, uniformBuffersMapped,
-      sizeof(UniformBufferObject));
+      sizeof(MVP));
   bufferManager.createUniformBuffers(
       deviceManager.getDevice(), deviceManager.getPhysicalDevice(),
       attributesUniformBuffers, attributesUniformBuffersMemory,
@@ -29,7 +30,7 @@ void FluidInstance::InitBuffers(BufferManager &bufferManager,
       modelUniformBuffers, modelUniformBuffersMemory, modelUniformBuffersMapped,
       sizeof(Model));
 
-  logger.LogInfo("VkBuffers created");
+  logger.LogInfo("VkBuffers created for uniforms and SSB");
   this->center = center;
   this->window = window;
 }
@@ -105,24 +106,27 @@ void FluidInstance::updateUniformBuffer(uint32_t currentImage,
                   glm::vec3(0.0f, 0.0f, 1.0f));
   glm::mat4 translateBack = glm::translate(glm::mat4(1.0f), center / 2.0f);
 
-  UniformBufferObject ubo{};
-  ubo.model = glm::translate(glm::mat4(1.0f), transformations.translate) *
+  MVP mvp{};
+  mvp.model = glm::translate(glm::mat4(1.0f), transformations.translate) *
               translateBack * rotationMatrix * scaleMatrix * translateToCenter;
-  ubo.view = view;
-  ubo.proj =
+  mvp.view = view;
+  float far = 10.0f;
+  float near = 0.1f;
+  mvp.proj =
       glm::perspective(glm::radians(45.0f),
-                       extent2D->width / (float)extent2D->height, 0.5f, 10.0f);
-  ubo.proj[1][1] *= -1;
-  ubo.cameraPos = inputState.cameraPos;
-  ubo.deltaTime = static_cast<float>(lastFrameTime) * 2.0f;
+                       extent2D->width / (float)extent2D->height, near, far);
+  mvp.proj[1][1] *= -1;
+  mvp.cameraPos = inputState.cameraPos;
+  mvp.deltaTime = static_cast<float>(lastFrameTime) * 2.0f;
 
   uniformData.attributes.center = this->center;
 
   int width, height;
   glfwGetFramebufferSize(window, &width, &height);
   uniformData.model.windowSize = glm::vec2(width, height);
+  uniformData.model.farPlaneDistance = far - near;
 
-  memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+  memcpy(uniformBuffersMapped[currentImage], &mvp, sizeof(mvp));
   memcpy(attributesUniformBuffersMapped[currentImage], &uniformData.attributes,
          sizeof(Attributes));
   memcpy(modelUniformBuffersMapped[currentImage], &uniformData.model,

@@ -24,7 +24,7 @@ void PipelineManager::init(VkDevice &device,
                                             VK_FALSE);
     simulationPipeline.init(
         &device, descriptorSetLayout, vulkanObject.getSimulationRenderPass(),
-        bindingDescription, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        bindingDescription, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
         depthStencilOptions);
 
     logger.LogInfo("Off screen pipeline created");

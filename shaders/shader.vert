@@ -23,12 +23,14 @@ layout(binding = 4) uniform Model {
   float size;
   float wallSize;
   int wall;
-  float pad;
+  float farPlaneDistance;
 }
 model;
 
 layout(location = 0) in vec4 inPosition;
 layout(location = 0) out float movable;
+layout(location = 1) out vec2 texCoord;
+layout(location = 2) out vec3 toCamera;
 
 layout(std140, binding = 1) readonly buffer ParticleSSBOIn {
   Particle particlesIn[];
@@ -38,7 +40,9 @@ void main() {
   int instanceIndex = gl_InstanceIndex;
   Particle p = particlesIn[instanceIndex];
 
-  vec4 vertexPosition = inPosition + p.position;
-  gl_Position = mvp.proj * mvp.view * mvp.model * vertexPosition;
+  gl_Position = mvp.proj * (vec4(inPosition.xyz, 0.0) + mvp.view * mvp.model * p.position);
+
   movable = p.movable;
+  texCoord = inPosition.xy;
+  toCamera = mvp.cameraPos - p.position.xyz;
 }

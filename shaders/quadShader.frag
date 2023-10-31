@@ -21,7 +21,7 @@ layout(binding = 2) uniform Model {
   vec4 wallColor;
   vec2 windowSize;
   int wall;
-  float pad2;
+  float farPlaneDistance;
 }
 model;
 
@@ -30,13 +30,11 @@ layout(binding = 3) uniform sampler2D blurImage;
 float texelSizeX;
 float texelSizeY;
 
-vec3 getNormal() {
-  float offset = 0.005;
-
-  float leftDepth = texture(blurImage, coord - vec2(texelSizeX, 0.0)).x;
-  float rightDepth = texture(blurImage, coord + vec2(texelSizeX, 0.0)).x;
-  float topDepth = texture(blurImage, coord - vec2(0.0, texelSizeY)).x;
-  float bottomDepth = texture(blurImage, coord + vec2(0.0, texelSizeY)).x;
+vec3 getNormal(sampler2D depthSampler) {
+  float leftDepth = texture(depthSampler, coord - vec2(texelSizeX, 0.0)).x * model.farPlaneDistance;
+  float rightDepth = texture(depthSampler, coord + vec2(texelSizeX, 0.0)).x * model.farPlaneDistance;
+  float topDepth = texture(depthSampler, coord - vec2(0.0, texelSizeY)).x * model.farPlaneDistance;
+  float bottomDepth = texture(depthSampler, coord + vec2(0.0, texelSizeY)).x * model.farPlaneDistance;
 
   vec3 leftViewPos = vec3(coord - vec2(texelSizeX, 0.0), leftDepth);
   vec3 rightViewPos = vec3(coord + vec2(texelSizeX, 0.0), rightDepth);
@@ -46,8 +44,7 @@ vec3 getNormal() {
   vec3 dx = rightViewPos - leftViewPos;
   vec3 dy = bottomViewPos - topViewPos;
 
-  vec3 viewSpaceNormal = normalize(cross(dx, dy));
-
+  vec3 viewSpaceNormal = (vec4(normalize(cross(dx, dy)), 0.0)).xyz;
   return viewSpaceNormal;
 }
 
@@ -58,9 +55,10 @@ void main() {
 
   float blurValue = texture(blurImage, coord).x;
   if (blurValue > 0.98) {
-	discard;
+	  discard;
   } else {
-	//outColor = vec4(getNormal(), 1.0);
-	outColor = vec4(vec3(blurValue), 1.0);
+	  //outColor = vec4(vec3(originalDepth), 1.0);
+	  //outColor = vec4(vec3(blurValue), 1.0);
+	  outColor = vec4((getNormal(depthImage) * 0.5 + vec3(0.5)) , 1.0);
   }
 }
