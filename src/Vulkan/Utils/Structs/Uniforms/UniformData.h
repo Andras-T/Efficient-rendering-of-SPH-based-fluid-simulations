@@ -1,9 +1,11 @@
 #pragma once
 
-#include "Attributes.h"
 #include "../InputState.h"
+#include "Attributes.h"
+#include "BlurSettings.h"
 #include "Model.h"
 #include "Transformations.h"
+#include "ViewMode.h"
 #include "imgui.h"
 
 struct UniformData {
@@ -11,6 +13,8 @@ struct UniformData {
   Attributes attributes;
   Transformations transformations;
   Model model;
+  BlurSettings blurSettings;
+  ViewMode viewMode;
   bool wall = false;
   bool resetRequest = false;
 };

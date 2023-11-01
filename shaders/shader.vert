@@ -40,7 +40,8 @@ void main() {
   int instanceIndex = gl_InstanceIndex;
   Particle p = particlesIn[instanceIndex];
 
-  gl_Position = mvp.proj * (vec4(inPosition.xyz, 0.0) + mvp.view * mvp.model * p.position);
+  gl_Position = mvp.proj *
+                (vec4(inPosition.xyz, 0.0) + mvp.view * mvp.model * p.position);
 
   movable = p.movable;
   texCoord = inPosition.xy;

@@ -62,8 +62,8 @@ public:
     return blur1CommandBuffers;
   }
 
-  std::vector<VkCommandBuffer>& getBlur2CommandBuffers() {
-      return blur2CommandBuffers;
+  std::vector<VkCommandBuffer> &getBlur2CommandBuffers() {
+    return blur2CommandBuffers;
   }
 
   std::vector<VkCommandBuffer> &getImGuiCommandBuffers() {

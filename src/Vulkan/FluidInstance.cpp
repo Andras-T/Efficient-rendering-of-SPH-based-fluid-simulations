@@ -4,8 +4,8 @@
 #include <iostream>
 
 #include "Utils/Structs/Uniforms/Attributes.h"
-#include "Utils/Structs/Uniforms/Model.h"
 #include "Utils/Structs/Uniforms/MVP.h"
+#include "Utils/Structs/Uniforms/Model.h"
 #include "Utils/Structs/Uniforms/Transformations.h"
 #include "Utils/Structs/Uniforms/UniformData.h"
 #include "Utils/Utils.h"
@@ -14,21 +14,18 @@ void FluidInstance::InitBuffers(BufferManager &bufferManager,
                                 DeviceManager &deviceManager,
                                 VkCommandPool &commandPool, glm::vec3 center,
                                 GLFWwindow *window) {
+  auto device = deviceManager.getDevice();
+  auto physicalDevice = deviceManager.getPhysicalDevice();
+
+  uniforms.try_emplace("Attributes", Uniform(device, physicalDevice, sizeof(Attributes)));
+  uniforms.try_emplace("BlurSettings", Uniform(device, physicalDevice, sizeof(BlurSettings)));
+  uniforms.try_emplace("Model", Uniform(device, physicalDevice, sizeof(Model)));
+  uniforms.try_emplace("MVP", Uniform(device, physicalDevice, sizeof(MVP)));
+  uniforms.try_emplace("ViewMode", Uniform(device, physicalDevice, sizeof(ViewMode)));
+
   bufferManager.createShaderStorageBuffers(deviceManager, commandPool,
                                            shaderStorageBuffers,
                                            shaderStorageBuffersMemory, center);
-  bufferManager.createUniformBuffers(
-      deviceManager.getDevice(), deviceManager.getPhysicalDevice(),
-      uniformBuffers, uniformBuffersMemory, uniformBuffersMapped,
-      sizeof(MVP));
-  bufferManager.createUniformBuffers(
-      deviceManager.getDevice(), deviceManager.getPhysicalDevice(),
-      attributesUniformBuffers, attributesUniformBuffersMemory,
-      attributesUniformBuffersMapped, sizeof(Attributes));
-  bufferManager.createUniformBuffers(
-      deviceManager.getDevice(), deviceManager.getPhysicalDevice(),
-      modelUniformBuffers, modelUniformBuffersMemory, modelUniformBuffersMapped,
-      sizeof(Model));
 
   logger.LogInfo("VkBuffers created for uniforms and SSB");
   this->center = center;
@@ -47,8 +44,7 @@ void FluidInstance::InitDescriptorSets(DescriptorManager &descriptorManager,
                                        BufferManager &bufferManager) {
   descriptorManager.createDescriptorSets(
       device, descriptorSets, quadDescriptorSets, blurDescriptorSets,
-      shaderStorageBuffers, uniformBuffers, attributesUniformBuffers,
-      modelUniformBuffers);
+      shaderStorageBuffers, uniforms);
   this->bufferManager = &bufferManager;
   logger.LogInfo("Descriptor sets created");
 }
@@ -126,21 +122,21 @@ void FluidInstance::updateUniformBuffer(uint32_t currentImage,
   uniformData.model.windowSize = glm::vec2(width, height);
   uniformData.model.farPlaneDistance = far - near;
 
-  memcpy(uniformBuffersMapped[currentImage], &mvp, sizeof(mvp));
-  memcpy(attributesUniformBuffersMapped[currentImage], &uniformData.attributes,
+
+  memcpy(uniforms["MVP"].getBufferMapped(currentImage), &mvp, sizeof(mvp));
+  memcpy(uniforms["Attributes"].getBufferMapped(currentImage), &uniformData.attributes,
          sizeof(Attributes));
-  memcpy(modelUniformBuffersMapped[currentImage], &uniformData.model,
+  memcpy(uniforms["Model"].getBufferMapped(currentImage), &uniformData.model,
          sizeof(Model));
+  memcpy(uniforms["BlurSettings"].getBufferMapped(currentImage), &uniformData.blurSettings,
+         sizeof(BlurSettings));
+  memcpy(uniforms["ViewMode"].getBufferMapped(currentImage), &uniformData.viewMode,
+    sizeof(ViewMode));
 }
 
 void FluidInstance::cleanUp(VkDevice &device) {
-  for (size_t i = 0; i < Utils::MAX_FRAMES_IN_FLIGHT; i++) {
-    vkDestroyBuffer(device, uniformBuffers[i], nullptr);
-    vkDestroyBuffer(device, attributesUniformBuffers[i], nullptr);
-    vkDestroyBuffer(device, modelUniformBuffers[i], nullptr);
-    vkFreeMemory(device, uniformBuffersMemory[i], nullptr);
-    vkFreeMemory(device, attributesUniformBuffersMemory[i], nullptr);
-    vkFreeMemory(device, modelUniformBuffersMemory[i], nullptr);
+  for (auto &[str, uniform] : uniforms) {
+    uniform.cleanUp(device);
   }
 
   for (size_t i = 0; i < Utils::MAX_FRAMES_IN_FLIGHT; i++) {

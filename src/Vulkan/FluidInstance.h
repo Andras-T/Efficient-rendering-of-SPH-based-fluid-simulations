@@ -4,11 +4,13 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "GLFW/glfw3.h"
 #include "glm/gtc/matrix_transform.hpp"
+#include <unordered_map>
 #include <vector>
 
 #include "BufferManager/BufferManager.h"
 #include "DescriptorManager/DescriptorManager.h"
 #include "DeviceManager/DeviceManager.h"
+#include "Uniform/Uniform.h"
 #include "Utils/Structs/Uniforms/UniformData.h"
 
 class FluidInstance {
@@ -21,17 +23,7 @@ private:
   std::vector<VkBuffer> shaderStorageBuffers;
   std::vector<VkDeviceMemory> shaderStorageBuffersMemory;
 
-  std::vector<VkBuffer> uniformBuffers;
-  std::vector<VkDeviceMemory> uniformBuffersMemory;
-  std::vector<void *> uniformBuffersMapped;
-
-  std::vector<VkBuffer> attributesUniformBuffers;
-  std::vector<VkDeviceMemory> attributesUniformBuffersMemory;
-  std::vector<void *> attributesUniformBuffersMapped;
-
-  std::vector<VkBuffer> modelUniformBuffers;
-  std::vector<VkDeviceMemory> modelUniformBuffersMemory;
-  std::vector<void *> modelUniformBuffersMapped;
+  std::unordered_map<std::string, Uniform> uniforms;
 
   glm::vec3 center = glm::vec3(0.0f, 0.0f, 0.0f);
 

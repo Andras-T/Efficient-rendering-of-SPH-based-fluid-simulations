@@ -30,8 +30,8 @@ void ImGuiRender::draw(VkCommandBuffer &commandBuffer) {
 
 void ImGuiRender::createAppearanceMenu(int width, int height) {
   float posY = ImGui::GetFrameHeight();
-  float posX = 3 * width / 4;
-  float sizeX = width / 4;
+  float posX = 4 * width / 5;
+  float sizeX = width / 5;
   float sizeY = height - posY - ImGui::GetFrameHeight();
 
   ImGui::SetNextWindowSize(ImVec2(sizeX, sizeY));
@@ -42,14 +42,69 @@ void ImGuiRender::createAppearanceMenu(int width, int height) {
 
   ImGui::SliderFloat("Font size", &ImGui::GetIO().FontGlobalScale, 0.5f, 2.0f);
 
+  ImGui::Spacing();
+
   ImGui::Checkbox("Wall", &uniformData.wall);
   uniformData.model.wall = uniformData.wall ? 1 : 0;
 
   ImGui::Spacing();
 
   ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-  if (ImGui::CollapsingHeader("Color Picker"))
+  if (ImGui::CollapsingHeader("Color Picker")) {
+    ImGui::Spacing();
     ImGui::ColorPicker3("Background Color", (float *)backgroundColor.float32);
+    ImGui::Spacing();
+    ImGui::ColorPicker4("Fluid color", (float *)&(uniformData.model.color));
+  }
+
+  ImGui::Spacing();
+
+  // Here's the code used for both captures,
+  {
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
+    const auto child_size = ImVec2(355, 160);
+    ImGui::BeginChild("ChildDrawList", child_size, true,
+                      ImGuiWindowFlags_MenuBar);
+
+    if (ImGui::BeginMenuBar()) {
+      ImGui::TextUnformatted("View modes");
+      ImGui::EndMenuBar();
+    }
+    const auto draw_list_size = ImVec2(355, 160);
+
+    constexpr int itemSize = 5;
+    const char *items[itemSize] = {"Depth view", "Normal vector view",
+                                   "Blured depth view",
+                                   "Blured normal vector view", "Colored view"};
+
+    if (ImGui::BeginListBox("Modes", draw_list_size)) {
+      if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_DownArrow))) {
+        if (uniformData.viewMode.mode < itemSize - 1) {
+          ++uniformData.viewMode.mode;
+        }
+      }
+      if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_UpArrow))) {
+        if (uniformData.viewMode.mode > 0) {
+          --uniformData.viewMode.mode;
+        }
+      }
+
+      for (int n = 0; n < itemSize; ++n) {
+        const bool is_selected = (uniformData.viewMode.mode == n);
+        if (ImGui::Selectable(items[n], is_selected)) {
+          uniformData.viewMode.mode = n;
+        }
+
+        if (is_selected) {
+          ImGui::SetItemDefaultFocus();
+        }
+      }
+      ImGui::EndListBox();
+    }
+
+    ImGui::EndChild();
+    ImGui::PopStyleVar();
+  }
 
   ImGui::End();
 }
@@ -129,11 +184,20 @@ void ImGuiRender::createTransformationsMenu(int width, int height) {
   ImGui::SetNextWindowSize(ImVec2(sizeX, sizeY));
   ImGui::SetNextWindowBgAlpha(0.5f);
 
-  ImGui::Begin("Transformations", nullptr, ImGuiWindowFlags_NoResize);
+  ImGui::Begin("Settings", nullptr, ImGuiWindowFlags_NoResize);
 
   ImGui::Checkbox("Free camera", &inputState.freeCam);
+  ImGui::Spacing();
   ImGui::SliderFloat("Speed", &inputState.cameraSpeed, 0.1f, 10.0f);
   {
+    ImGui::Spacing();
+    ImGui::Spacing();
+    ImGui::Spacing();
+    ImGui::Spacing();
+
+    ImGui::Text("Model Settings: ");
+    ImGui::Spacing();
+
     ImGui::SliderFloat("Scale", &uniformData.transformations.s, 0.001f, 1.0f);
     ImGui::SliderFloat("Scale X", &uniformData.transformations.scale.x, 0.001f,
                        1.0f);
@@ -151,6 +215,12 @@ void ImGuiRender::createTransformationsMenu(int width, int height) {
                         (float *)&uniformData.transformations.translate,
                         -0.001f, 0.001f);
 
+    ImGui::Spacing();
+    ImGui::Spacing();
+    ImGui::Spacing();
+    ImGui::Spacing();
+
+    ImGui::Text("Particle Settings: ");
     ImGui::Spacing();
 
     ImGui::DragFloat("Smoothing length", &uniformData.attributes.smootingLength,
@@ -176,6 +246,30 @@ void ImGuiRender::createTransformationsMenu(int width, int height) {
 
     ImGui::Spacing();
     ImGui::Spacing();
+    ImGui::Spacing();
+    ImGui::Spacing();
+
+    ImGui::Text("Blur Settings: ");
+    ImGui::Spacing();
+
+    ImGui::DragFloat("Blur scale", &uniformData.blurSettings.blurScale, 0.0001f,
+                     0.0000001f, 10.0f, "%.7f", 0);
+    ImGui::DragFloat("Blur depth falloff",
+                     &uniformData.blurSettings.blurDepthFalloff, 0.01f, 0.01f,
+                     1000.0f, "%.5f", 0);
+    ImGui::DragFloat("Blur filter radius",
+                     &uniformData.blurSettings.filterRadius, 1.0f, 1.0f, 50.0f,
+                     "%.0f", 0);
+    ImGui::DragFloat("Blur direction X", &uniformData.blurSettings.blurDir.x,
+                     1.0f, 1.0f, 50.0f, "%.1f", 0);
+    ImGui::DragFloat("Blur direction Y", &uniformData.blurSettings.blurDir.y,
+                     1.0f, 1.0f, 50.0f, "%.1f", 0);
+
+    ImGui::Spacing();
+    ImGui::Spacing();
+    ImGui::Spacing();
+    ImGui::Spacing();
+
     static std::string buttonName;
     buttonName = uniformData.attributes.stop == 0 ? "Stop" : "Resume";
     if (ImGui::Button(buttonName.c_str(), ImVec2(width / 4, 40))) {

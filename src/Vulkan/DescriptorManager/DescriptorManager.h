@@ -8,6 +8,7 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "imgui.h"
 #include <vector>
+#include "../Uniform/Uniform.h"
 
 class DescriptorManager {
 
@@ -23,8 +24,7 @@ class DescriptorManager {
 
   SwapchainManager *swapchainManager;
 
-  std::vector<VkBuffer> *modelUniformBuffers;
-  std::vector<VkBuffer> *uniformBuffers;
+  std::unordered_map<std::string, Uniform>* uniforms;
 
 public:
   void init(VkDevice &device, SwapchainManager &swapchainManager) {
@@ -41,10 +41,7 @@ public:
                             std::vector<VkDescriptorSet> &quadDescriptorSets,
                             std::vector<VkDescriptorSet> &blurDescriptorSets,
                             std::vector<VkBuffer> &shaderStorageBuffers,
-                            /*VkBuffer &sphereBuffers, VkBuffer& quadBuffers,*/
-                            std::vector<VkBuffer> &uniformBuffers,
-                            std::vector<VkBuffer> &attributesUniformBuffers,
-                            std::vector<VkBuffer> &modelUniformBuffers);
+                            std::unordered_map<std::string, Uniform> &uniforms);
 
   void recreateDescriptorSets(VkDevice &device,
                               std::vector<VkDescriptorSet> &quadDescriptorSets,

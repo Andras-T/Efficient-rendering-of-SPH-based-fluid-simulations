@@ -43,7 +43,7 @@ public:
   static void createSphere(std::vector<glm::vec4> &vertices, float radius,
                            int latitudeSegments, int longitudeSegments);
 
-  static void createQuad(std::vector<glm::vec4>& vertices);
+  static void createQuad(std::vector<glm::vec4> &vertices);
 
   static glm::mat4 updateCamera(float deltaTime, InputState &inputState,
                                 ImGuiIO &io);

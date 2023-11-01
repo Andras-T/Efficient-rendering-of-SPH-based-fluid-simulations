@@ -31,5 +31,7 @@ void main() {
     outColor = model.color;
   }
 
-   gl_FragDepth = (length(toCamera) - sqrt(radius * radius - distance * distance)) / model.farPlaneDistance;
+  gl_FragDepth =
+      (length(toCamera) - sqrt(radius * radius - distance * distance)) /
+      model.farPlaneDistance;
 }

@@ -16,16 +16,17 @@ set(SOURCES
         ${VULKAN}/CommandPool/CommandPoolManager.cpp
         ${VULKAN}/DescriptorManager/DescriptorManager.cpp
         ${VULKAN}/DeviceManager/DeviceManager.cpp
+        ${VULKAN}/FluidInstance.cpp
         ${VULKAN}/PipelineManager/PipelineManager.cpp
         ${VULKAN}/PipelineManager/Pipeline.cpp
+        ${VULKAN}/Render/ImGuiRender.cpp
         ${VULKAN}/Render/Render.cpp
         ${VULKAN}/SwapchainManager/SwapchainManager.cpp
         ${VULKAN}/SwapchainManager/Image.cpp
         ${VULKAN}/Utils/Utils.cpp
+        ${VULKAN}/Uniform/Uniform.cpp
         ${VULKAN}/VulkanObject/VulkanObject.cpp
         ${VULKAN}/Window/Window.cpp
-        ${VULKAN}/Render/ImGuiRender.cpp
-        ${VULKAN}/FluidInstance.cpp
         src/FluidSimulationEnvironment.cpp
         src/Logger.cpp
         src/main.cpp

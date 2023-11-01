@@ -123,7 +123,7 @@ void SwapchainManager::createDepthResources(
                  std::to_string(swapChainExtent.width) + ", " +
                  std::to_string(swapChainExtent.height) + ")");
 
-  VkFormat blurFormat = VK_FORMAT_R8G8B8A8_UNORM;
+  VkFormat blurFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
   blurImage.createImage(
       swapChainExtent.width, swapChainExtent.height, blurFormat,
       VK_IMAGE_TILING_OPTIMAL,
@@ -131,8 +131,8 @@ void SwapchainManager::createDepthResources(
           VK_IMAGE_USAGE_SAMPLED_BIT,
       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, *device, *physicalDevice);
 
-  blurImage.createImageView(VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT,
-                            *device);
+  blurImage.createImageView(VK_FORMAT_R32G32B32A32_SFLOAT,
+                            VK_IMAGE_ASPECT_COLOR_BIT, *device);
 
   commandPoolManager.transitionImageLayout(blurImage.getImage(), blurFormat,
                                            VK_IMAGE_LAYOUT_UNDEFINED,

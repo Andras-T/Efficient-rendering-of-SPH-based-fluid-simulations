@@ -69,8 +69,8 @@ void CommandPoolManager::createBlurCommandBuffer() {
   }
 
   if (vkAllocateCommandBuffers(*device, &allocInfo2,
-      blur2CommandBuffers.data()) != VK_SUCCESS) {
-      throw std::runtime_error("failed to allocate blur command buffers!");
+                               blur2CommandBuffers.data()) != VK_SUCCESS) {
+    throw std::runtime_error("failed to allocate blur command buffers!");
   }
 }
 
