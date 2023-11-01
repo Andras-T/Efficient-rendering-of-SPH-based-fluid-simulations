@@ -11,7 +11,7 @@
 #include "DescriptorManager/DescriptorManager.h"
 #include "DeviceManager/DeviceManager.h"
 #include "Uniform/Uniform.h"
-#include "Utils/Structs/Uniforms/UniformData.h"
+#include "Uniform/Structs/UniformData.h"
 
 class FluidInstance {
 

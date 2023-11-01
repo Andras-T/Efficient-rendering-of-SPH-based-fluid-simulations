@@ -3,11 +3,11 @@
 #include <chrono>
 #include <iostream>
 
-#include "Utils/Structs/Uniforms/Attributes.h"
-#include "Utils/Structs/Uniforms/MVP.h"
-#include "Utils/Structs/Uniforms/Model.h"
-#include "Utils/Structs/Uniforms/Transformations.h"
-#include "Utils/Structs/Uniforms/UniformData.h"
+#include "Uniform/Structs/Attributes.h"
+#include "Uniform/Structs/MVP.h"
+#include "Uniform/Structs/Model.h"
+#include "Uniform/Structs/Transformations.h"
+#include "Uniform/Structs/UniformData.h"
 #include "Utils/Utils.h"
 
 void FluidInstance::InitBuffers(BufferManager &bufferManager,

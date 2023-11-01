@@ -59,7 +59,22 @@ void ImGuiRender::createAppearanceMenu(int width, int height) {
 
   ImGui::Spacing();
 
-  // Here's the code used for both captures,
+  ImGui::Text("Lightning");
+  
+  ImGui::Spacing();
+
+  ImGui::DragFloat("Shininess", &uniformData.model.shininess,
+    0.1f, 0.001f, 500.0f, "%.1f", 0);
+
+  ImGui::DragFloat("Ambient light", &uniformData.model.ambient,
+    0.05f, 0.001f, 1.0f, "%.2f", 0);
+
+  ImGui::DragFloat("Light strength", &uniformData.model.lightStrength,
+    0.05f, 0.001f, 5.0f, "%.2f", 0);
+
+  ImGui::Spacing();
+
+  // View Modes
   {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
     const auto child_size = ImVec2(355, 160);
@@ -72,10 +87,10 @@ void ImGuiRender::createAppearanceMenu(int width, int height) {
     }
     const auto draw_list_size = ImVec2(355, 160);
 
-    constexpr int itemSize = 5;
+    constexpr int itemSize = 6;
     const char *items[itemSize] = {"Depth view", "Normal vector view",
                                    "Blured depth view",
-                                   "Blured normal vector view", "Colored view"};
+                                   "Blured normal vector view", "Colored view", "Lights"};
 
     if (ImGui::BeginListBox("Modes", draw_list_size)) {
       if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_DownArrow))) {
@@ -105,6 +120,9 @@ void ImGuiRender::createAppearanceMenu(int width, int height) {
     ImGui::EndChild();
     ImGui::PopStyleVar();
   }
+  bool worldNormal = uniformData.model.viewOrWorldSpace == 1;
+  ImGui::Checkbox("Use world normals", &worldNormal);
+  uniformData.model.viewOrWorldSpace = worldNormal ? 1 : 0;
 
   ImGui::End();
 }

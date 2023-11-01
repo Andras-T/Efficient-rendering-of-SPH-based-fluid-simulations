@@ -1,5 +1,5 @@
 #pragma once
 
 struct ViewMode {
-  int mode = 4;
+  int mode = 5;
 };

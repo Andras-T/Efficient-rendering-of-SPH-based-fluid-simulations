@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../InputState.h"
+#include "../../Utils/Structs/InputState.h"
 #include "Attributes.h"
 #include "BlurSettings.h"
 #include "Model.h"
