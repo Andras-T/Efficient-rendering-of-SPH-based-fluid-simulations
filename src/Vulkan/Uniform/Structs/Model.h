@@ -8,8 +8,4 @@ struct Model {
   glm::vec2 windowSize = glm::vec2(1200, 800);
   int wall = 0;
   float farPlaneDistance;
-  float shininess = 15.0;
-  float ambient = 0.35;
-  float lightStrength = 0.4;
-  int viewOrWorldSpace = 1;
 };

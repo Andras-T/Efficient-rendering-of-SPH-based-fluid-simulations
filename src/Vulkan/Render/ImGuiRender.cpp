@@ -63,13 +63,16 @@ void ImGuiRender::createAppearanceMenu(int width, int height) {
   
   ImGui::Spacing();
 
-  ImGui::DragFloat("Shininess", &uniformData.model.shininess,
+  ImGui::DragFloat("Light FoV", &uniformData.viewMode.lightFOV,
+    0.5f, 5.0f, 90.0f, "%.1f", 0);
+
+  ImGui::DragFloat("Shininess", &uniformData.viewMode.shininess,
     0.1f, 0.001f, 500.0f, "%.1f", 0);
 
-  ImGui::DragFloat("Ambient light", &uniformData.model.ambient,
+  ImGui::DragFloat("Ambient light", &uniformData.viewMode.ambient,
     0.05f, 0.001f, 1.0f, "%.2f", 0);
 
-  ImGui::DragFloat("Light strength", &uniformData.model.lightStrength,
+  ImGui::DragFloat("Light strength", &uniformData.viewMode.lightStrength,
     0.05f, 0.001f, 5.0f, "%.2f", 0);
 
   ImGui::Spacing();
@@ -120,9 +123,9 @@ void ImGuiRender::createAppearanceMenu(int width, int height) {
     ImGui::EndChild();
     ImGui::PopStyleVar();
   }
-  bool worldNormal = uniformData.model.viewOrWorldSpace == 1;
+  bool worldNormal = uniformData.viewMode.viewOrWorldSpace == 1;
   ImGui::Checkbox("Use world normals", &worldNormal);
-  uniformData.model.viewOrWorldSpace = worldNormal ? 1 : 0;
+  uniformData.viewMode.viewOrWorldSpace = worldNormal ? 1 : 0;
 
   ImGui::End();
 }

@@ -29,10 +29,6 @@ layout(binding = 2) uniform Model {
   vec2 windowSize;
   int wall;
   float farPlaneDistance;
-  float shininess;
-  float ambient;
-  float lightStrength;
-  int viewOrWorldSpace;
 }
 model;
 
@@ -43,6 +39,11 @@ float texelSizeY;
 
 layout(binding = 4) uniform ViewMode {
   int mode;
+  int viewOrWorldSpace;
+  float shininess;
+  float ambient;
+  float lightStrength;
+  float lightFOV;
 }
 viewMode;
 
@@ -79,7 +80,7 @@ vec3 getOriginalNormal() {
   vec3 topWorldPos;
   vec3 bottomWorldPos;
 
-  if (model.viewOrWorldSpace == 1) {
+  if (viewMode.viewOrWorldSpace == 1) {
     leftWorldPos = getWorldPos(coord - vec2(texelSizeX, 0.0), leftDepth);
     rightWorldPos = getWorldPos(coord + vec2(texelSizeX, 0.0), rightDepth);
     topWorldPos = getWorldPos(coord - vec2(0.0, texelSizeY), topDepth);
@@ -114,7 +115,7 @@ vec3 getNormal() {
   vec3 topWorldPos;
   vec3 bottomWorldPos;
 
-  if (model.viewOrWorldSpace == 1) {
+  if (viewMode.viewOrWorldSpace == 1) {
     leftWorldPos = getWorldPos(coord - vec2(texelSizeX, 0.0), leftDepth);
     rightWorldPos = getWorldPos(coord + vec2(texelSizeX, 0.0), rightDepth);
     topWorldPos = getWorldPos(coord - vec2(0.0, texelSizeY), topDepth);
@@ -142,22 +143,29 @@ vec3 calcLight(float depth) {
   headLight.position = mvp.cameraPos;
 
   vec3 hitPosition = getWorldPos(coord, depth);
-  
-  vec3 lightDirection = normalize(hitPosition - headLight.position);
   vec3 viewDirection = getWorldPos(vec2(0.5, 0.5), 1.0);
   
+  if (viewMode.viewOrWorldSpace == 0) {
+    vec4 lightPos = mvp.view * vec4(mvp.cameraPos, 1.0);
+    headLight.position = lightPos.xyz / lightPos.w;
+    hitPosition = getViewPos(coord, depth);
+    viewDirection = getViewPos(vec2(0.5, 0.5), 1.0);
+  }
+
+  vec3 lightDirection = normalize(hitPosition - headLight.position);
+  
   float angle = acos(dot(normalize(lightDirection), normalize(viewDirection)));
-  float maxAngle = PI / 8.0;
+  float maxAngle = viewMode.lightFOV / 180.0 * PI;
   if (angle < maxAngle) {
     vec3 halfVector = normalize(lightDirection + viewDirection);
     vec3 bluredNormal = getNormal();
     float diffuse = max(dot(bluredNormal, lightDirection), 0.0f);
-    float specular = pow(max(dot(bluredNormal, halfVector), 0.0f), model.shininess);
+    float specular = pow(max(dot(bluredNormal, halfVector), 0.0f), viewMode.shininess);
 
     outputColor += (diffuse + specular) * headLight.color * (1.0 - angle / maxAngle);
   }
-  outputColor *= model.lightStrength;
-  outputColor += model.ambient * model.color.xyz;
+  outputColor *= viewMode.lightStrength;
+  outputColor += viewMode.ambient * model.color.xyz;
   return outputColor;
 }
 
@@ -215,11 +223,11 @@ void main() {
 //  float diffuse = max(dot(bluredNormal, lightDirection), 0.0f);
 //
 //  vec3 halfVector = normalize(lightDirection + viewDirection);
-//  float specular = pow(max(dot(bluredNormal, halfVector), 0.0f), model.shininess);
+//  float specular = pow(max(dot(bluredNormal, halfVector), 0.0f), viewMode.shininess);
 //
 //  outputColor += (diffuse + specular) * headLight.color;
-//  outputColor += model.ambient * model.color.xyz;
-//  outputColor *= model.lightStrength;
+//  outputColor += viewMode.ambient * model.color.xyz;
+//  outputColor *= viewMode.lightStrength;
 //
 //  return outputColor;
 //}
