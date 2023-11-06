@@ -24,6 +24,8 @@ layout(binding = 4) uniform Model {
   float wallSize;
   int wall;
   float farPlaneDistance;
+  float particleRadius;
+  vec3 pad;
 }
 model;
 

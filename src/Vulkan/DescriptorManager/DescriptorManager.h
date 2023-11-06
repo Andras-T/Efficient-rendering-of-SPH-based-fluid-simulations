@@ -3,12 +3,12 @@
 #define GLFW_INCLUDE_VULKAN
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "../SwapchainManager/SwapchainManager.h"
+#include "../Uniform/Uniform.h"
 #include "../Utils/Utils.h"
 #include "GLFW/glfw3.h"
 #include "glm/gtc/matrix_transform.hpp"
 #include "imgui.h"
 #include <vector>
-#include "../Uniform/Uniform.h"
 
 class DescriptorManager {
 
@@ -20,11 +20,11 @@ class DescriptorManager {
   VkDescriptorPool quadDescriptorPool;
   VkDescriptorPool blurDescriptorPool;
 
-  VkSampler depthSampler;
+  VkSampler sampler;
 
   SwapchainManager *swapchainManager;
 
-  std::unordered_map<std::string, Uniform>* uniforms;
+  std::unordered_map<std::string, Uniform> *uniforms;
 
 public:
   void init(VkDevice &device, SwapchainManager &swapchainManager) {

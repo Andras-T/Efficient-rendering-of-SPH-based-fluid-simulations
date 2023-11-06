@@ -7,6 +7,7 @@
 #include "../VulkanObject/VulkanObject.h"
 #include "../Window/Window.h"
 #include "Image.h"
+#include "TexCube.h"
 
 class SwapchainManager {
 
@@ -23,6 +24,7 @@ private:
 
   Image depthImage;
   Image blurImage;
+  TexCube texCube;
 
   Window *window;
   VkSurfaceKHR *surface;
@@ -62,12 +64,14 @@ public:
             VkPhysicalDevice &physicalDevice, VkDevice &device,
             QueueFamilyIndices &indices);
 
-  void createDepthResources(CommandPoolManager &commandPoolManager);
+  void createDepthResources(CommandPoolManager &commandPoolManager,
+                            VkQueue &graphicsQueue);
 
   void createFramebuffers(VulkanObject &vulkanObject);
 
   void recreateSwapChain(GLFWwindow *window, VkDevice &device,
-                         CommandPoolManager &commandPoolManager);
+                         CommandPoolManager &commandPoolManager,
+                         VkQueue &graphicsQueue);
 
   void cleanupSwapChain();
 
@@ -95,6 +99,10 @@ public:
   VkImage &getDepthImage() { return depthImage.getImage(); }
   VkDeviceMemory &getDepthImageMemory() { return depthImage.getImageMemory(); }
   VkImageView &getDepthImageView() { return depthImage.getImageView(); }
+
+  VkImage &getTexCubeImage() { return texCube.getImage(); }
+  VkDeviceMemory &getTexCubeImageMemory() { return texCube.getImageMemory(); }
+  VkImageView &getTexCubeImageView() { return texCube.getImageView(); }
 
   VkImage &getBlurImage() { return blurImage.getImage(); }
   VkDeviceMemory &getBlurImageMemory() { return blurImage.getImageMemory(); }

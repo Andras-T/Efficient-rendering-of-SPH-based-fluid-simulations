@@ -140,7 +140,8 @@ void CommandPoolManager::endSingleTimeCommands(VkCommandBuffer commandBuffer,
 
 void CommandPoolManager::transitionImageLayout(VkImage image, VkFormat format,
                                                VkImageLayout oldLayout,
-                                               VkImageLayout newLayout) {
+                                               VkImageLayout newLayout,
+                                               uint32_t layerCount) {
   VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
   VkImageMemoryBarrier barrier{};
@@ -154,7 +155,7 @@ void CommandPoolManager::transitionImageLayout(VkImage image, VkFormat format,
   barrier.subresourceRange.baseMipLevel = 0;
   barrier.subresourceRange.levelCount = 1;
   barrier.subresourceRange.baseArrayLayer = 0;
-  barrier.subresourceRange.layerCount = 1;
+  barrier.subresourceRange.layerCount = layerCount;
 
   VkPipelineStageFlags sourceStage;
   VkPipelineStageFlags destinationStage;

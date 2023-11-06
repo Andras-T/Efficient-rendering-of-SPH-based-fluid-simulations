@@ -23,6 +23,7 @@ set(SOURCES
         ${VULKAN}/Render/Render.cpp
         ${VULKAN}/SwapchainManager/SwapchainManager.cpp
         ${VULKAN}/SwapchainManager/Image.cpp
+        ${VULKAN}/SwapchainManager/TexCube.cpp
         ${VULKAN}/Utils/Utils.cpp
         ${VULKAN}/Uniform/Uniform.cpp
         ${VULKAN}/VulkanObject/VulkanObject.cpp
@@ -39,7 +40,7 @@ set(SOURCES
         ${IMGUI_DIR}/imgui_tables.cpp 
         ${IMGUI_DIR}/imgui_widgets.cpp
 
-        ${STB_DIR}/stb_image.cpp 
+        ${STB_DIR}/stb_image.cpp
         ${STB_DIR}/stb_image.h)
 
 add_executable(FluidSimulationSPH ${SOURCES} res/app.o)

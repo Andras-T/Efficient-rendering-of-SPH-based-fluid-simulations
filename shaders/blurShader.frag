@@ -1,8 +1,5 @@
 #version 450
-
-float texelSizeX;
-float texelSizeY;
-ivec2 texel;
+#define PI 3.141592653589
 
 layout(location = 0) out vec4 outColor;
 layout(location = 1) in vec2 coord;
@@ -15,17 +12,20 @@ layout(binding = 2) uniform Model {
   vec4 wallColor;
   vec2 windowSize;
   int wall;
-  float pad2;
+  float farPlaneDistance;
+  float particleRadius;
+  vec3 pad;
 }
 model;
 
 layout(binding = 3) uniform BlurSettings {
+  vec2 blurDir;
   float blurScale;
   float blurDepthFalloff;
   float filterRadius;
-  float pad1;
-  vec2 blurDir;
-  vec2 pad2;
+  float sigma;
+  float kernelSize;
+  float pad;
 }
 blurSettings;
 
@@ -85,25 +85,70 @@ float getBluredDepthY(ivec2 texel, float filterRadius, vec2 blurDir,
   return sum;
 }
 
+float imLoad(vec2 texCoord) {
+  ivec2 texel =
+      ivec2(texCoord.x * model.windowSize.x, texCoord.y * model.windowSize.y);
+  return imageLoad(blurImage, texel).x;
+}
+
+float loadDepth(vec2 texCoord) {
+  if (texCoord.x < 0.0 || texCoord.x > 1.0 || texCoord.y < 0.0 || texCoord.y > 1.0 )
+    return 1.0f;
+
+  float depth = 0.0f;
+
+  if (constants.stageIndex == 0){
+    depth = texture(depthImage, texCoord).x;
+  } else {
+    depth = imLoad(texCoord);
+  }  
+
+  return depth;
+}
+
+float gaussian(float x, float sigma) {
+  return (1.0 / (sqrt(2.0 * PI) * sigma)) * exp(-(x * x) / (2.0 * sigma * sigma));
+}
+
+float getBluredDepth(vec2 dir) {
+  float w_sum = 0.0f;
+  for (float i = -blurSettings.kernelSize; i <= blurSettings.kernelSize; i += 1.0) {
+      w_sum += gaussian(i, blurSettings.sigma);
+  }
+
+  float result = 0.0f;
+  for (float i = -blurSettings.kernelSize; i <= blurSettings.kernelSize; i += 1.0) {
+    float w = gaussian(i, blurSettings.sigma) / w_sum;
+    if (isnan(w) || w > 1.0f || w < 0.0f)
+      w = 0.0f;
+
+    float d = loadDepth(coord + dir * i);
+      result += d * w;
+  }
+
+
+  return result; 
+}
+
+
 void main() {
-  ivec2 imageSize = imageSize(blurImage);
+  float texelSizeX = 1.0 / model.windowSize.x;
+  float texelSizeY = 1.0 / model.windowSize.y;
+
   ivec2 texel =
       ivec2(coord.x * model.windowSize.x, coord.y * model.windowSize.y);
-  vec4 pixel = imageLoad(blurImage, texel);
 
   if (constants.stageIndex == 0) {
-    float depthX = getBluredDepthX(
-        blurSettings.filterRadius,
-        2.0 * vec2(blurSettings.blurDir.y / model.windowSize.x, 0.0f),
-        blurSettings.blurScale, blurSettings.blurDepthFalloff);
-    imageStore(blurImage, texel, vec4(vec3(depthX), 1.0));
+    float depthValue = getBluredDepth(vec2(blurSettings.blurDir.x / model.windowSize.x, 0.0f));
+    imageStore(blurImage, texel, vec4(vec3(depthValue), 1.0));
   } else {
     float depthY =
         getBluredDepthY(texel, blurSettings.filterRadius,
                         vec2(0.0f, blurSettings.blurDir.x / model.windowSize.y),
                         blurSettings.blurScale, blurSettings.blurDepthFalloff);
-    imageStore(blurImage, texel, vec4(vec3(depthY), 1.0));
+    float depthValue = getBluredDepth(vec2(0.0f, blurSettings.blurDir.y / model.windowSize.y));
+    imageStore(blurImage, texel, vec4(vec3(depthValue), 1.0));
   }
 
-  outColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+  outColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 }

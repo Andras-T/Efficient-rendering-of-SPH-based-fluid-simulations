@@ -1,6 +1,8 @@
 #pragma once
 
 #define GLFW_INCLUDE_VULKAN
+#include "../BufferManager/BufferManager.h"
+#include "../CommandPool/CommandPoolManager.h"
 #include "GLFW/glfw3.h"
 
 class Image {

@@ -42,7 +42,8 @@ public:
                              VkQueue &graphicsQueue);
 
   void transitionImageLayout(VkImage image, VkFormat format,
-                             VkImageLayout oldLayout, VkImageLayout newLayout);
+                             VkImageLayout oldLayout, VkImageLayout newLayout,
+                             uint32_t layerCount = 1);
 
   void cleanup();
 

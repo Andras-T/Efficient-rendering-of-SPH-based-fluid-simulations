@@ -33,7 +33,8 @@ void FluidSimulationEnvironment::init() {
 
   commandPoolManager.init(deviceManager, deviceManager.getFamilyIndices());
 
-  swapChainManager.createDepthResources(commandPoolManager);
+  swapChainManager.createDepthResources(commandPoolManager,
+                                        deviceManager.getGraphicsQueue());
   swapChainManager.createFramebuffers(vulkanObject);
 
   descriptorManager.createDescriptorPool(device);

@@ -17,11 +17,14 @@ void FluidInstance::InitBuffers(BufferManager &bufferManager,
   auto device = deviceManager.getDevice();
   auto physicalDevice = deviceManager.getPhysicalDevice();
 
-  uniforms.try_emplace("Attributes", Uniform(device, physicalDevice, sizeof(Attributes)));
-  uniforms.try_emplace("BlurSettings", Uniform(device, physicalDevice, sizeof(BlurSettings)));
+  uniforms.try_emplace("Attributes",
+                       Uniform(device, physicalDevice, sizeof(Attributes)));
+  uniforms.try_emplace("BlurSettings",
+                       Uniform(device, physicalDevice, sizeof(BlurSettings)));
   uniforms.try_emplace("Model", Uniform(device, physicalDevice, sizeof(Model)));
   uniforms.try_emplace("MVP", Uniform(device, physicalDevice, sizeof(MVP)));
-  uniforms.try_emplace("ViewMode", Uniform(device, physicalDevice, sizeof(ViewMode)));
+  uniforms.try_emplace("ViewMode",
+                       Uniform(device, physicalDevice, sizeof(ViewMode)));
 
   bufferManager.createShaderStorageBuffers(deviceManager, commandPool,
                                            shaderStorageBuffers,
@@ -42,9 +45,9 @@ void FluidInstance::resetInstance(BufferManager &bufferManager,
 void FluidInstance::InitDescriptorSets(DescriptorManager &descriptorManager,
                                        VkDevice &device,
                                        BufferManager &bufferManager) {
-  descriptorManager.createDescriptorSets(
-      device, descriptorSets, quadDescriptorSets, blurDescriptorSets,
-      shaderStorageBuffers, uniforms);
+  descriptorManager.createDescriptorSets(device, descriptorSets,
+                                         quadDescriptorSets, blurDescriptorSets,
+                                         shaderStorageBuffers, uniforms);
   this->bufferManager = &bufferManager;
   logger.LogInfo("Descriptor sets created");
 }
@@ -119,19 +122,18 @@ void FluidInstance::updateUniformBuffer(uint32_t currentImage,
 
   int width, height;
   glfwGetFramebufferSize(window, &width, &height);
-  uniformData.model.windowSize = glm::vec2(width, height);
+  uniformData.model.windowSize = glm::vec2(float(width), float(height));
   uniformData.model.farPlaneDistance = far - near;
 
-
   memcpy(uniforms["MVP"].getBufferMapped(currentImage), &mvp, sizeof(mvp));
-  memcpy(uniforms["Attributes"].getBufferMapped(currentImage), &uniformData.attributes,
-         sizeof(Attributes));
+  memcpy(uniforms["Attributes"].getBufferMapped(currentImage),
+         &uniformData.attributes, sizeof(Attributes));
   memcpy(uniforms["Model"].getBufferMapped(currentImage), &uniformData.model,
          sizeof(Model));
-  memcpy(uniforms["BlurSettings"].getBufferMapped(currentImage), &uniformData.blurSettings,
-         sizeof(BlurSettings));
-  memcpy(uniforms["ViewMode"].getBufferMapped(currentImage), &uniformData.viewMode,
-    sizeof(ViewMode));
+  memcpy(uniforms["BlurSettings"].getBufferMapped(currentImage),
+         &uniformData.blurSettings, sizeof(BlurSettings));
+  memcpy(uniforms["ViewMode"].getBufferMapped(currentImage),
+         &uniformData.viewMode, sizeof(ViewMode));
 }
 
 void FluidInstance::cleanUp(VkDevice &device) {

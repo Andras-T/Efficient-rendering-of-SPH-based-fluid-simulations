@@ -151,7 +151,7 @@ void Render::drawFrame(uint32_t lastFrameTime) {
 
     vkResetFences(device, 1, &blur1InFlightFences[currentFrame]);
 
-    pushConstant.stageIndex = 0;
+    blurPushConstant.stageIndex = 0;
 
     auto &commandBuffer =
         commandPoolManager->getBlur1CommandBuffers()[currentFrame];
@@ -185,7 +185,7 @@ void Render::drawFrame(uint32_t lastFrameTime) {
 
     vkResetFences(device, 1, &blur2InFlightFences[currentFrame]);
 
-    pushConstant.stageIndex = 1;
+    blurPushConstant.stageIndex = 1;
 
     auto &commandBuffer =
         commandPoolManager->getBlur2CommandBuffers()[currentFrame];
@@ -224,9 +224,9 @@ void Render::drawFrame(uint32_t lastFrameTime) {
         imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-      swapChainManager->recreateSwapChain(window->get_GLFW_Window(),
-                                          deviceManager->getDevice(),
-                                          *commandPoolManager);
+      swapChainManager->recreateSwapChain(
+          window->get_GLFW_Window(), deviceManager->getDevice(),
+          *commandPoolManager, deviceManager->getGraphicsQueue());
       return;
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
       throw std::runtime_error("failed to acquire swap chain image!");
@@ -275,9 +275,9 @@ void Render::drawFrame(uint32_t lastFrameTime) {
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR ||
         Window::framebufferResized) {
       Window::framebufferResized = false;
-      swapChainManager->recreateSwapChain(window->get_GLFW_Window(),
-                                          deviceManager->getDevice(),
-                                          *commandPoolManager);
+      swapChainManager->recreateSwapChain(
+          window->get_GLFW_Window(), deviceManager->getDevice(),
+          *commandPoolManager, deviceManager->getGraphicsQueue());
       descriptorManager->recreateDescriptorSets(
           device, instance->getQuadDescriptorSets(),
           instance->getBlurDescriptorSets());
@@ -436,7 +436,7 @@ void Render::recordQuadCommandBuffer(VkCommandBuffer &commandBuffer,
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
   if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
-    throw std::runtime_error("failed to begin recording quad command buffer!");
+    throw std::runtime_error("Failed to begin recording quad command buffer!");
   }
 
   VkRenderPassBeginInfo renderPassInfo{};
@@ -474,15 +474,32 @@ void Render::recordQuadCommandBuffer(VkCommandBuffer &commandBuffer,
   vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
   VkDeviceSize offsets[] = {0};
-  vkCmdBindVertexBuffers(commandBuffer, 0, 1, &(bufferManager->getQuadBuffer()),
-                         offsets);
+  vkCmdBindVertexBuffers(commandBuffer, 0, 1,
+                         &(bufferManager->getSkyBoxBuffer()), offsets);
 
   auto descriptorSet = &instance->getQuadDescriptorSets()[currentFrame];
   vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           pipelineManager->getQuadPipelineLayout(), 0, 1,
                           descriptorSet, 0, nullptr);
 
-  vkCmdDraw(commandBuffer, 4, 1, 0, 0);
+  quadPushConstant.stageIndex = 0;
+
+  vkCmdPushConstants(commandBuffer, pipelineManager->getQuadPipelineLayout(),
+                     VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT,
+                     0, sizeof(QuadStage), &quadPushConstant);
+
+  vkCmdDraw(commandBuffer, 36, 1, 0, 0);
+
+  vkCmdBindVertexBuffers(commandBuffer, 0, 1, &(bufferManager->getQuadBuffer()),
+                         offsets);
+
+  quadPushConstant.stageIndex = 1;
+
+  vkCmdPushConstants(commandBuffer, pipelineManager->getQuadPipelineLayout(),
+                     VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT,
+                     0, sizeof(QuadStage), &quadPushConstant);
+
+  vkCmdDraw(commandBuffer, 6, 1, 0, 0);
 
   imGuiRender.draw(commandBuffer);
 
@@ -547,9 +564,9 @@ void Render::recordBlurCommandBuffer(VkCommandBuffer &commandBuffer,
 
   vkCmdPushConstants(commandBuffer, pipelineManager->getBlurPipelineLayout(),
                      VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(BlurStage),
-                     &pushConstant);
+                     &blurPushConstant);
 
-  vkCmdDraw(commandBuffer, 4, 1, 0, 0);
+  vkCmdDraw(commandBuffer, 6, 1, 0, 0);
 
   vkCmdEndRenderPass(commandBuffer);
 

@@ -2,6 +2,7 @@
 #include "../Utils/Structs/PushConstants/BlurStageConstant.h"
 #include "../Utils/Structs/PushConstants/ComputeStageConstant.h"
 
+#include "../Utils/Structs/PushConstants/QuadStageConstant.h"
 #include <filesystem>
 #include <fstream>
 
@@ -24,6 +25,9 @@ void Pipeline::init(VkDevice *device,
   } else if (name._Equal(BlurStage::getOwner())) {
     pipelineLayoutInfo.pushConstantRangeCount = 1;
     pipelineLayoutInfo.pPushConstantRanges = &BlurStage::getPushConstantRange();
+  } else if (name._Equal(QuadStage::getOwner())) {
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges = &QuadStage::getPushConstantRange();
   }
 
   if (vkCreatePipelineLayout(*device, &pipelineLayoutInfo, nullptr, &layout) !=

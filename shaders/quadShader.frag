@@ -1,7 +1,7 @@
 #version 450
-#define PI 3.1415926538
+#define PI 3.141592653589
 
-float maxDepth = 0.99f;
+float maxDepth = 0.96f;
 
 struct Light {
   vec3 position;
@@ -12,6 +12,7 @@ Light headLight;
 
 layout(location = 0) out vec4 outColor;
 layout(location = 1) in vec2 coord;
+layout(location = 2) in vec3 cubePos;
 
 layout(binding = 0) uniform sampler2D depthImage;
 layout(binding = 1) uniform MVP {
@@ -29,6 +30,8 @@ layout(binding = 2) uniform Model {
   vec2 windowSize;
   int wall;
   float farPlaneDistance;
+  float particleRadius;
+  vec3 pad;
 }
 model;
 
@@ -39,195 +42,165 @@ float texelSizeY;
 
 layout(binding = 4) uniform ViewMode {
   int mode;
-  int viewOrWorldSpace;
   float shininess;
   float ambient;
   float lightStrength;
   float lightFOV;
+  float reflection;
+  float maxDepth;
+  float pad2;
 }
 viewMode;
 
+layout(push_constant) uniform Constants { int stageIndex; }
+constants;
+
+layout(binding = 5) uniform samplerCube cubemap;
+
 float getImage2DValue(vec2 imageCoord) {
   ivec2 iCoord = ivec2(imageCoord.x * model.windowSize.x,
-                                    imageCoord.y * model.windowSize.y);
+                       imageCoord.y * model.windowSize.y);
   return imageLoad(blurImage, iCoord).x;
 }
 
-vec3 getWorldPos(vec2 texCoord, float depth) {
-  vec4 clip = vec4(texCoord * 2.0 - vec2(1.0, 1.0), depth, 1.0);
-  vec4 view = inverse(mvp.proj) * clip;
-  return (inverse(mvp.view) * vec4(view.xyz/ view.w, 1.0)).xyz;
+mat4 removeTranslation(mat4 mat) {
+  mat[3][0] = 0.0;
+  mat[3][1] = 0.0;
+  mat[3][2] = 0.0;
+  return mat;
 }
 
-vec3 getViewPos(vec2 texCoord, float depth) {
-  vec4 clip = vec4(texCoord * 2.0 - vec2(1.0, 1.0), depth, 1.0);
-  vec4 view = inverse(mvp.proj) * clip;
-  return vec3(view.xyz/ view.w);
+vec3 getViewPos(vec2 uv, float depth) {
+  vec4 clipPos = vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+  vec4 eyePos = inverse(mvp.proj) * clipPos;
+  return eyePos.xyz / eyePos.w;
 }
 
-vec3 getOriginalNormal() {
-  float leftDepth = texture(depthImage, coord - vec2(texelSizeX, 0.0)).x *
-                    model.farPlaneDistance;
-  float rightDepth = texture(depthImage, coord + vec2(texelSizeX, 0.0)).x *
-                     model.farPlaneDistance;
-  float topDepth = texture(depthImage, coord - vec2(0.0, texelSizeY)).x *
-                   model.farPlaneDistance;
-  float bottomDepth = texture(depthImage, coord + vec2(0.0, texelSizeY)).x *
-                      model.farPlaneDistance;
-
-  vec3 leftWorldPos;
-  vec3 rightWorldPos;
-  vec3 topWorldPos;
-  vec3 bottomWorldPos;
-
-  if (viewMode.viewOrWorldSpace == 1) {
-    leftWorldPos = getWorldPos(coord - vec2(texelSizeX, 0.0), leftDepth);
-    rightWorldPos = getWorldPos(coord + vec2(texelSizeX, 0.0), rightDepth);
-    topWorldPos = getWorldPos(coord - vec2(0.0, texelSizeY), topDepth);
-    bottomWorldPos = getWorldPos(coord + vec2(0.0, texelSizeY), bottomDepth);
-  } else {
-    leftWorldPos = getViewPos(coord - vec2(texelSizeX, 0.0), leftDepth);
-    rightWorldPos = getViewPos(coord + vec2(texelSizeX, 0.0), rightDepth);
-    topWorldPos = getViewPos(coord - vec2(0.0, texelSizeY), topDepth);
-    bottomWorldPos = getViewPos(coord + vec2(0.0, texelSizeY), bottomDepth);
-  }
-  vec3 dx = rightWorldPos - leftWorldPos;
-  vec3 dy = bottomWorldPos - topWorldPos;
-
-  vec3 crossProduct = cross(dx, dy);
-
-  vec3 worldSpaceNormal = crossProduct / length(crossProduct);
-  return worldSpaceNormal;
+vec3 getEyePos(vec2 texCoord) {
+  ivec2 iCoord =
+      ivec2(texCoord.x * model.windowSize.x, texCoord.y * model.windowSize.y);
+  float depth = getImage2DValue(texCoord);
+  return getViewPos(texCoord, depth);
 }
 
 vec3 getNormal() {
-  float leftDepth =
-      getImage2DValue(coord - vec2(texelSizeX, 0.0)) * model.farPlaneDistance;
-  float rightDepth =
-      getImage2DValue(coord + vec2(texelSizeX, 0.0)) * model.farPlaneDistance;
-  float topDepth =
-      getImage2DValue(coord - vec2(0.0, texelSizeY)) * model.farPlaneDistance;
-  float bottomDepth =
-      getImage2DValue(coord + vec2(0.0, texelSizeY)) * model.farPlaneDistance;
-
-  vec3 leftWorldPos;
-  vec3 rightWorldPos;
-  vec3 topWorldPos;
-  vec3 bottomWorldPos;
-
-  if (viewMode.viewOrWorldSpace == 1) {
-    leftWorldPos = getWorldPos(coord - vec2(texelSizeX, 0.0), leftDepth);
-    rightWorldPos = getWorldPos(coord + vec2(texelSizeX, 0.0), rightDepth);
-    topWorldPos = getWorldPos(coord - vec2(0.0, texelSizeY), topDepth);
-    bottomWorldPos = getWorldPos(coord + vec2(0.0, texelSizeY), bottomDepth);
-  } else {
-    leftWorldPos = getViewPos(coord - vec2(texelSizeX, 0.0), leftDepth);
-    rightWorldPos = getViewPos(coord + vec2(texelSizeX, 0.0), rightDepth);
-    topWorldPos = getViewPos(coord - vec2(0.0, texelSizeY), topDepth);
-    bottomWorldPos = getViewPos(coord + vec2(0.0, texelSizeY), bottomDepth);
+  float depth = getImage2DValue(coord);
+  if (depth > viewMode.maxDepth) {
+    discard;
   }
 
-  vec3 dx = rightWorldPos - leftWorldPos;
-  vec3 dy = bottomWorldPos - topWorldPos;
+  // Calculate eye-space position from depth
+  vec3 posEye = getViewPos(coord, depth);
 
-  vec3 crossProduct = cross(dx, dy);
+  // Calculate differences on X
+  vec3 ddx = getEyePos(coord + vec2(texelSizeX, 0)) - posEye;
+  vec3 ddx2 = posEye - getEyePos(coord + vec2(-texelSizeX, 0));
+  if (abs(ddx.z) > abs(ddx2.z)) {
+    ddx = ddx2;
+  }
+  // Calculate differences on Y
+  vec3 ddy = getEyePos(coord + vec2(0, texelSizeY)) - posEye;
+  vec3 ddy2 = posEye - getEyePos(coord + vec2(0, -texelSizeY));
+  if (abs(ddy.z) > abs(ddy2.z)) {
+    ddy = ddy2;
+  }
 
-  vec3 worldSpaceNormal = crossProduct / length(crossProduct);
-  return worldSpaceNormal;
+  vec4 viewSpaceNormal = vec4(normalize(-cross(ddx, ddy)), 1.0);
+
+  vec4 worldNormal = inverse(removeTranslation(mvp.view)) * viewSpaceNormal;
+  worldNormal = inverse(mvp.model) * worldNormal;
+
+  return normalize(worldNormal).xyz;
 }
 
 vec3 calcLight(float depth) {
   vec3 outputColor = vec3(0.0);
 
   headLight.color = vec3(0.9, 0.9, 0.6);
-  headLight.position = mvp.cameraPos;
+  headLight.position = (mvp.view * vec4(mvp.cameraPos, 1.0)).xyz;
 
-  vec3 hitPosition = getWorldPos(coord, depth);
-  vec3 viewDirection = getWorldPos(vec2(0.5, 0.5), 1.0);
-  
-  if (viewMode.viewOrWorldSpace == 0) {
-    vec4 lightPos = mvp.view * vec4(mvp.cameraPos, 1.0);
-    headLight.position = lightPos.xyz / lightPos.w;
-    hitPosition = getViewPos(coord, depth);
-    viewDirection = getViewPos(vec2(0.5, 0.5), 1.0);
-  }
+  vec3 hitPosition = getViewPos(coord, depth);
+  vec3 viewDirection = getViewPos(vec2(0.5, 0.5), 1.0);
 
   vec3 lightDirection = normalize(hitPosition - headLight.position);
-  
+  vec3 reflection = vec3(0.0f);
+
   float angle = acos(dot(normalize(lightDirection), normalize(viewDirection)));
   float maxAngle = viewMode.lightFOV / 180.0 * PI;
+  vec3 normal = getNormal();
   if (angle < maxAngle) {
     vec3 halfVector = normalize(lightDirection + viewDirection);
-    vec3 bluredNormal = getNormal();
-    float diffuse = max(dot(bluredNormal, lightDirection), 0.0f);
-    float specular = pow(max(dot(bluredNormal, halfVector), 0.0f), viewMode.shininess);
+    vec3 viewNormal = normalize((mvp.view * vec4(normal, 1.0)).xyz);
 
-    outputColor += (diffuse + specular) * headLight.color * (1.0 - angle / maxAngle);
+    float diffuse = max(dot(viewNormal, lightDirection), 0.0f);
+    float specular =
+        pow(max(dot(viewNormal, halfVector), 0.0f), viewMode.shininess);
+
+    outputColor +=
+        (diffuse + specular) * headLight.color * (1.0 - angle / maxAngle);
   }
+
   outputColor *= viewMode.lightStrength;
   outputColor += viewMode.ambient * model.color.xyz;
-  return outputColor;
+
+  vec3 R = reflect(lightDirection, normalize(normal));
+  reflection = texture(cubemap, R).xyz;
+
+  float reflectionScale = 0.0f;
+  float pixel = 15.0f;
+  if (getImage2DValue(coord + pixel * vec2(texelSizeX)) < viewMode.maxDepth)
+    reflectionScale += 0.25f;
+  if (getImage2DValue(coord - pixel * vec2(texelSizeX)) < viewMode.maxDepth)
+    reflectionScale += 0.25f;
+  if (getImage2DValue(coord + pixel * vec2(texelSizeY)) < viewMode.maxDepth)
+    reflectionScale += 0.25f;
+  if (getImage2DValue(coord - pixel * vec2(texelSizeY)) < viewMode.maxDepth)
+    reflectionScale += 0.25f;
+
+  if (normalize(normal).z < -0.25)
+    return outputColor + reflectionScale * 0.3f * reflection * viewMode.reflection;
+  
+  return outputColor + reflectionScale * reflection * viewMode.reflection;
 }
 
 void main() {
-  texelSizeX = 1.0f / model.windowSize.x;
-  texelSizeY = 1.0f / model.windowSize.y;
+  texelSizeX = 1.0 / model.windowSize.x;
+  texelSizeY = 1.0 / model.windowSize.y;
   float originalDepth = texture(depthImage, coord).x;
 
   float blurValue = getImage2DValue(coord);
-  if (viewMode.mode == 0) {         // Original Depth
+  if (viewMode.mode == 0 && constants.stageIndex == 1) {      // Original Depth
     if (originalDepth > 0.97) {
       discard;
     }
     outColor = vec4(vec3(originalDepth), 1.0);
-  } else if (viewMode.mode == 1) {  // Original Normal
-    if (originalDepth > 0.97) {
-      discard;
-    }
-    outColor = vec4(getOriginalNormal() * 0.5 + vec3(0.5), 1.0);
-  } else if (viewMode.mode == 2) {  // Blured Depth
+  } else if (viewMode.mode == 1 && constants.stageIndex == 1) { // Blured Depth
     if (blurValue > 0.97) {
       discard;
     }
     outColor = vec4(vec3(blurValue), 1.0);
-  } else if (viewMode.mode == 3) {  // Blured Normal
-    if (blurValue > 0.97) {
+  } else if (viewMode.mode == 2 && constants.stageIndex == 1) { // Blured Normal
+    if (originalDepth > 0.97) {
       discard;
     }
-    outColor = vec4(getNormal() * 0.5 + vec3(0.5), 1.0);
-  } else if (viewMode.mode == 4) {  // Blured With Color
+    outColor = vec4((getNormal() + vec3(0.5)) * 0.5, 1.0);
+  } else if (viewMode.mode == 3 &&
+             constants.stageIndex == 1) {                       // Blured With Color
     if (blurValue > 0.97) {
       discard;
     }
     outColor = vec4(clamp(blurValue, 0.2, 0.75) * model.color.xyz, 1.0);
-  } else if (viewMode.mode == 5) {
-    if (blurValue > 0.97) {
-      discard;
+  } else if (viewMode.mode == 4) {                              // Light & Background
+    if (constants.stageIndex == 0) {
+      outColor = vec4(vec3(texture(cubemap, cubePos).xyz), 1.0);
+    } else {
+      if (blurValue > 0.97) {
+        discard;
+      }
+      vec3 light = calcLight(blurValue);
+      outColor = vec4(light, 1.0);
     }
-    outColor = vec4(calcLight(blurValue), 1.0);
+  } else {
+    discard;
   }
 }
-
-//vec3 calcLight(float depth) {
-//  vec3 outputColor = vec3(0.0);
-//
-//  headLight.color = vec3(0.9, 0.9, 0.6);
-//  headLight.position = vec3(0.5, 0.5, 0.0);
-//  vec3 viewPos = vec3(coord, depth);          // might want to * model.farPlaneDistance
-//
-//  vec3 lightDirection = normalize(headLight.position - viewPos);
-//  vec3 viewDirection = lightDirection;
-//
-//  vec3 bluredNormal = getNormal();
-//
-//  float diffuse = max(dot(bluredNormal, lightDirection), 0.0f);
-//
-//  vec3 halfVector = normalize(lightDirection + viewDirection);
-//  float specular = pow(max(dot(bluredNormal, halfVector), 0.0f), viewMode.shininess);
-//
-//  outputColor += (diffuse + specular) * headLight.color;
-//  outputColor += viewMode.ambient * model.color.xyz;
-//  outputColor *= viewMode.lightStrength;
-//
-//  return outputColor;
-//}

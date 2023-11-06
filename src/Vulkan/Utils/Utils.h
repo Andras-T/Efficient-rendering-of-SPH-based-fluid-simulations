@@ -45,6 +45,8 @@ public:
 
   static void createQuad(std::vector<glm::vec4> &vertices);
 
+  static void createSkyBox(std::vector<glm::vec4> &vertices);
+
   static glm::mat4 updateCamera(float deltaTime, InputState &inputState,
                                 ImGuiIO &io);
 

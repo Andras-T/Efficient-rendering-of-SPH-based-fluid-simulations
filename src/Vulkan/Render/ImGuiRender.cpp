@@ -49,6 +49,11 @@ void ImGuiRender::createAppearanceMenu(int width, int height) {
 
   ImGui::Spacing();
 
+  ImGui::DragFloat("Sphere size", &uniformData.model.particleRadius, 0.005f, 0.01f,
+    0.1f, "%.3f", 0);
+
+  ImGui::Spacing();
+
   ImGui::SetNextItemOpen(true, ImGuiCond_Once);
   if (ImGui::CollapsingHeader("Color Picker")) {
     ImGui::Spacing();
@@ -60,20 +65,25 @@ void ImGuiRender::createAppearanceMenu(int width, int height) {
   ImGui::Spacing();
 
   ImGui::Text("Lightning");
-  
+
   ImGui::Spacing();
 
-  ImGui::DragFloat("Light FoV", &uniformData.viewMode.lightFOV,
-    0.5f, 5.0f, 90.0f, "%.1f", 0);
+  ImGui::DragFloat("Light FoV", &uniformData.viewMode.lightFOV, 0.5f, 5.0f,
+                   90.0f, "%.1f", 0);
 
-  ImGui::DragFloat("Shininess", &uniformData.viewMode.shininess,
-    0.1f, 0.001f, 500.0f, "%.1f", 0);
+  ImGui::DragFloat("Shininess", &uniformData.viewMode.shininess, 0.1f, 0.001f,
+                   500.0f, "%.1f", 0);
 
-  ImGui::DragFloat("Ambient light", &uniformData.viewMode.ambient,
-    0.05f, 0.001f, 1.0f, "%.2f", 0);
+  ImGui::DragFloat("Ambient light", &uniformData.viewMode.ambient, 0.05f,
+                   0.001f, 1.0f, "%.2f", 0);
 
-  ImGui::DragFloat("Light strength", &uniformData.viewMode.lightStrength,
-    0.05f, 0.001f, 5.0f, "%.2f", 0);
+  ImGui::DragFloat("Light strength", &uniformData.viewMode.lightStrength, 0.05f,
+                   0.001f, 5.0f, "%.2f", 0);
+
+  ImGui::DragFloat("Reflection", &uniformData.viewMode.reflection, 0.1f, 0.0f,
+                   1.0f, "%.2f", 0);
+  ImGui::DragFloat("Max Depth", &uniformData.viewMode.maxDepth, 0.01f, 0.0f,
+    1.0f, "%.2f", 0);
 
   ImGui::Spacing();
 
@@ -90,10 +100,10 @@ void ImGuiRender::createAppearanceMenu(int width, int height) {
     }
     const auto draw_list_size = ImVec2(355, 160);
 
-    constexpr int itemSize = 6;
-    const char *items[itemSize] = {"Depth view", "Normal vector view",
-                                   "Blured depth view",
-                                   "Blured normal vector view", "Colored view", "Lights"};
+    constexpr int itemSize = 5;
+    const char *items[itemSize] = {"Depth view", "Blured depth view",
+                                   "Normal vector view", "Colored view",
+                                   "Lights & Background"};
 
     if (ImGui::BeginListBox("Modes", draw_list_size)) {
       if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_DownArrow))) {
@@ -123,9 +133,6 @@ void ImGuiRender::createAppearanceMenu(int width, int height) {
     ImGui::EndChild();
     ImGui::PopStyleVar();
   }
-  bool worldNormal = uniformData.viewMode.viewOrWorldSpace == 1;
-  ImGui::Checkbox("Use world normals", &worldNormal);
-  uniformData.viewMode.viewOrWorldSpace = worldNormal ? 1 : 0;
 
   ImGui::End();
 }
@@ -285,6 +292,13 @@ void ImGuiRender::createTransformationsMenu(int width, int height) {
                      1.0f, 1.0f, 50.0f, "%.1f", 0);
     ImGui::DragFloat("Blur direction Y", &uniformData.blurSettings.blurDir.y,
                      1.0f, 1.0f, 50.0f, "%.1f", 0);
+    ImGui::DragFloat("Sigma",
+      &uniformData.blurSettings.sigma, 0.1f, 0.1f, 100.0f,
+      "%.1f", 0);
+    ImGui::DragFloat("Kernel size",
+      &uniformData.blurSettings.kernelSize, 1.0f, 1.0f, 50.0f,
+      "%.0f", 0);
+
 
     ImGui::Spacing();
     ImGui::Spacing();

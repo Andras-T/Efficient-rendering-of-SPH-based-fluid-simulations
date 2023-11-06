@@ -10,8 +10,8 @@
 #include "BufferManager/BufferManager.h"
 #include "DescriptorManager/DescriptorManager.h"
 #include "DeviceManager/DeviceManager.h"
-#include "Uniform/Uniform.h"
 #include "Uniform/Structs/UniformData.h"
+#include "Uniform/Uniform.h"
 
 class FluidInstance {
 

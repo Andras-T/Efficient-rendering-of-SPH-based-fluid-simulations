@@ -19,6 +19,9 @@ class BufferManager {
   VkBuffer quadBuffer;
   VkDeviceMemory quadMemory;
 
+  VkBuffer skyBoxBuffer;
+  VkDeviceMemory skyBoxMemory;
+
   VkBuffer blurBuffer;
   VkDeviceMemory blurMemory;
 
@@ -40,10 +43,10 @@ public:
                             std::vector<void *> &uniformBuffersMapped,
                             VkDeviceSize bufferSize);
 
-  void createBuffer(VkDevice &device, VkPhysicalDevice &physicalDevice,
-                    VkDeviceSize size, VkBufferUsageFlags usage,
-                    VkMemoryPropertyFlags properties, VkBuffer &buffer,
-                    VkDeviceMemory &bufferMemory);
+  static void createBuffer(VkDevice &device, VkPhysicalDevice &physicalDevice,
+                           VkDeviceSize size, VkBufferUsageFlags usage,
+                           VkMemoryPropertyFlags properties, VkBuffer &buffer,
+                           VkDeviceMemory &bufferMemory);
 
   void copyBuffer(VkDevice &device, VkCommandPool &commandPool,
                   VkQueue &graphicsQueue, VkBuffer srcBuffer,
@@ -57,14 +60,17 @@ public:
     vkDestroyBuffer(device, sphereBuffer, nullptr);
     vkDestroyBuffer(device, quadBuffer, nullptr);
     vkDestroyBuffer(device, blurBuffer, nullptr);
+    vkDestroyBuffer(device, skyBoxBuffer, nullptr);
 
     vkFreeMemory(device, sphereMemory, nullptr);
     vkFreeMemory(device, quadMemory, nullptr);
     vkFreeMemory(device, blurMemory, nullptr);
+    vkFreeMemory(device, skyBoxMemory, nullptr);
   }
 
   VkDeviceMemory &getSphereMemory() { return sphereMemory; }
   VkBuffer &getSphereBuffer() { return sphereBuffer; }
   VkBuffer &getQuadBuffer() { return quadBuffer; }
+  VkBuffer &getSkyBoxBuffer() { return skyBoxBuffer; }
   VkBuffer &getBlurBuffer() { return blurBuffer; }
 };

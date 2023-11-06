@@ -46,12 +46,11 @@ void BufferManager::createShaderStorageBuffers(
 
   if (firstRun) {
     std::vector<glm::vec4> sphereVertices;
-    float sphereRadius = Utils::SPHERE_RADIUS;
-    int latitudeSegments = 12, longitudeSegments = 12;
-    // Utils::createSphere(sphereVertices, sphereRadius, latitudeSegments,
-    //                    longitudeSegments);
     Utils::createQuad(sphereVertices);
     VkDeviceSize sphereBufferSize = sizeof(glm::vec4) * sphereVertices.size();
+    std::vector<glm::vec4> skyBoxVerticies;
+    Utils::createSkyBox(skyBoxVerticies);
+    VkDeviceSize skyBoxBufferSize = sizeof(glm::vec4) * skyBoxVerticies.size();
     createVertexBuffer(deviceManager, commandPool, sphereVertices.data(),
                        sphereBuffer, sphereMemory, sphereBufferSize);
     createVertexBuffer(deviceManager, commandPool, quad::quadVertices.data(),
@@ -60,6 +59,8 @@ void BufferManager::createShaderStorageBuffers(
     createVertexBuffer(deviceManager, commandPool, quad::quadVertices.data(),
                        quadBuffer, quadMemory,
                        quad::quadVertices.size() * sizeof(float));
+    createVertexBuffer(deviceManager, commandPool, skyBoxVerticies.data(),
+                       skyBoxBuffer, skyBoxMemory, skyBoxBufferSize);
 
     firstRun = false;
   }

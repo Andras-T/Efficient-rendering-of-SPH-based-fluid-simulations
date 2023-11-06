@@ -109,38 +109,47 @@ void SwapchainManager::createSwapChain() {
 }
 
 void SwapchainManager::createDepthResources(
-    CommandPoolManager &commandPoolManager) {
-  VkFormat depthFormat = findDepthFormat();
-  depthImage.createImage(
-      swapChainExtent.width, swapChainExtent.height, depthFormat,
-      VK_IMAGE_TILING_OPTIMAL,
-      VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, *device, *physicalDevice);
+    CommandPoolManager &commandPoolManager, VkQueue &graphicsQueue) {
+  // Depth Image
+  {
+    VkFormat depthFormat = findDepthFormat();
+    depthImage.createImage(swapChainExtent.width, swapChainExtent.height,
+                           depthFormat, VK_IMAGE_TILING_OPTIMAL,
+                           VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
+                               VK_IMAGE_USAGE_SAMPLED_BIT,
+                           VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, *device,
+                           *physicalDevice);
 
-  depthImage.createImageView(depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, *device);
+    depthImage.createImageView(depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, *device);
 
-  logger.LogInfo("Depth Image and View created (" +
-                 std::to_string(swapChainExtent.width) + ", " +
-                 std::to_string(swapChainExtent.height) + ")");
+    logger.LogInfo("Depth Image and View created (" +
+                   std::to_string(swapChainExtent.width) + ", " +
+                   std::to_string(swapChainExtent.height) + ")");
+  }
+  // Blur Image
+  {
+    VkFormat blurFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
+    blurImage.createImage(
+        swapChainExtent.width, swapChainExtent.height, blurFormat,
+        VK_IMAGE_TILING_OPTIMAL,
+        /*VK_IMAGE_USAGE_TRANSFER_DST_BIT | */ VK_IMAGE_USAGE_STORAGE_BIT |
+            VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, *device, *physicalDevice);
 
-  VkFormat blurFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
-  blurImage.createImage(
-      swapChainExtent.width, swapChainExtent.height, blurFormat,
-      VK_IMAGE_TILING_OPTIMAL,
-      /*VK_IMAGE_USAGE_TRANSFER_DST_BIT | */ VK_IMAGE_USAGE_STORAGE_BIT |
-          VK_IMAGE_USAGE_SAMPLED_BIT,
-      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, *device, *physicalDevice);
+    blurImage.createImageView(VK_FORMAT_R32G32B32A32_SFLOAT,
+                              VK_IMAGE_ASPECT_COLOR_BIT, *device);
 
-  blurImage.createImageView(VK_FORMAT_R32G32B32A32_SFLOAT,
-                            VK_IMAGE_ASPECT_COLOR_BIT, *device);
+    commandPoolManager.transitionImageLayout(blurImage.getImage(), blurFormat,
+                                             VK_IMAGE_LAYOUT_UNDEFINED,
+                                             VK_IMAGE_LAYOUT_GENERAL);
 
-  commandPoolManager.transitionImageLayout(blurImage.getImage(), blurFormat,
-                                           VK_IMAGE_LAYOUT_UNDEFINED,
-                                           VK_IMAGE_LAYOUT_GENERAL);
-
-  logger.LogInfo("Blur Image and View created (" +
-                 std::to_string(swapChainExtent.width) + ", " +
-                 std::to_string(swapChainExtent.height) + ")");
+    logger.LogInfo("Blur Image and View created (" +
+                   std::to_string(swapChainExtent.width) + ", " +
+                   std::to_string(swapChainExtent.height) + ")");
+  }
+  // TexCube Images
+  texCube.createTextureImages(*device, *physicalDevice, commandPoolManager,
+                              graphicsQueue);
 }
 
 void SwapchainManager::createFramebuffers(VulkanObject &vulkanObject) {
@@ -217,9 +226,9 @@ void SwapchainManager::createFramebuffers(VulkanObject &vulkanObject) {
   logger.LogInfo("Framebuffers created");
 }
 
-void SwapchainManager::recreateSwapChain(
-    GLFWwindow *window, VkDevice &device,
-    CommandPoolManager &commandPoolManager) {
+void SwapchainManager::recreateSwapChain(GLFWwindow *window, VkDevice &device,
+                                         CommandPoolManager &commandPoolManager,
+                                         VkQueue &graphicsQueue) {
   int width = 0, height = 0;
   glfwGetFramebufferSize(window, &width, &height);
   while (width == 0 || height == 0) {
@@ -233,7 +242,7 @@ void SwapchainManager::recreateSwapChain(
 
   createSwapChain();
   createImageViews();
-  createDepthResources(commandPoolManager);
+  createDepthResources(commandPoolManager, graphicsQueue);
   createFramebuffers(*vulkanObject);
   logger.LogInfo("Swap chain recreated");
 }
@@ -249,6 +258,8 @@ void SwapchainManager::cleanupSwapChain() {
 
     vkFreeMemory(*device, getDepthImageMemory(), nullptr);
     vkFreeMemory(*device, getBlurImageMemory(), nullptr);
+
+    texCube.cleanUp(*device);
   }
 
   for (auto &framebuffer : swapChainFramebuffers)

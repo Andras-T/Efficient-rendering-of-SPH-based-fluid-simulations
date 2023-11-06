@@ -9,7 +9,7 @@ def find_files(directory):
     cpp_files = []
     for root, dirs, files in os.walk(directory):
         for file in files:
-            if file.endswith(tuple(file_extensions)):
+            if file.endswith(tuple(file_extensions)) and ".vshistory" not in root:
                 cpp_files.append(os.path.join(root, file))
     return cpp_files
 

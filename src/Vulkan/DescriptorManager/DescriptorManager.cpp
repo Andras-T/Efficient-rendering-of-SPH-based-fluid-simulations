@@ -95,7 +95,7 @@ void DescriptorManager::createDescriptorSetLayout(VkDevice &device) {
 
   // Quad layout bindings
   {
-    std::array<VkDescriptorSetLayoutBinding, 5> quadLayoutBindings{};
+    std::array<VkDescriptorSetLayoutBinding, 6> quadLayoutBindings{};
     quadLayoutBindings[0].binding = 0;
     quadLayoutBindings[0].descriptorCount = 1;
     quadLayoutBindings[0].descriptorType =
@@ -107,7 +107,8 @@ void DescriptorManager::createDescriptorSetLayout(VkDevice &device) {
     quadLayoutBindings[1].descriptorCount = 1;
     quadLayoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     quadLayoutBindings[1].pImmutableSamplers = nullptr;
-    quadLayoutBindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    quadLayoutBindings[1].stageFlags =
+        VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
 
     quadLayoutBindings[2].binding = 2;
     quadLayoutBindings[2].descriptorCount = 1;
@@ -126,6 +127,13 @@ void DescriptorManager::createDescriptorSetLayout(VkDevice &device) {
     quadLayoutBindings[4].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     quadLayoutBindings[4].pImmutableSamplers = nullptr;
     quadLayoutBindings[4].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    quadLayoutBindings[5].binding = 5;
+    quadLayoutBindings[5].descriptorCount = 1;
+    quadLayoutBindings[5].descriptorType =
+        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    quadLayoutBindings[5].pImmutableSamplers = nullptr;
+    quadLayoutBindings[5].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
     VkDescriptorSetLayoutCreateInfo quadLayoutInfo{};
     quadLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -207,7 +215,7 @@ void DescriptorManager::createDescriptorPool(VkDevice &device) {
 
   // Quad descriptor pool
   {
-    std::array<VkDescriptorPoolSize, 5> quadPoolSizes{};
+    std::array<VkDescriptorPoolSize, 6> quadPoolSizes{};
     quadPoolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     quadPoolSizes[0].descriptorCount = static_cast<uint32_t>(1);
 
@@ -222,6 +230,9 @@ void DescriptorManager::createDescriptorPool(VkDevice &device) {
 
     quadPoolSizes[4].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     quadPoolSizes[4].descriptorCount = static_cast<uint32_t>(1);
+
+    quadPoolSizes[5].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    quadPoolSizes[5].descriptorCount = static_cast<uint32_t>(1);
 
     VkDescriptorPoolCreateInfo quadPoolInfo{};
     quadPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -350,11 +361,10 @@ void DescriptorManager::createDescriptorSets(
     samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
     samplerInfo.unnormalizedCoordinates = VK_FALSE;
     samplerInfo.compareEnable = VK_TRUE;
-    samplerInfo.compareOp =
-        VK_COMPARE_OP_ALWAYS; // VK_COMPARE_OP_ALWAYS // VK_COMPARE_OP_LESS
+    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
     samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 
-    if (vkCreateSampler(device, &samplerInfo, nullptr, &depthSampler) !=
+    if (vkCreateSampler(device, &samplerInfo, nullptr, &sampler) !=
         VK_SUCCESS) {
       throw std::runtime_error("failed to create depth sampler!");
     }
@@ -384,7 +394,7 @@ void DescriptorManager::createDescriptorSets(
       VkDescriptorImageInfo depthImageInfo = {};
       depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
       depthImageInfo.imageView = swapchainManager->getDepthImageView();
-      depthImageInfo.sampler = depthSampler;
+      depthImageInfo.sampler = sampler;
 
       descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
       descriptorWrites[0].dstSet = blurDescriptorSets[i];
@@ -459,12 +469,12 @@ void DescriptorManager::createDescriptorSets(
     }
 
     for (size_t i = 0; i < Utils::MAX_FRAMES_IN_FLIGHT; i++) {
-      std::array<VkWriteDescriptorSet, 5> descriptorWrites{};
+      std::array<VkWriteDescriptorSet, 6> descriptorWrites{};
 
       VkDescriptorImageInfo depthImageInfo = {};
       depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
       depthImageInfo.imageView = swapchainManager->getDepthImageView();
-      depthImageInfo.sampler = depthSampler;
+      depthImageInfo.sampler = sampler;
 
       descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
       descriptorWrites[0].dstSet = quadDescriptorSets[i];
@@ -527,6 +537,21 @@ void DescriptorManager::createDescriptorSets(
       descriptorWrites[4].descriptorCount = 1;
       descriptorWrites[4].pBufferInfo = &viewModeUniformBufferInfo;
 
+      VkDescriptorImageInfo texCubeImageInfo = {};
+      texCubeImageInfo.imageLayout =
+          VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; // VK_IMAGE_LAYOUT_GENERAL;
+      texCubeImageInfo.imageView = swapchainManager->getTexCubeImageView();
+      texCubeImageInfo.sampler = sampler;
+
+      descriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      descriptorWrites[5].dstSet = quadDescriptorSets[i];
+      descriptorWrites[5].dstBinding = 5;
+      descriptorWrites[5].dstArrayElement = 0;
+      descriptorWrites[5].descriptorType =
+          VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+      descriptorWrites[5].descriptorCount = 1;
+      descriptorWrites[5].pImageInfo = &texCubeImageInfo;
+
       vkUpdateDescriptorSets(device,
                              static_cast<uint32_t>(descriptorWrites.size()),
                              descriptorWrites.data(), 0, nullptr);
@@ -537,31 +562,6 @@ void DescriptorManager::createDescriptorSets(
 void DescriptorManager::recreateDescriptorSets(
     VkDevice &device, std::vector<VkDescriptorSet> &quadDescriptorSets,
     std::vector<VkDescriptorSet> &blurDescriptorSets) {
-  // Recreate depth sampler
-  {
-    vkDestroySampler(device, depthSampler, nullptr);
-
-    VkSamplerCreateInfo samplerInfo{};
-    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerInfo.magFilter = VK_FILTER_LINEAR;
-    samplerInfo.minFilter = VK_FILTER_LINEAR;
-    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.anisotropyEnable = VK_FALSE;
-    samplerInfo.maxAnisotropy = 1.0f;
-    samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
-    samplerInfo.unnormalizedCoordinates = VK_FALSE;
-    samplerInfo.compareEnable = VK_TRUE;
-    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS; // VK_COMPARE_OP_LESS
-    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-
-    if (vkCreateSampler(device, &samplerInfo, nullptr, &depthSampler) !=
-        VK_SUCCESS) {
-      throw std::runtime_error("failed to create depth sampler!");
-    }
-  }
-
   // Recreate Blur Descriptor sets
   {
     std::vector<VkDescriptorSetLayout> blurLayouts(Utils::MAX_FRAMES_IN_FLIGHT,
@@ -586,7 +586,7 @@ void DescriptorManager::recreateDescriptorSets(
       VkDescriptorImageInfo depthImageInfo = {};
       depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
       depthImageInfo.imageView = swapchainManager->getDepthImageView();
-      depthImageInfo.sampler = depthSampler;
+      depthImageInfo.sampler = sampler;
 
       descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
       descriptorWrites[0].dstSet = blurDescriptorSets[i];
@@ -661,12 +661,12 @@ void DescriptorManager::recreateDescriptorSets(
     }
 
     for (size_t i = 0; i < Utils::MAX_FRAMES_IN_FLIGHT; i++) {
-      std::array<VkWriteDescriptorSet, 5> descriptorWrites{};
+      std::array<VkWriteDescriptorSet, 6> descriptorWrites{};
 
       VkDescriptorImageInfo depthImageInfo = {};
       depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
       depthImageInfo.imageView = swapchainManager->getDepthImageView();
-      depthImageInfo.sampler = depthSampler;
+      depthImageInfo.sampler = sampler;
 
       descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
       descriptorWrites[0].dstSet = quadDescriptorSets[i];
@@ -729,6 +729,21 @@ void DescriptorManager::recreateDescriptorSets(
       descriptorWrites[4].descriptorCount = 1;
       descriptorWrites[4].pBufferInfo = &viewModeUniformBufferInfo;
 
+      VkDescriptorImageInfo texCubeImageInfo = {};
+      texCubeImageInfo.imageLayout =
+          VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; // VK_IMAGE_LAYOUT_GENERAL;
+      texCubeImageInfo.imageView = swapchainManager->getTexCubeImageView();
+      texCubeImageInfo.sampler = sampler;
+
+      descriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      descriptorWrites[5].dstSet = quadDescriptorSets[i];
+      descriptorWrites[5].dstBinding = 5;
+      descriptorWrites[5].dstArrayElement = 0;
+      descriptorWrites[5].descriptorType =
+          VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+      descriptorWrites[5].descriptorCount = 1;
+      descriptorWrites[5].pImageInfo = &texCubeImageInfo;
+
       vkUpdateDescriptorSets(device,
                              static_cast<uint32_t>(descriptorWrites.size()),
                              descriptorWrites.data(), 0, nullptr);
@@ -737,7 +752,7 @@ void DescriptorManager::recreateDescriptorSets(
 }
 
 void DescriptorManager::cleanup(VkDevice &device) {
-  vkDestroySampler(device, depthSampler, nullptr);
+  vkDestroySampler(device, sampler, nullptr);
   vkDestroyDescriptorPool(device, descriptorPool, nullptr);
   vkDestroyDescriptorPool(device, quadDescriptorPool, nullptr);
   vkDestroyDescriptorPool(device, blurDescriptorPool, nullptr);

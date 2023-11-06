@@ -12,12 +12,14 @@ layout(binding = 4) uniform Model {
   vec2 windowSize;
   int wall;
   float farPlaneDistance;
+  float particleRadius;
+  vec3 pad;
 }
 model;
 
 void main() {
   float distance = length(texCoord);
-  float radius = 0.075f;
+  float radius = model.particleRadius;
   if (distance > radius)
     discard;
 

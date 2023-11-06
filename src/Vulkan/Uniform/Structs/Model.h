@@ -8,4 +8,6 @@ struct Model {
   glm::vec2 windowSize = glm::vec2(1200, 800);
   int wall = 0;
   float farPlaneDistance;
+  float particleRadius = 0.075f;
+  glm::vec3 pad;
 };

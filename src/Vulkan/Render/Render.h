@@ -7,6 +7,7 @@
 #include "../PipelineManager/PipelineManager.h"
 #include "../SwapchainManager/SwapchainManager.h"
 #include "../Utils/Structs/PushConstants/BlurStageConstant.h"
+#include "../Utils/Structs/PushConstants/QuadStageConstant.h"
 #include "../VulkanObject/VulkanObject.h"
 #include "../Window/Window.h"
 #include "ImGuiRender.h"
@@ -45,7 +46,8 @@ private:
 
   FluidInstance *instance;
 
-  BlurStage pushConstant;
+  BlurStage blurPushConstant;
+  QuadStage quadPushConstant;
   bool stopped = false;
 
 public:

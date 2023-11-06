@@ -1,5 +1,5 @@
 #version 450
-#define PI 3.1415926538
+#define PI 3.141592653589
 
 vec3 velocity_;
 vec3 position_;

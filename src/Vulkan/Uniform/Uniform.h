@@ -14,19 +14,18 @@ class Uniform {
                     VkDeviceMemory &bufferMemory);
 
 public:
-  
   Uniform() { throw std::runtime_error("Invalid Uniform creation!"); }
 
   explicit Uniform(VkDevice &device, VkPhysicalDevice &physicalDevice,
-          VkDeviceSize bufferSize);
+                   VkDeviceSize bufferSize);
 
   void cleanUp(VkDevice &device);
 
   std::vector<VkBuffer> &getBuffers() { return buffers; }
   VkBuffer &getBuffer(size_t i) { return buffers[i]; }
-  
+
   std::vector<VkDeviceMemory> &getBuffersMemory() { return buffersMemory; }
 
   std::vector<void *> &getBuffersMapped() { return buffersMapped; }
-  void* getBufferMapped(size_t i) { return buffersMapped[i]; }
+  void *getBufferMapped(size_t i) { return buffersMapped[i]; }
 };

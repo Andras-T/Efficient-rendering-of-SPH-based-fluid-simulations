@@ -43,10 +43,10 @@ void PipelineManager::init(VkDevice &device,
     DepthStencilOptions depthStencilOptions(VK_FALSE, VK_FALSE, VK_FALSE,
                                             VK_FALSE);
 
-    blurPipeline.init(
-        &device, blurDescriptorSetLayout, vulkanObject.getBlurRenderPass(),
-        quad::getBindingDescription(), VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
-        depthStencilOptions);
+    blurPipeline.init(&device, blurDescriptorSetLayout,
+                      vulkanObject.getBlurRenderPass(),
+                      quad::getBindingDescription(),
+                      VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, depthStencilOptions);
 
     logger.LogInfo("Blur pipeline created");
   }
@@ -56,10 +56,10 @@ void PipelineManager::init(VkDevice &device,
     DepthStencilOptions depthStencilOptions(VK_FALSE, VK_FALSE, VK_FALSE,
                                             VK_FALSE);
 
-    quadPipeline.init(
-        &device, quadDescriptorSetLayout, vulkanObject.getQuadRenderPass(),
-        quad::getBindingDescription(), VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
-        depthStencilOptions);
+    quadPipeline.init(&device, quadDescriptorSetLayout,
+                      vulkanObject.getQuadRenderPass(),
+                      quad::getBindingDescription(),
+                      VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, depthStencilOptions);
 
     logger.LogInfo("Quad pipeline created");
   }

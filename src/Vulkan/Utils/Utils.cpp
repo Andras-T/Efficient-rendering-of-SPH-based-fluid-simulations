@@ -190,21 +190,66 @@ void Utils::createSphere(std::vector<glm::vec4> &vertices, float radius,
 }
 
 void Utils::createQuad(std::vector<glm::vec4> &vertices) {
-  vertices.push_back(glm::vec4(-0.075f, -0.075f, 0.0f, 1.0f));
-  vertices.push_back(glm::vec4(0.075f, -0.075f, 0.0f, 1.0f));
-  vertices.push_back(glm::vec4(-0.075f, 0.075f, 0.0f, 1.0f));
-  vertices.push_back(glm::vec4(0.075f, 0.075f, 0.0f, 1.0f));
+  const float size = 0.1f;
+  vertices.push_back(glm::vec4(-size, -size, 0.0f, 1.0f));
+  vertices.push_back(glm::vec4(size, -size, 0.0f, 1.0f));
+  vertices.push_back(glm::vec4(-size, size, 0.0f, 1.0f));
+  vertices.push_back(glm::vec4(size, size, 0.0f, 1.0f));
 
   setVertexCount(vertices.size());
+}
+
+void Utils::createSkyBox(std::vector<glm::vec4> &vertices) {
+  vertices.push_back(glm::vec4(-1.0f, 1.0f, -1.0f, 1.0));
+  vertices.push_back(glm::vec4(-1.0f, -1.0f, -1.0f, 1.0));
+  vertices.push_back(glm::vec4(1.0f, -1.0f, -1.0f, 1.0));
+  vertices.push_back(glm::vec4(1.0f, -1.0f, -1.0f, 1.0));
+  vertices.push_back(glm::vec4(1.0f, 1.0f, -1.0f, 1.0));
+  vertices.push_back(glm::vec4(-1.0f, 1.0f, -1.0f, 1.0));
+
+  vertices.push_back(glm::vec4(-1.0f, -1.0f, 1.0f, 1.0));
+  vertices.push_back(glm::vec4(-1.0f, -1.0f, -1.0f, 1.0));
+  vertices.push_back(glm::vec4(-1.0f, 1.0f, -1.0f, 1.0));
+  vertices.push_back(glm::vec4(-1.0f, 1.0f, -1.0f, 1.0));
+  vertices.push_back(glm::vec4(-1.0f, 1.0f, 1.0f, 1.0));
+  vertices.push_back(glm::vec4(-1.0f, -1.0f, 1.0f, 1.0));
+
+  vertices.push_back(glm::vec4(1.0f, -1.0f, -1.0f, 1.0));
+  vertices.push_back(glm::vec4(1.0f, -1.0f, 1.0f, 1.0));
+  vertices.push_back(glm::vec4(1.0f, 1.0f, 1.0f, 1.0));
+  vertices.push_back(glm::vec4(1.0f, 1.0f, 1.0f, 1.0));
+  vertices.push_back(glm::vec4(1.0f, 1.0f, -1.0f, 1.0));
+  vertices.push_back(glm::vec4(1.0f, -1.0f, -1.0f, 1.0));
+
+  vertices.push_back(glm::vec4(-1.0f, -1.0f, 1.0f, 1.0));
+  vertices.push_back(glm::vec4(-1.0f, 1.0f, 1.0f, 1.0));
+  vertices.push_back(glm::vec4(1.0f, 1.0f, 1.0f, 1.0));
+  vertices.push_back(glm::vec4(1.0f, 1.0f, 1.0f, 1.0));
+  vertices.push_back(glm::vec4(1.0f, -1.0f, 1.0f, 1.0));
+  vertices.push_back(glm::vec4(-1.0f, -1.0f, 1.0f, 1.0));
+
+  vertices.push_back(glm::vec4(-1.0f, 1.0f, -1.0f, 1.0));
+  vertices.push_back(glm::vec4(1.0f, 1.0f, -1.0f, 1.0));
+  vertices.push_back(glm::vec4(1.0f, 1.0f, 1.0f, 1.0));
+  vertices.push_back(glm::vec4(1.0f, 1.0f, 1.0f, 1.0));
+  vertices.push_back(glm::vec4(-1.0f, 1.0f, 1.0f, 1.0));
+  vertices.push_back(glm::vec4(-1.0f, 1.0f, -1.0f, 1.0));
+
+  vertices.push_back(glm::vec4(-1.0f, -1.0f, -1.0f, 1.0));
+  vertices.push_back(glm::vec4(-1.0f, -1.0f, 1.0f, 1.0));
+  vertices.push_back(glm::vec4(1.0f, -1.0f, -1.0f, 1.0));
+  vertices.push_back(glm::vec4(1.0f, -1.0f, -1.0f, 1.0));
+  vertices.push_back(glm::vec4(-1.0f, -1.0f, 1.0f, 1.0));
+  vertices.push_back(glm::vec4(1.0f, -1.0f, 1.0f, 1.0));
 }
 
 glm::mat4 Utils::updateCamera(float deltaTime, InputState &inputState,
                               ImGuiIO &io) {
   float movementSpeed = inputState.cameraSpeed * deltaTime;
   glm::vec3 movementDirection =
-      glm::vec3(inputState.cameraFront.x, inputState.cameraFront.y, 0.0f);
+      glm::vec3(inputState.cameraFront.x, inputState.cameraFront.y, inputState.cameraFront.z);
   glm::vec3 movementDirectionRight =
-      glm::vec3(inputState.cameraRight.x, inputState.cameraRight.y, 0.0f);
+      glm::vec3(inputState.cameraRight.x, inputState.cameraRight.y, inputState.cameraRight.z);
   // Movement input
   {
     if (io.KeysDown['W']) {
