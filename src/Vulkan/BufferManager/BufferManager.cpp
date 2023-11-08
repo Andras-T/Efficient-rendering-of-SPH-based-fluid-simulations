@@ -1,6 +1,6 @@
 #include "BufferManager.h"
-#include "../Utils/Structs/Quad.h"
-#include "../Utils/Utils.h"
+#include "Vulkan/Utils/Structs/Quad.h"
+#include "Vulkan/Utils/Utils.h"
 #include <cstring>
 #include <iostream>
 #include <stdexcept>

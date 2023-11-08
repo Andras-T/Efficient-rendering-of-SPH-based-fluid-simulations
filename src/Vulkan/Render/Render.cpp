@@ -1,9 +1,10 @@
 #include "Render.h"
-#include "../Utils/Structs/PushConstants/ComputeStageConstant.h"
+#include "Vulkan/Utils/Structs/PushConstants/ComputeStageConstant.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
 #include "imgui_internal.h"
 #include <iostream>
+#include <Vulkan/Utils/Structs/PushConstants/SimulationStageConstant.h>
 
 void Render::init(DeviceManager &deviceManager,
                   SwapchainManager &swapChainManager,
@@ -30,11 +31,13 @@ void Render::createSyncObjects() {
   imageAvailableSemaphores.resize(Utils::MAX_FRAMES_IN_FLIGHT);
   renderFinishedSemaphores.resize(Utils::MAX_FRAMES_IN_FLIGHT);
   simulationFinishedSemaphores.resize(Utils::MAX_FRAMES_IN_FLIGHT);
+  simulation2FinishedSemaphores.resize(Utils::MAX_FRAMES_IN_FLIGHT);
   blur1FinishedSemaphores.resize(Utils::MAX_FRAMES_IN_FLIGHT);
   blur2FinishedSemaphores.resize(Utils::MAX_FRAMES_IN_FLIGHT);
   computeFinishedSemaphores.resize(Utils::MAX_FRAMES_IN_FLIGHT);
 
   simulationInFlightFences.resize(Utils::MAX_FRAMES_IN_FLIGHT);
+  simulation2InFlightFences.resize(Utils::MAX_FRAMES_IN_FLIGHT);
   displayInFlightFences.resize(Utils::MAX_FRAMES_IN_FLIGHT);
   computeInFlightFences.resize(Utils::MAX_FRAMES_IN_FLIGHT);
   blur1InFlightFences.resize(Utils::MAX_FRAMES_IN_FLIGHT);
@@ -54,6 +57,8 @@ void Render::createSyncObjects() {
                           &renderFinishedSemaphores[i]) != VK_SUCCESS ||
         vkCreateSemaphore(device, &semaphoreInfo, nullptr,
                           &simulationFinishedSemaphores[i]) != VK_SUCCESS ||
+      vkCreateSemaphore(device, &semaphoreInfo, nullptr,
+        &simulation2FinishedSemaphores[i]) != VK_SUCCESS ||
         vkCreateSemaphore(device, &semaphoreInfo, nullptr,
                           &blur1FinishedSemaphores[i]) != VK_SUCCESS ||
         vkCreateSemaphore(device, &semaphoreInfo, nullptr,
@@ -65,6 +70,8 @@ void Render::createSyncObjects() {
     }
     if (vkCreateFence(device, &fenceInfo, nullptr,
                       &simulationInFlightFences[i]) != VK_SUCCESS ||
+      vkCreateFence(device, &fenceInfo, nullptr,
+        &simulation2InFlightFences[i]) != VK_SUCCESS ||
         vkCreateFence(device, &fenceInfo, nullptr, &computeInFlightFences[i]) !=
             VK_SUCCESS ||
         vkCreateFence(device, &fenceInfo, nullptr, &blur1InFlightFences[i]) !=
@@ -121,9 +128,9 @@ void Render::drawFrame(uint32_t lastFrameTime) {
     auto &commandBuffer = commandPoolManager->getCommandBuffers()[currentFrame];
     vkResetCommandBuffer(commandBuffer, 0);
 
-    recordCommandBuffer(commandBuffer, currentFrame);
+    recordCommandBuffer(commandBuffer, currentFrame, 0);
 
-    VkSemaphore waitSemaphores[] = {computeFinishedSemaphores[currentFrame]};
+    VkSemaphore waitSemaphores[] = {computeFinishedSemaphores[currentFrame], renderFinishedSemaphores[(currentFrame + 1) % 2]};
     VkPipelineStageFlags waitStages[] = {
         VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
@@ -139,6 +146,38 @@ void Render::drawFrame(uint32_t lastFrameTime) {
 
     if (vkQueueSubmit(deviceManager->getGraphicsQueue(), 1, &submitInfo,
                       simulationInFlightFences[currentFrame]) != VK_SUCCESS) {
+      throw std::runtime_error("failed to submit draw command buffer!");
+    }
+  }
+
+  // Volume Thickness submission
+  {
+    vkWaitForFences(device, 1, &simulation2InFlightFences[currentFrame], VK_TRUE,
+      UINT64_MAX);
+
+    vkResetFences(device, 1, &simulation2InFlightFences[currentFrame]);
+
+    auto& commandBuffer = commandPoolManager->getCommandBuffers2()[currentFrame];
+    vkResetCommandBuffer(commandBuffer, 0);
+
+    recordCommandBuffer(commandBuffer, currentFrame, 1);
+
+    VkSemaphore waitSemaphores[] = { simulationFinishedSemaphores[currentFrame]};
+    VkPipelineStageFlags waitStages[] = {
+        VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = waitSemaphores;
+    submitInfo.pWaitDstStageMask = waitStages;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffer;
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = &simulation2FinishedSemaphores[currentFrame];
+
+    if (vkQueueSubmit(deviceManager->getGraphicsQueue(), 1, &submitInfo,
+      simulation2InFlightFences[currentFrame]) != VK_SUCCESS) {
       throw std::runtime_error("failed to submit draw command buffer!");
     }
   }
@@ -159,7 +198,7 @@ void Render::drawFrame(uint32_t lastFrameTime) {
 
     recordBlurCommandBuffer(commandBuffer, currentFrame);
 
-    VkSemaphore waitSemaphores[] = {simulationFinishedSemaphores[currentFrame]};
+    VkSemaphore waitSemaphores[] = {simulation2FinishedSemaphores[currentFrame]};
     VkPipelineStageFlags waitStages[] = {
         VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
@@ -279,7 +318,7 @@ void Render::drawFrame(uint32_t lastFrameTime) {
           window->get_GLFW_Window(), deviceManager->getDevice(),
           *commandPoolManager, deviceManager->getGraphicsQueue());
       descriptorManager->recreateDescriptorSets(
-          device, instance->getQuadDescriptorSets(),
+          device, instance->getDescriptorSets(), instance->getQuadDescriptorSets(),
           instance->getBlurDescriptorSets());
     } else if (result != VK_SUCCESS) {
       throw std::runtime_error("failed to present swap chain image!");
@@ -355,7 +394,7 @@ void Render::recordComputeCommandBuffer(VkCommandBuffer &commandBuffer) {
 }
 
 void Render::recordCommandBuffer(VkCommandBuffer &commandBuffer,
-                                 uint32_t imageIndex) {
+                                 uint32_t imageIndex, int index) {
   VkCommandBufferBeginInfo beginInfo{};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
   beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -387,13 +426,15 @@ void Render::recordCommandBuffer(VkCommandBuffer &commandBuffer,
   renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
   renderPassInfo.renderPass = vulkanObject->getSimulationRenderPass();
   renderPassInfo.framebuffer =
-      (swapChainManager->getSwapChainFramebuffers())[imageIndex];
+      (swapChainManager->getSwapChainFramebuffers(index))[imageIndex];
   renderPassInfo.renderArea.offset = {0, 0};
   renderPassInfo.renderArea.extent = swapChainManager->getSwapChainExtent();
 
   std::array<VkClearValue, 2> clearValues{};
   clearValues[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
   clearValues[1].depthStencil = {1.0f, 0};
+  if ( index > 0)
+    clearValues[1].depthStencil = { 0.9f, 0 };
   renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
   renderPassInfo.pClearValues = clearValues.data();
 
@@ -416,6 +457,13 @@ void Render::recordCommandBuffer(VkCommandBuffer &commandBuffer,
   scissor.offset = {0, 0};
   scissor.extent = swapChainManager->getSwapChainExtent();
   vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+  SimulationStage pushConstant;
+  pushConstant.stageIndex = index;
+
+  vkCmdPushConstants(commandBuffer, pipelineManager->getSimulationPipelineLayout(),
+    VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(SimulationStage),
+    &pushConstant);
 
   instance->Render(commandBuffer,
                    pipelineManager->getSimulationPipelineLayout(),
@@ -447,8 +495,9 @@ void Render::recordQuadCommandBuffer(VkCommandBuffer &commandBuffer,
   renderPassInfo.renderArea.offset = {0, 0};
   renderPassInfo.renderArea.extent = swapChainManager->getSwapChainExtent();
 
-  std::array<VkClearValue, 1> clearValues{};
+  std::array<VkClearValue, 2> clearValues{};
   clearValues[0].color = imGuiRender.backgroundColor;
+  clearValues[1].depthStencil = { 1.0f, 0 };
 
   renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
   renderPassInfo.pClearValues = clearValues.data();
@@ -473,14 +522,15 @@ void Render::recordQuadCommandBuffer(VkCommandBuffer &commandBuffer,
   scissor.extent = swapChainManager->getSwapChainExtent();
   vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-  VkDeviceSize offsets[] = {0};
-  vkCmdBindVertexBuffers(commandBuffer, 0, 1,
-                         &(bufferManager->getSkyBoxBuffer()), offsets);
-
   auto descriptorSet = &instance->getQuadDescriptorSets()[currentFrame];
   vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           pipelineManager->getQuadPipelineLayout(), 0, 1,
                           descriptorSet, 0, nullptr);
+  
+  VkDeviceSize offsets[] = { 0 };
+
+  vkCmdBindVertexBuffers(commandBuffer, 0, 1,
+    &(bufferManager->getSkyBoxBuffer()), offsets);
 
   quadPushConstant.stageIndex = 0;
 
@@ -580,11 +630,14 @@ void Render::cleanUp() {
   for (size_t i = 0; i < Utils::MAX_FRAMES_IN_FLIGHT; i++) {
     vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
     vkDestroySemaphore(device, simulationFinishedSemaphores[i], nullptr);
+    vkDestroySemaphore(device, simulation2FinishedSemaphores[i], nullptr);
     vkDestroySemaphore(device, blur1FinishedSemaphores[i], nullptr);
     vkDestroySemaphore(device, blur2FinishedSemaphores[i], nullptr);
     vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
     vkDestroySemaphore(device, computeFinishedSemaphores[i], nullptr);
+
     vkDestroyFence(device, simulationInFlightFences[i], nullptr);
+    vkDestroyFence(device, simulation2InFlightFences[i], nullptr);
     vkDestroyFence(device, computeInFlightFences[i], nullptr);
     vkDestroyFence(device, blur1InFlightFences[i], nullptr);
     vkDestroyFence(device, blur2InFlightFences[i], nullptr);

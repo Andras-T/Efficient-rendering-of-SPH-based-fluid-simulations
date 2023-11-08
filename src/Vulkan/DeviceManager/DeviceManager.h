@@ -1,9 +1,9 @@
 #pragma once
 
 #define GLFW_INCLUDE_VULKAN
-#include "../../Logger.h"
-#include "../Utils/Structs/QueueFamilyIndices.h"
-#include "../Utils/Structs/SwapChainSupportDetails.h"
+#include "Logger/Logger.h"
+#include "Vulkan/Utils/Structs/QueueFamilyIndices.h"
+#include "Vulkan/Utils/Structs/SwapChainSupportDetails.h"
 #include "GLFW/glfw3.h"
 
 class DeviceManager {

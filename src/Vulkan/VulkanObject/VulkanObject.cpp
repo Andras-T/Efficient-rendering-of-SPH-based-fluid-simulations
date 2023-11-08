@@ -1,5 +1,5 @@
 #include "VulkanObject.h"
-#include "../Utils/Utils.h"
+#include "Vulkan/Utils/Utils.h"
 #include <array>
 #include <cstdint>
 #include <cstring>
@@ -60,11 +60,11 @@ void VulkanObject::createRenderPass(VkDevice &device, VkFormat &imageformat,
     simulationDependency.dstSubpass = 0;
     simulationDependency.srcStageMask =
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+      VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
     simulationDependency.srcAccessMask = 0;
     simulationDependency.dstStageMask =
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+      VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
     simulationDependency.dstAccessMask =
         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
         VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
@@ -151,14 +151,30 @@ void VulkanObject::createRenderPass(VkDevice &device, VkFormat &imageformat,
     colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
+    VkAttachmentDescription depthAttachment{};
+    depthAttachment.format = depthformat;
+    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+
     VkAttachmentReference colorAttachmentRef{};
     colorAttachmentRef.attachment = 0;
     colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference depthAttachmentRef{};
+    depthAttachmentRef.attachment = 1;
+    depthAttachmentRef.layout =
+      VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
     VkSubpassDescription quadSubpass{};
     quadSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     quadSubpass.colorAttachmentCount = 1;
     quadSubpass.pColorAttachments = &colorAttachmentRef;
+    quadSubpass.pDepthStencilAttachment = &depthAttachmentRef;
 
     VkSubpassDependency quadDependency{};
     quadDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -170,9 +186,11 @@ void VulkanObject::createRenderPass(VkDevice &device, VkFormat &imageformat,
     quadDependency.dstStageMask =
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
         VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    quadDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    quadDependency.dstAccessMask = 
+      VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+      VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;;
 
-    std::array<VkAttachmentDescription, 1> quadAttachments = {colorAttachment};
+    std::array<VkAttachmentDescription, 2> quadAttachments = {colorAttachment, depthAttachment};
 
     VkRenderPassCreateInfo quadRenderPassInfo{};
     quadRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;

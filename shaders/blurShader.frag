@@ -5,7 +5,7 @@ layout(location = 0) out vec4 outColor;
 layout(location = 1) in vec2 coord;
 
 layout(binding = 0) uniform sampler2D depthImage;
-layout(binding = 1, rgba8) uniform image2D blurImage;
+layout(binding = 1, rgba32f) uniform image2D blurImage;
 
 layout(binding = 2) uniform Model {
   vec4 color;

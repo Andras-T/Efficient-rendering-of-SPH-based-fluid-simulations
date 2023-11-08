@@ -1,8 +1,8 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "PipelineManager.h"
-#include "../Utils/Structs/Particle.h"
-#include "../Utils/Structs/Quad.h"
-#include "../Utils/Utils.h"
+#include "Vulkan/Utils/Structs/Particle.h"
+#include "Vulkan/Utils/Structs/Quad.h"
+#include "Vulkan/Utils/Utils.h"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -53,13 +53,13 @@ void PipelineManager::init(VkDevice &device,
 
   // Quad Graphics pipeline
   {
-    DepthStencilOptions depthStencilOptions(VK_FALSE, VK_FALSE, VK_FALSE,
+    DepthStencilOptions depthStencilOptions(VK_TRUE, VK_TRUE, VK_TRUE,
                                             VK_FALSE);
 
     quadPipeline.init(&device, quadDescriptorSetLayout,
                       vulkanObject.getQuadRenderPass(),
                       quad::getBindingDescription(),
-                      VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, depthStencilOptions);
+                      VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, depthStencilOptions, VK_TRUE);
 
     logger.LogInfo("Quad pipeline created");
   }

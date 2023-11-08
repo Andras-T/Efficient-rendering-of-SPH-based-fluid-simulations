@@ -1,8 +1,8 @@
 #pragma once
 
 #define GLFW_INCLUDE_VULKAN
-#include "../../Logger.h"
-#include "../VulkanObject/VulkanObject.h"
+#include "Logger/Logger.h"
+#include "Vulkan/VulkanObject/VulkanObject.h"
 #include "GLFW/glfw3.h"
 #include "Pipeline.h"
 #include <array>

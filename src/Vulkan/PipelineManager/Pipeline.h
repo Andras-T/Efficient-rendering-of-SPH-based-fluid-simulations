@@ -5,9 +5,9 @@
 #include "GLFW/glfw3.h"
 #include "glm/vec3.hpp"
 
-#include "../../Logger.h"
+#include "Logger/Logger.h"
 
-#include "../Utils/Structs/DepthStencilOptions.h"
+#include "Vulkan/Utils/Structs/DepthStencilOptions.h"
 #include <optional>
 #include <string>
 #include <string_view>
@@ -42,7 +42,8 @@ public:
             VkRenderPass &renderPass,
             VkVertexInputBindingDescription bindingDescription = {},
             VkPrimitiveTopology topology = {},
-            DepthStencilOptions depthStencilOptions = {});
+            DepthStencilOptions depthStencilOptions = {},
+            VkBool32 alphaBlendingEnable = VK_FALSE);
 
   VkPipeline &getPipeline() { return pipeline; }
 

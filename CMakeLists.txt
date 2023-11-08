@@ -29,7 +29,7 @@ set(SOURCES
         ${VULKAN}/VulkanObject/VulkanObject.cpp
         ${VULKAN}/Window/Window.cpp
         src/FluidSimulationEnvironment.cpp
-        src/Logger.cpp
+        src/Logger/Logger.cpp
         src/main.cpp
 
         ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp 
@@ -58,6 +58,6 @@ find_package(Vulkan REQUIRED)
 add_subdirectory("lib/glfw")
 add_subdirectory("lib/glm")
 
-include_directories(${IMGUI_DIR} ${IMGUI_DIR}/backends ${STB_DIR})
+include_directories(${IMGUI_DIR} ${IMGUI_DIR}/backends ${STB_DIR} src)
 
 target_link_libraries(FluidSimulationSPH Vulkan::Vulkan glm glfw)

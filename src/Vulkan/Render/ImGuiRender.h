@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../FluidInstance.h"
-#include "../Uniform/Structs/UniformData.h"
-#include "../Utils/Utils.h"
-#include "../Window/Window.h"
+#include "Vulkan/FluidInstance.h"
+#include "Vulkan/Uniform/Structs/UniformData.h"
+#include "Vulkan/Utils/Utils.h"
+#include "Vulkan/Window/Window.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
 #include <string>

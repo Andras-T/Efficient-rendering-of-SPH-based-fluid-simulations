@@ -1,17 +1,18 @@
 #include "Pipeline.h"
-#include "../Utils/Structs/PushConstants/BlurStageConstant.h"
-#include "../Utils/Structs/PushConstants/ComputeStageConstant.h"
+#include "Vulkan/Utils/Structs/PushConstants/BlurStageConstant.h"
+#include "Vulkan/Utils/Structs/PushConstants/ComputeStageConstant.h"
 
-#include "../Utils/Structs/PushConstants/QuadStageConstant.h"
+#include "Vulkan/Utils/Structs/PushConstants/QuadStageConstant.h"
 #include <filesystem>
 #include <fstream>
+#include <Vulkan/Utils/Structs/PushConstants/SimulationStageConstant.h>
 
 void Pipeline::init(VkDevice *device,
                     VkDescriptorSetLayout &descriptorSetLayout,
                     VkRenderPass &renderPass,
                     VkVertexInputBindingDescription bindingDescription,
                     VkPrimitiveTopology topology,
-                    DepthStencilOptions depthStencilOptions) {
+                    DepthStencilOptions depthStencilOptions, VkBool32 alphaBlendingEnable) {
   this->device = device;
 
   VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
@@ -28,6 +29,9 @@ void Pipeline::init(VkDevice *device,
   } else if (name._Equal(QuadStage::getOwner())) {
     pipelineLayoutInfo.pushConstantRangeCount = 1;
     pipelineLayoutInfo.pPushConstantRanges = &QuadStage::getPushConstantRange();
+  } else if (name._Equal(SimulationStage::getOwner())) {
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges = &SimulationStage::getPushConstantRange();
   }
 
   if (vkCreatePipelineLayout(*device, &pipelineLayoutInfo, nullptr, &layout) !=
@@ -107,7 +111,7 @@ void Pipeline::init(VkDevice *device,
     colorBlendAttachment.colorWriteMask =
         VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
         VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    colorBlendAttachment.blendEnable = VK_FALSE;
+    colorBlendAttachment.blendEnable = alphaBlendingEnable;
     colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
     colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
     colorBlendAttachment.dstColorBlendFactor =

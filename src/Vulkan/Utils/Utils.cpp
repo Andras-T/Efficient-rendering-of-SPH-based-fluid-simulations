@@ -1,5 +1,5 @@
 #include "Utils.h"
-#include "../../Logger.h"
+#include "Logger/Logger.h"
 #include "imgui_internal.h"
 #include <chrono>
 #include <iomanip>

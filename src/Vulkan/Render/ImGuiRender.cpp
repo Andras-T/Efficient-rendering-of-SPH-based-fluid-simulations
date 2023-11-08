@@ -1,6 +1,6 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "ImGuiRender.h"
-#include "../Utils/Structs/ImVecUtils.h"
+#include "Vulkan/Utils/Structs/ImVecUtils.h"
 #include "imgui_internal.h"
 
 void ImGuiRender::draw(VkCommandBuffer &commandBuffer) {
@@ -84,6 +84,9 @@ void ImGuiRender::createAppearanceMenu(int width, int height) {
                    1.0f, "%.2f", 0);
   ImGui::DragFloat("Max Depth", &uniformData.viewMode.maxDepth, 0.01f, 0.0f,
     1.0f, "%.2f", 0);
+
+  ImGui::DragFloat("Transparency", &uniformData.viewMode.transparency, 0.1f, 0.0f,
+    2.0f, "%.2f", 0);
 
   ImGui::Spacing();
 

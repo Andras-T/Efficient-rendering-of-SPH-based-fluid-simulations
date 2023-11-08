@@ -6,7 +6,7 @@
 #include "glm/vec3.hpp"
 #include <vector>
 
-#include "../DeviceManager/DeviceManager.h"
+#include "Vulkan/DeviceManager/DeviceManager.h"
 
 class BufferManager {
 

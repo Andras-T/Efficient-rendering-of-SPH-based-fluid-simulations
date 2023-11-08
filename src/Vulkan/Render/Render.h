@@ -1,15 +1,15 @@
 #pragma once
 
-#include "../CommandPool/CommandPoolManager.h"
-#include "../DescriptorManager/DescriptorManager.h"
-#include "../DeviceManager/DeviceManager.h"
-#include "../FluidInstance.h"
-#include "../PipelineManager/PipelineManager.h"
-#include "../SwapchainManager/SwapchainManager.h"
-#include "../Utils/Structs/PushConstants/BlurStageConstant.h"
-#include "../Utils/Structs/PushConstants/QuadStageConstant.h"
-#include "../VulkanObject/VulkanObject.h"
-#include "../Window/Window.h"
+#include "Vulkan/CommandPool/CommandPoolManager.h"
+#include "Vulkan/DescriptorManager/DescriptorManager.h"
+#include "Vulkan/DeviceManager/DeviceManager.h"
+#include "Vulkan/FluidInstance.h"
+#include "Vulkan/PipelineManager/PipelineManager.h"
+#include "Vulkan/SwapchainManager/SwapchainManager.h"
+#include "Vulkan/Utils/Structs/PushConstants/BlurStageConstant.h"
+#include "Vulkan/Utils/Structs/PushConstants/QuadStageConstant.h"
+#include "Vulkan/VulkanObject/VulkanObject.h"
+#include "Vulkan/Window/Window.h"
 #include "ImGuiRender.h"
 #include "imgui.h"
 #include <vector>
@@ -19,12 +19,14 @@ class Render {
 private:
   std::vector<VkSemaphore> computeFinishedSemaphores;
   std::vector<VkSemaphore> simulationFinishedSemaphores;
+  std::vector<VkSemaphore> simulation2FinishedSemaphores;
   std::vector<VkSemaphore> blur1FinishedSemaphores;
   std::vector<VkSemaphore> blur2FinishedSemaphores;
   std::vector<VkSemaphore> imageAvailableSemaphores;
   std::vector<VkSemaphore> renderFinishedSemaphores;
 
   std::vector<VkFence> simulationInFlightFences;
+  std::vector<VkFence> simulation2InFlightFences;
   std::vector<VkFence> computeInFlightFences;
   std::vector<VkFence> blur1InFlightFences;
   std::vector<VkFence> blur2InFlightFences;
@@ -67,7 +69,7 @@ public:
 
   void recordComputeCommandBuffer(VkCommandBuffer &commandBuffer);
 
-  void recordCommandBuffer(VkCommandBuffer &commandBuffer, uint32_t imageIndex);
+  void recordCommandBuffer(VkCommandBuffer &commandBuffer, uint32_t imageIndex, int index);
 
   void recordQuadCommandBuffer(VkCommandBuffer &commandBuffer,
                                uint32_t imageIndex);

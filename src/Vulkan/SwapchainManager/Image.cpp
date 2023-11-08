@@ -1,5 +1,5 @@
 #include "Image.h"
-#include "../Utils/Utils.h"
+#include "Vulkan/Utils/Utils.h"
 
 void Image::createImage(uint32_t width, uint32_t height, VkFormat format,
                         VkImageTiling tiling, VkImageUsageFlags usage,
@@ -39,6 +39,7 @@ void Image::createImage(uint32_t width, uint32_t height, VkFormat format,
 
   vkBindImageMemory(device, image, memory, 0);
 }
+
 
 void Image::createImageView(VkFormat format, VkImageAspectFlags aspectFlags,
                             VkDevice &device) {

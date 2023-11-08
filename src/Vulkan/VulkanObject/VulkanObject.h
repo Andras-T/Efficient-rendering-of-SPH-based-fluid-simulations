@@ -2,7 +2,7 @@
 
 #define GLFW_INCLUDE_VULKAN
 
-#include "../../Logger.h"
+#include "Logger/Logger.h"
 #include "GLFW/glfw3.h"
 #include <vector>
 

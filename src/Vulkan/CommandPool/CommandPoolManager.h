@@ -5,14 +5,15 @@
 #include <stdexcept>
 #include <vector>
 
-#include "../../Logger.h"
-#include "../DeviceManager/DeviceManager.h"
-#include "../Utils/Structs/QueueFamilyIndices.h"
+#include "Logger/Logger.h"
+#include "Vulkan/DeviceManager/DeviceManager.h"
+#include "Vulkan/Utils/Structs/QueueFamilyIndices.h"
 
 class CommandPoolManager {
 
   VkCommandPool commandPool;
   std::vector<VkCommandBuffer> commandBuffers;
+  std::vector<VkCommandBuffer> commandBuffers2;
   std::vector<VkCommandBuffer> quadCommandBuffers;
   std::vector<VkCommandBuffer> blur1CommandBuffers;
   std::vector<VkCommandBuffer> blur2CommandBuffers;
@@ -54,6 +55,8 @@ public:
   }
 
   std::vector<VkCommandBuffer> &getCommandBuffers() { return commandBuffers; }
+
+  std::vector<VkCommandBuffer> &getCommandBuffers2() { return commandBuffers2; }
 
   std::vector<VkCommandBuffer> &getQuadCommandBuffers() {
     return quadCommandBuffers;

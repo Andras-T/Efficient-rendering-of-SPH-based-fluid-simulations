@@ -48,14 +48,16 @@ layout(binding = 4) uniform ViewMode {
   float lightFOV;
   float reflection;
   float maxDepth;
-  float pad2;
+  float transparency;
 }
 viewMode;
+
+layout(binding = 5) uniform samplerCube cubemap;
+layout(binding = 6) uniform sampler2D volumeThicknessImage;
 
 layout(push_constant) uniform Constants { int stageIndex; }
 constants;
 
-layout(binding = 5) uniform samplerCube cubemap;
 
 float getImage2DValue(vec2 imageCoord) {
   ivec2 iCoord = ivec2(imageCoord.x * model.windowSize.x,
@@ -183,7 +185,7 @@ void main() {
     if (originalDepth > 0.97) {
       discard;
     }
-    outColor = vec4((getNormal() + vec3(0.5)) * 0.5, 1.0);
+    outColor = vec4(getNormal(), 1.0);
   } else if (viewMode.mode == 3 &&
              constants.stageIndex == 1) {                       // Blured With Color
     if (blurValue > 0.97) {
@@ -197,8 +199,43 @@ void main() {
       if (blurValue > 0.97) {
         discard;
       }
+
+      float thicknessValue = texture(volumeThicknessImage, coord).x;
+      thicknessValue += texture(volumeThicknessImage, coord + vec2(texelSizeX, 0.0f)).x;
+      thicknessValue += texture(volumeThicknessImage, coord - vec2(texelSizeX, 0.0f)).x;
+      thicknessValue += texture(volumeThicknessImage, coord + vec2(0.0f, texelSizeY)).x;
+      thicknessValue += texture(volumeThicknessImage, coord - vec2(0.0f, texelSizeY)).x;
+      thicknessValue += texture(volumeThicknessImage, coord + vec2(texelSizeX, texelSizeY)).x;
+      thicknessValue += texture(volumeThicknessImage, coord - vec2(texelSizeX, texelSizeY)).x;
+      thicknessValue += texture(volumeThicknessImage, coord + vec2(-texelSizeX, texelSizeY)).x;
+      thicknessValue += texture(volumeThicknessImage, coord - vec2(-texelSizeX, texelSizeY)).x;
+      thicknessValue += texture(volumeThicknessImage, coord + 3.0f * vec2(texelSizeX, 0.0f)).x;
+      thicknessValue += texture(volumeThicknessImage, coord - 3.0f * vec2(texelSizeX, 0.0f)).x;
+      thicknessValue += texture(volumeThicknessImage, coord + 3.0f * vec2(0.0f, texelSizeY)).x;
+      thicknessValue += texture(volumeThicknessImage, coord - 3.0f * vec2(0.0f, texelSizeY)).x;
+      thicknessValue += texture(volumeThicknessImage, coord + 3.0f * vec2(texelSizeX, texelSizeY)).x;
+      thicknessValue += texture(volumeThicknessImage, coord - 3.0f * vec2(texelSizeX, texelSizeY)).x;
+      thicknessValue += texture(volumeThicknessImage, coord + 3.0f * vec2(-texelSizeX, texelSizeY)).x;
+      thicknessValue += texture(volumeThicknessImage, coord - 3.0f * vec2(-texelSizeX, texelSizeY)).x;
+      thicknessValue += texture(volumeThicknessImage, coord + 6.0f * vec2(texelSizeX, 0.0f)).x;
+      thicknessValue += texture(volumeThicknessImage, coord - 6.0f * vec2(texelSizeX, 0.0f)).x;
+      thicknessValue += texture(volumeThicknessImage, coord + 6.0f * vec2(0.0f, texelSizeY)).x;
+      thicknessValue += texture(volumeThicknessImage, coord - 6.0f * vec2(0.0f, texelSizeY)).x;
+      thicknessValue += texture(volumeThicknessImage, coord + 6.0f * vec2(texelSizeX, texelSizeY)).x;
+      thicknessValue += texture(volumeThicknessImage, coord - 6.0f * vec2(texelSizeX, texelSizeY)).x;
+      thicknessValue += texture(volumeThicknessImage, coord + 6.0f * vec2(-texelSizeX, texelSizeY)).x;
+      thicknessValue += texture(volumeThicknessImage, coord - 6.0f * vec2(-texelSizeX, texelSizeY)).x;
+
+      thicknessValue = thicknessValue / 25.0f;
+
+      thicknessValue = 1.0f - thicknessValue;
+      if (1.0f - texture(volumeThicknessImage, coord).x > 0.4f) {
+        thicknessValue = (thicknessValue - blurValue) * 5.0f + 0.4f;
+      } else {
+        thicknessValue = 0.25f;
+      }
       vec3 light = calcLight(blurValue);
-      outColor = vec4(light, 1.0);
+      outColor = vec4(light, thicknessValue * (2.0f - viewMode.transparency));
     }
   } else {
     discard;

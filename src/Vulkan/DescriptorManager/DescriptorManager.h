@@ -2,9 +2,9 @@
 
 #define GLFW_INCLUDE_VULKAN
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include "../SwapchainManager/SwapchainManager.h"
-#include "../Uniform/Uniform.h"
-#include "../Utils/Utils.h"
+#include "Vulkan/SwapchainManager/SwapchainManager.h"
+#include "Vulkan/Uniform/Uniform.h"
+#include "Vulkan/Utils/Utils.h"
 #include "GLFW/glfw3.h"
 #include "glm/gtc/matrix_transform.hpp"
 #include "imgui.h"
@@ -25,6 +25,7 @@ class DescriptorManager {
   SwapchainManager *swapchainManager;
 
   std::unordered_map<std::string, Uniform> *uniforms;
+  std::vector<VkBuffer> *shaderStorageBuffers;
 
 public:
   void init(VkDevice &device, SwapchainManager &swapchainManager) {
@@ -44,6 +45,7 @@ public:
                             std::unordered_map<std::string, Uniform> &uniforms);
 
   void recreateDescriptorSets(VkDevice &device,
+                              std::vector<VkDescriptorSet>& descriptorSets,
                               std::vector<VkDescriptorSet> &quadDescriptorSets,
                               std::vector<VkDescriptorSet> &blurDescriptorSets);
 

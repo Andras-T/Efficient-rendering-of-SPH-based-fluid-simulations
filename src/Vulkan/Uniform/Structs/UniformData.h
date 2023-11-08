@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../Utils/Structs/InputState.h"
+#include "Vulkan/Utils/Structs/InputState.h"
 #include "Attributes.h"
 #include "BlurSettings.h"
 #include "Model.h"

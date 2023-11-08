@@ -1,5 +1,5 @@
 #include "CommandPoolManager.h"
-#include "../Utils/Utils.h"
+#include "Vulkan/Utils/Utils.h"
 #include <iostream>
 
 void CommandPoolManager::init(DeviceManager &deviceManager,
@@ -12,6 +12,7 @@ void CommandPoolManager::init(DeviceManager &deviceManager,
 
 void CommandPoolManager::createCommandBuffers() {
   commandBuffers.resize(Utils::MAX_FRAMES_IN_FLIGHT);
+  commandBuffers2.resize(Utils::MAX_FRAMES_IN_FLIGHT);
 
   VkCommandBufferAllocateInfo allocInfo{};
   allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -19,8 +20,8 @@ void CommandPoolManager::createCommandBuffers() {
   allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
   allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
 
-  if (vkAllocateCommandBuffers(*device, &allocInfo, commandBuffers.data()) !=
-      VK_SUCCESS) {
+  if (vkAllocateCommandBuffers(*device, &allocInfo, commandBuffers.data()) != VK_SUCCESS || 
+    vkAllocateCommandBuffers(*device, &allocInfo, commandBuffers2.data()) != VK_SUCCESS) {
     throw std::runtime_error("failed to allocate command buffers!");
   }
 
@@ -177,6 +178,15 @@ void CommandPoolManager::transitionImageLayout(VkImage image, VkFormat format,
   } else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
              newLayout == VK_IMAGE_LAYOUT_GENERAL) {
     sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+  }
+  else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_GENERAL) {
+    sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+  }
+  else if (oldLayout == VK_IMAGE_LAYOUT_GENERAL && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+    sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
   } else {
     throw std::invalid_argument("unsupported layout transition!");

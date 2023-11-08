@@ -79,6 +79,9 @@ float getPressure(float density) {
 }
 
 vec3 getGravity() {
+  if (attributes.gravity == 0.0f)
+    return vec3(0.0f);
+
   vec4 transformedGravity4 =
       (inverse(mvp.model)) * vec4(0.0f, 0.0f, -attributes.gravity, 0.0f);
   return normalize(transformedGravity4.xyz) *

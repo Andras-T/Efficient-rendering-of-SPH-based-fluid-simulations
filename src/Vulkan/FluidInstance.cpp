@@ -83,7 +83,7 @@ void FluidInstance::updateUniformBuffer(uint32_t currentImage,
   if (inputState.freeCam) {
     view = Utils::updateCamera(time, inputState, uniformData.io);
   } else {
-    glm::vec3 cameraPos = inputState.cameraPos;
+    glm::vec3 cameraPos = inputState.fixedCamPos;
     glm::vec3 cameraTarget = inputState.fixedCamTarget;
     glm::vec3 cameraUp = glm::vec3(0.0f, 0.0f, 1.0f);
 

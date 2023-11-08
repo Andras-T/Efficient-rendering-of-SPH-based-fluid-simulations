@@ -1,6 +1,6 @@
 #include "Window.h"
-#include "../../Logger.h"
-#include "../Utils/Utils.h"
+#include "Logger/Logger.h"
+#include "Vulkan/Utils/Utils.h"
 #include "stb_image.h"
 #include <filesystem>
 #include <iostream>
