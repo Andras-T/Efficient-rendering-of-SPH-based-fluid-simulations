@@ -19,6 +19,9 @@ layout(binding = 1) uniform MVP {
   mat4 model;
   mat4 view;
   mat4 proj;
+  mat4 viewModel;
+  mat4 inverseModel;
+  mat4 inverseProj;
   vec3 cameraPos;
   float deltaTime;
 }
@@ -53,7 +56,7 @@ layout(binding = 4) uniform ViewMode {
 viewMode;
 
 layout(binding = 5) uniform samplerCube cubemap;
-layout(binding = 6) uniform sampler2D volumeThicknessImage;
+layout(binding = 6, rgba32f) uniform image2D bluredVolumeImage;
 
 layout(push_constant) uniform Constants { int stageIndex; }
 constants;
@@ -74,7 +77,7 @@ mat4 removeTranslation(mat4 mat) {
 
 vec3 getViewPos(vec2 uv, float depth) {
   vec4 clipPos = vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
-  vec4 eyePos = inverse(mvp.proj) * clipPos;
+  vec4 eyePos = mvp.inverseProj * clipPos;
   return eyePos.xyz / eyePos.w;
 }
 
@@ -110,7 +113,6 @@ vec3 getNormal() {
   vec4 viewSpaceNormal = vec4(normalize(-cross(ddx, ddy)), 1.0);
 
   vec4 worldNormal = inverse(removeTranslation(mvp.view)) * viewSpaceNormal;
-  worldNormal = inverse(mvp.model) * worldNormal;
 
   return normalize(worldNormal).xyz;
 }
@@ -200,42 +202,14 @@ void main() {
         discard;
       }
 
-      float thicknessValue = texture(volumeThicknessImage, coord).x;
-      thicknessValue += texture(volumeThicknessImage, coord + vec2(texelSizeX, 0.0f)).x;
-      thicknessValue += texture(volumeThicknessImage, coord - vec2(texelSizeX, 0.0f)).x;
-      thicknessValue += texture(volumeThicknessImage, coord + vec2(0.0f, texelSizeY)).x;
-      thicknessValue += texture(volumeThicknessImage, coord - vec2(0.0f, texelSizeY)).x;
-      thicknessValue += texture(volumeThicknessImage, coord + vec2(texelSizeX, texelSizeY)).x;
-      thicknessValue += texture(volumeThicknessImage, coord - vec2(texelSizeX, texelSizeY)).x;
-      thicknessValue += texture(volumeThicknessImage, coord + vec2(-texelSizeX, texelSizeY)).x;
-      thicknessValue += texture(volumeThicknessImage, coord - vec2(-texelSizeX, texelSizeY)).x;
-      thicknessValue += texture(volumeThicknessImage, coord + 3.0f * vec2(texelSizeX, 0.0f)).x;
-      thicknessValue += texture(volumeThicknessImage, coord - 3.0f * vec2(texelSizeX, 0.0f)).x;
-      thicknessValue += texture(volumeThicknessImage, coord + 3.0f * vec2(0.0f, texelSizeY)).x;
-      thicknessValue += texture(volumeThicknessImage, coord - 3.0f * vec2(0.0f, texelSizeY)).x;
-      thicknessValue += texture(volumeThicknessImage, coord + 3.0f * vec2(texelSizeX, texelSizeY)).x;
-      thicknessValue += texture(volumeThicknessImage, coord - 3.0f * vec2(texelSizeX, texelSizeY)).x;
-      thicknessValue += texture(volumeThicknessImage, coord + 3.0f * vec2(-texelSizeX, texelSizeY)).x;
-      thicknessValue += texture(volumeThicknessImage, coord - 3.0f * vec2(-texelSizeX, texelSizeY)).x;
-      thicknessValue += texture(volumeThicknessImage, coord + 6.0f * vec2(texelSizeX, 0.0f)).x;
-      thicknessValue += texture(volumeThicknessImage, coord - 6.0f * vec2(texelSizeX, 0.0f)).x;
-      thicknessValue += texture(volumeThicknessImage, coord + 6.0f * vec2(0.0f, texelSizeY)).x;
-      thicknessValue += texture(volumeThicknessImage, coord - 6.0f * vec2(0.0f, texelSizeY)).x;
-      thicknessValue += texture(volumeThicknessImage, coord + 6.0f * vec2(texelSizeX, texelSizeY)).x;
-      thicknessValue += texture(volumeThicknessImage, coord - 6.0f * vec2(texelSizeX, texelSizeY)).x;
-      thicknessValue += texture(volumeThicknessImage, coord + 6.0f * vec2(-texelSizeX, texelSizeY)).x;
-      thicknessValue += texture(volumeThicknessImage, coord - 6.0f * vec2(-texelSizeX, texelSizeY)).x;
+      ivec2 iCoord = ivec2(coord.x * model.windowSize.x,
+                       coord.y * model.windowSize.y);
+      float volumeValue = 1.0f - imageLoad(bluredVolumeImage, iCoord).x;
 
-      thicknessValue = thicknessValue / 25.0f;
+      float thickness = (volumeValue - blurValue) * 4.0f + 0.15f;
 
-      thicknessValue = 1.0f - thicknessValue;
-      if (1.0f - texture(volumeThicknessImage, coord).x > 0.4f) {
-        thicknessValue = (thicknessValue - blurValue) * 5.0f + 0.4f;
-      } else {
-        thicknessValue = 0.25f;
-      }
       vec3 light = calcLight(blurValue);
-      outColor = vec4(light, thicknessValue * (2.0f - viewMode.transparency));
+      outColor = vec4(light, thickness * (4.0f - viewMode.transparency));
     }
   } else {
     discard;

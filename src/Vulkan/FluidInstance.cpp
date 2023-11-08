@@ -10,6 +10,10 @@
 #include "Uniform/Structs/UniformData.h"
 #include "Utils/Utils.h"
 
+float gaussian(float x, float sigma) {
+  return (1.0 / (sqrt(2.0 * glm::pi<float>()) * sigma)) * exp(-(x * x) / (2.0 * sigma * sigma));
+}
+
 void FluidInstance::InitBuffers(BufferManager &bufferManager,
                                 DeviceManager &deviceManager,
                                 VkCommandPool &commandPool, glm::vec3 center,
@@ -117,6 +121,9 @@ void FluidInstance::updateUniformBuffer(uint32_t currentImage,
   mvp.proj[1][1] *= -1;
   mvp.cameraPos = inputState.cameraPos;
   mvp.deltaTime = static_cast<float>(lastFrameTime) * 2.0f;
+  mvp.viewModel = mvp.view * mvp.model;
+  mvp.inverseModel = glm::inverse(mvp.model);
+  mvp.inverseProj = glm::inverse(mvp.proj);
 
   uniformData.attributes.center = this->center;
 
@@ -124,7 +131,18 @@ void FluidInstance::updateUniformBuffer(uint32_t currentImage,
   glfwGetFramebufferSize(window, &width, &height);
   uniformData.model.windowSize = glm::vec2(float(width), float(height));
   uniformData.model.farPlaneDistance = far - near;
+  
+  static float sigma = uniformData.blurSettings.sigma;
+  static float kernelSize = uniformData.blurSettings.kernelSize;
+  static bool firstTime = true;
 
+  if (sigma != uniformData.blurSettings.sigma || kernelSize != uniformData.blurSettings.kernelSize || firstTime) {
+    uniformData.blurSettings.w_sum = 0.0f;
+    for (float i = -uniformData.blurSettings.kernelSize; i <= uniformData.blurSettings.kernelSize; i += 1.0) {
+      uniformData.blurSettings.w_sum += gaussian(i, uniformData.blurSettings.sigma);
+    }
+    firstTime = false;
+  }
   memcpy(uniforms["MVP"].getBufferMapped(currentImage), &mvp, sizeof(mvp));
   memcpy(uniforms["Attributes"].getBufferMapped(currentImage),
          &uniformData.attributes, sizeof(Attributes));

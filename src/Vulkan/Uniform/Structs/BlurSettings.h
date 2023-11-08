@@ -4,10 +4,8 @@
 
 struct BlurSettings {
   glm::vec2 blurDir = glm::vec2(1.0, 1.0);
-  float blurScale = 0.0001;
-  float blurDepthFalloff = 3.5;
-  float filterRadius = 12.0;
   float sigma = 11.0f;
-  float kernelSize = 32.0f;
-  float pad;
+  float kernelSize = 22.0f;
+  float w_sum;
+  glm::vec3 pad;
 };

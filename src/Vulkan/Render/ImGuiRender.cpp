@@ -86,7 +86,7 @@ void ImGuiRender::createAppearanceMenu(int width, int height) {
     1.0f, "%.2f", 0);
 
   ImGui::DragFloat("Transparency", &uniformData.viewMode.transparency, 0.1f, 0.0f,
-    2.0f, "%.2f", 0);
+    4.0f, "%.2f", 0);
 
   ImGui::Spacing();
 
@@ -229,7 +229,7 @@ void ImGuiRender::createTransformationsMenu(int width, int height) {
     ImGui::Text("Model Settings: ");
     ImGui::Spacing();
 
-    ImGui::SliderFloat("Scale", &uniformData.transformations.s, 0.001f, 1.0f);
+    ImGui::SliderFloat("Scale", &uniformData.transformations.s, 0.01f, 5.0f);
     ImGui::SliderFloat("Scale X", &uniformData.transformations.scale.x, 0.001f,
                        1.0f);
     ImGui::SliderFloat("Scale Y", &uniformData.transformations.scale.y, 0.001f,
@@ -237,14 +237,14 @@ void ImGuiRender::createTransformationsMenu(int width, int height) {
     ImGui::SliderFloat("Scale Z", &uniformData.transformations.scale.z, 0.001f,
                        1.0f);
     ImGui::SliderFloat("Rotate X", &uniformData.transformations.rotations.x,
-                       0.0f, 720.0f);
+                       -360.0f, 720.0f);
     ImGui::SliderFloat("Rotate Y", &uniformData.transformations.rotations.y,
-                       0.0f, 720.0f);
+      -360.0f, 720.0f);
     ImGui::SliderFloat("Rotate Z", &uniformData.transformations.rotations.z,
-                       0.0f, 720.0f);
+      -360.0f, 720.0f);
     ImGui::SliderFloat3("Translate",
                         (float *)&uniformData.transformations.translate,
-                        -0.001f, 0.001f);
+                        -0.5f, 0.5f);
 
     ImGui::Spacing();
     ImGui::Spacing();
@@ -283,27 +283,16 @@ void ImGuiRender::createTransformationsMenu(int width, int height) {
     ImGui::Text("Blur Settings: ");
     ImGui::Spacing();
 
-    ImGui::DragFloat("Blur scale", &uniformData.blurSettings.blurScale, 0.0001f,
-                     0.0000001f, 10.0f, "%.7f", 0);
-    ImGui::DragFloat("Blur depth falloff",
-                     &uniformData.blurSettings.blurDepthFalloff, 0.01f, 0.01f,
-                     1000.0f, "%.5f", 0);
-    ImGui::DragFloat("Blur filter radius",
-                     &uniformData.blurSettings.filterRadius, 1.0f, 1.0f, 50.0f,
-                     "%.0f", 0);
-    ImGui::DragFloat("Blur direction X", &uniformData.blurSettings.blurDir.x,
-                     1.0f, 1.0f, 50.0f, "%.1f", 0);
-    ImGui::DragFloat("Blur direction Y", &uniformData.blurSettings.blurDir.y,
-                     1.0f, 1.0f, 50.0f, "%.1f", 0);
-    ImGui::DragFloat("Sigma",
-      &uniformData.blurSettings.sigma, 0.1f, 0.1f, 100.0f,
-      "%.1f", 0);
     ImGui::DragFloat("Kernel size",
-      &uniformData.blurSettings.kernelSize, 1.0f, 1.0f, 50.0f,
+      &uniformData.blurSettings.kernelSize, 1.0f, 1.0f, 25.0f,
       "%.0f", 0);
-
-
-    ImGui::Spacing();
+    ImGui::DragFloat("Sigma",
+      &uniformData.blurSettings.sigma, 0.1f, 0.1f, 50.0f,
+      "%.1f", 0);
+    ImGui::DragFloat("Blur direction X", &uniformData.blurSettings.blurDir.x,
+                     1.0f, 1.0f, 3.0f, "%.1f", 0);
+    ImGui::DragFloat("Blur direction Y", &uniformData.blurSettings.blurDir.y,
+                     1.0f, 1.0f, 3.0f, "%.1f", 0);
     ImGui::Spacing();
     ImGui::Spacing();
     ImGui::Spacing();

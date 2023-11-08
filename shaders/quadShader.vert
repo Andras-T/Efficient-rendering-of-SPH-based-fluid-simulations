@@ -8,6 +8,9 @@ layout(binding = 1) uniform MVP {
   mat4 model;
   mat4 view;
   mat4 proj;
+  mat4 viewModel;
+  mat4 inverseModel;
+  mat4 inverseProj;
   vec3 cameraPos;
   float deltaTime;
 }

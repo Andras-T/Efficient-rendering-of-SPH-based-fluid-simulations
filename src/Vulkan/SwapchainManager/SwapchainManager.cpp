@@ -14,6 +14,12 @@ void SwapchainManager::init(Window& window, VkSurfaceKHR& surface,
 	this->physicalDevice = &physicalDevice;
 	this->device = &device;
 	this->indices = &indices;
+	blurImage.reserve(Utils::MAX_FRAMES_IN_FLIGHT);
+	blurImage2.reserve(Utils::MAX_FRAMES_IN_FLIGHT);
+	blurImage.push_back(Image());
+	blurImage.push_back(Image());
+	blurImage2.push_back(Image());
+	blurImage2.push_back(Image());
 	createSwapChain();
 	logger.LogInfo("Swap chain created");
 	createImageViews();
@@ -147,22 +153,38 @@ void SwapchainManager::createDepthResources(
 		}
 		// Blur Image
 		{
+			for (size_t i = 0; i < Utils::MAX_FRAMES_IN_FLIGHT; i++)
+			{
 			VkFormat blurFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
-			blurImage.createImage(
+			blurImage[i].createImage(
 				swapChainExtent.width, swapChainExtent.height, blurFormat,
 				VK_IMAGE_TILING_OPTIMAL,
 				VK_IMAGE_USAGE_STORAGE_BIT |
 				VK_IMAGE_USAGE_SAMPLED_BIT,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, *device, *physicalDevice);
 
-			blurImage.createImageView(blurFormat,
+			blurImage[i].createImageView(blurFormat,
 				VK_IMAGE_ASPECT_COLOR_BIT, *device);
 
-			commandPoolManager.transitionImageLayout(blurImage.getImage(), blurFormat,
+			commandPoolManager.transitionImageLayout(blurImage[i].getImage(), blurFormat,
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_LAYOUT_GENERAL);
 
-			logger.LogInfo("Blur Image & View created (" +
+			blurImage2[i].createImage(
+				swapChainExtent.width, swapChainExtent.height, blurFormat,
+				VK_IMAGE_TILING_OPTIMAL,
+				VK_IMAGE_USAGE_STORAGE_BIT |
+				VK_IMAGE_USAGE_SAMPLED_BIT,
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, *device, *physicalDevice);
+
+			blurImage2[i].createImageView(blurFormat,
+				VK_IMAGE_ASPECT_COLOR_BIT, *device);
+
+			commandPoolManager.transitionImageLayout(blurImage2[i].getImage(), blurFormat,
+				VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_LAYOUT_GENERAL);
+			}
+			logger.LogInfo("Blur Images & Views created (" +
 				std::to_string(swapChainExtent.width) + ", " +
 				std::to_string(swapChainExtent.height) + ")");
 		}
@@ -285,17 +307,26 @@ void SwapchainManager::cleanupSwapChain() {
 		vkDestroyImage(*device, getDepthImage(), nullptr);
 		vkDestroyImage(*device, getDepthImage2(), nullptr);
 		vkDestroyImage(*device, getQuadDepthImage(), nullptr);
-		vkDestroyImage(*device, getBlurImage(), nullptr);
+		vkDestroyImage(*device, getBlurImage(0), nullptr);
+		vkDestroyImage(*device, getBlurImage(1), nullptr);
+		vkDestroyImage(*device, getBlurImage2(0), nullptr);
+		vkDestroyImage(*device, getBlurImage2(1), nullptr);
 
 		vkDestroyImageView(*device, getDepthImageView(), nullptr);
 		vkDestroyImageView(*device, getDepthImageView2(), nullptr);
 		vkDestroyImageView(*device, getQuadDepthImageView(), nullptr);
-		vkDestroyImageView(*device, getBlurImageView(), nullptr);
+		vkDestroyImageView(*device, getBlurImageView(0), nullptr);
+		vkDestroyImageView(*device, getBlurImageView(1), nullptr);
+		vkDestroyImageView(*device, getBlurImageView2(0), nullptr);
+		vkDestroyImageView(*device, getBlurImageView2(1), nullptr);
 
 		vkFreeMemory(*device, getDepthImageMemory(), nullptr);
 		vkFreeMemory(*device, getDepthImageMemory2(), nullptr);
 		vkFreeMemory(*device, getQuadDepthImageMemory(), nullptr);
-		vkFreeMemory(*device, getBlurImageMemory(), nullptr);
+		vkFreeMemory(*device, getBlurImageMemory(0), nullptr);
+		vkFreeMemory(*device, getBlurImageMemory(1), nullptr);
+		vkFreeMemory(*device, getBlurImageMemory2(0), nullptr);
+		vkFreeMemory(*device, getBlurImageMemory2(1), nullptr);
 
 		texCube.cleanUp(*device);
 	}

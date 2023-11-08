@@ -12,6 +12,9 @@ layout(binding = 0) uniform MVP {
   mat4 model;
   mat4 view;
   mat4 proj;
+  mat4 viewModel;
+  mat4 inverseModel;
+  mat4 inverseProj;
   vec3 cameraPos;
   float deltaTime;
 }
@@ -44,7 +47,7 @@ void main() {
   Particle p = particlesIn[instanceIndex];
 
   gl_Position = mvp.proj *
-                (vec4(inPosition.xyz, 0.0) + mvp.view * mvp.model * p.position);
+                (vec4(inPosition.xyz, 0.0) + mvp.viewModel * p.position);
   
   movable = p.movable;
   texCoord = inPosition.xy;

@@ -44,12 +44,12 @@ void main() {
 
   if (constants.stageIndex == 0) {
   gl_FragDepth =
-      (length(toCamera) - sqrt(radius * radius - distance * distance)) /
+      (length(toCamera) - length(cameraPos) + length(vec3(1.0f)) - sqrt(radius * radius - distance * distance)) /
       model.farPlaneDistance;
   } else {
   radius = 0.11f;
   gl_FragDepth = 1.0f -
-      (length(toCamera) - sqrt(radius * radius - distance * distance)) /
+      (length(toCamera) - length(cameraPos) + length(vec3(1.0f)) - sqrt(radius * radius - distance * distance)) /
       model.farPlaneDistance;
   }
 }

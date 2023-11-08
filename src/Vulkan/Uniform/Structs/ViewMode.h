@@ -8,5 +8,5 @@ struct ViewMode {
   float lightFOV = 60;
   float reflection = 0.35f;
   float maxDepth = 0.67f;
-  float transparency = 0.9f;
+  float transparency = 2.3f;
 };

@@ -28,7 +28,7 @@ uint32_t Utils::findMemoryType(uint32_t typeFilter,
 
 void Utils::initializeParticles(std::vector<Particle> &particles,
                                 glm::vec3 center) {
-  const double side = 1.35;
+  const double side = 1.6;
   const double Volume = side * side * side;
   const double particleVolume = Volume / MOVABLE_PARTICLE_COUNT;
   const double particleLength = pow(particleVolume, 1.0 / 3.0);
@@ -41,6 +41,8 @@ void Utils::initializeParticles(std::vector<Particle> &particles,
   for (size_t i = 0; i < perAxis; i++) {
     for (size_t j = 0; j < perAxis; j++) {
       for (int k = 0; k < perAxis; k++) {
+        if (counter == MOVABLE_PARTICLE_COUNT)
+          break;
         float x = (offset + k * particleLength) - 1;
         float y = (offset + j * particleLength) - 1;
         float z = (offset + i * particleLength) - 1;

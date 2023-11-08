@@ -17,6 +17,9 @@ layout(binding = 0) uniform MVP {
   mat4 model;
   mat4 view;
   mat4 proj;
+  mat4 viewModel;
+  mat4 inverseModel;
+  mat4 inverseProj;
   vec3 cameraPos;
   float deltaTime;
 }
@@ -83,7 +86,7 @@ vec3 getGravity() {
     return vec3(0.0f);
 
   vec4 transformedGravity4 =
-      (inverse(mvp.model)) * vec4(0.0f, 0.0f, -attributes.gravity, 0.0f);
+      mvp.inverseModel * vec4(0.0f, 0.0f, -attributes.gravity, 0.0f);
   return normalize(transformedGravity4.xyz) *
          length(vec3(0.0f, 0.0f, attributes.gravity)) * 0.0000001;
 }
@@ -117,27 +120,27 @@ vec3 getAcceleration(vec3 position, vec3 velocity, uint currentIndex) {
 }
 
 void checkBoundary(float dist) {
-  float slowingFactor = -0.5f;
-  if (position_.z < attributes.center.z - dist) {
+  float slowingFactor = -0.6f;
+  if (position_.z < -dist) {
     velocity_.z = slowingFactor * velocity_.z;
     position_.z = attributes.center.z - dist;
-  } else if (position_.z > attributes.center.z + dist) {
+  } else if (position_.z > dist) {
     velocity_.z = slowingFactor * velocity_.z;
     position_.z = attributes.center.z + dist;
   }
 
-  if (position_.y < attributes.center.y - dist) {
+  if (position_.y < -dist) {
     velocity_.y = slowingFactor * velocity_.y;
     position_.y = attributes.center.y - dist;
-  } else if (position_.y > attributes.center.y + dist) {
+  } else if (position_.y > dist) {
     velocity_.y = slowingFactor * velocity_.y;
     position_.y = attributes.center.y + dist;
   }
 
-  if (position_.x < attributes.center.x - dist) {
+  if (position_.x < -dist) {
     velocity_.x = slowingFactor * velocity_.x;
     position_.x = attributes.center.x - dist;
-  } else if (position_.x > attributes.center.x + dist) {
+  } else if (position_.x > dist) {
     velocity_.x = slowingFactor * velocity_.x;
     position_.x = attributes.center.x + dist;
   }
@@ -160,14 +163,22 @@ void stageTwo() {
 void stageThree() {
   Particle currentParticle = particlesIn[gl_GlobalInvocationID.x];
   if (currentParticle.movable > 0.0f) {
-    velocity_ = currentParticle.velocity + currentParticle.acceleration *
+    vec3 additionalVelocity = currentParticle.acceleration *
                                                attributes.timeStep *
                                                mvp.deltaTime / 2.0f;
+    velocity_ = currentParticle.velocity + additionalVelocity;
+    if (isnan(velocity_.x) || isnan(velocity_.y) || isnan(velocity_.z))
+      velocity_ = particlesIn[gl_GlobalInvocationID.x].velocity * 0.9;
+
     position_ = currentParticle.position.xyz +
-                currentParticle.velocity * attributes.timeStep * mvp.deltaTime;
-    velocity_ += currentParticle.acceleration * attributes.timeStep *
-                 mvp.deltaTime / 2.0f;
+                velocity_ * attributes.timeStep * mvp.deltaTime;
+    velocity_ += additionalVelocity;
+
+    if (isnan(velocity_.x) || isnan(velocity_.y) || isnan(velocity_.z))
+      velocity_ = particlesIn[gl_GlobalInvocationID.x].velocity * 0.9;
+
     checkBoundary(0.885f);
+    
     particlesOut[gl_GlobalInvocationID.x].velocity =
         velocity_ * (1.0 - attributes.dampingVelocity);
     particlesOut[gl_GlobalInvocationID.x].position = vec4(position_, 1.0f);

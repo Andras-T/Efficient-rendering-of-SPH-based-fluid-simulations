@@ -26,7 +26,8 @@ private:
 	Image depthImage;
 	Image depthImage2;
 	Image quadDepthImage;
-	Image blurImage;
+	std::vector<Image> blurImage;
+	std::vector<Image> blurImage2;
 
 	TexCube texCube;
 
@@ -116,7 +117,11 @@ public:
 	VkDeviceMemory& getTexCubeImageMemory() { return texCube.getImageMemory(); }
 	VkImageView& getTexCubeImageView() { return texCube.getImageView(); }
 
-	VkImage& getBlurImage() { return blurImage.getImage(); }
-	VkDeviceMemory& getBlurImageMemory() { return blurImage.getImageMemory(); }
-	VkImageView& getBlurImageView() { return blurImage.getImageView(); }
+	VkImage& getBlurImage(size_t i) { return blurImage[i].getImage(); }
+	VkDeviceMemory& getBlurImageMemory(size_t i) { return blurImage[i].getImageMemory(); }
+	VkImageView& getBlurImageView(size_t i) { return blurImage[i].getImageView(); }
+
+	VkImage& getBlurImage2(size_t i) { return blurImage2[i].getImage(); }
+	VkDeviceMemory& getBlurImageMemory2(size_t i) { return blurImage2[i].getImageMemory(); }
+	VkImageView& getBlurImageView2(size_t i) { return blurImage2[i].getImageView(); }
 };

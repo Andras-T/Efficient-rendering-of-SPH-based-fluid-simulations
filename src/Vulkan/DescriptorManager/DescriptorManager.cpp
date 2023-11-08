@@ -55,7 +55,7 @@ void DescriptorManager::createDescriptorSetLayout(VkDevice &device) {
 
   // Blur layout bindings
   {
-    std::array<VkDescriptorSetLayoutBinding, 4> blurLayoutBindings{};
+    std::array<VkDescriptorSetLayoutBinding, 6> blurLayoutBindings{};
     blurLayoutBindings[0].binding = 0;
     blurLayoutBindings[0].descriptorCount = 1;
     blurLayoutBindings[0].descriptorType =
@@ -80,6 +80,19 @@ void DescriptorManager::createDescriptorSetLayout(VkDevice &device) {
     blurLayoutBindings[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     blurLayoutBindings[3].pImmutableSamplers = nullptr;
     blurLayoutBindings[3].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    blurLayoutBindings[4].binding = 4;
+    blurLayoutBindings[4].descriptorCount = 1;
+    blurLayoutBindings[4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    blurLayoutBindings[4].pImmutableSamplers = nullptr;
+    blurLayoutBindings[4].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    blurLayoutBindings[5].binding = 5;
+    blurLayoutBindings[5].descriptorCount = 1;
+    blurLayoutBindings[5].descriptorType =
+      VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    blurLayoutBindings[5].pImmutableSamplers = nullptr;
+    blurLayoutBindings[5].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
     VkDescriptorSetLayoutCreateInfo blurLayoutInfo{};
     blurLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -137,7 +150,7 @@ void DescriptorManager::createDescriptorSetLayout(VkDevice &device) {
 
     quadLayoutBindings[6].binding = 6;
     quadLayoutBindings[6].descriptorCount = 1;
-    quadLayoutBindings[6].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    quadLayoutBindings[6].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     quadLayoutBindings[6].pImmutableSamplers = nullptr;
     quadLayoutBindings[6].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
@@ -193,7 +206,7 @@ void DescriptorManager::createDescriptorPool(VkDevice &device) {
 
   // Blur descriptor pool
   {
-    std::array<VkDescriptorPoolSize, 4> blurPoolSizes{};
+    std::array<VkDescriptorPoolSize, 6> blurPoolSizes{};
     blurPoolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     blurPoolSizes[0].descriptorCount = static_cast<uint32_t>(1);
 
@@ -205,6 +218,12 @@ void DescriptorManager::createDescriptorPool(VkDevice &device) {
 
     blurPoolSizes[3].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     blurPoolSizes[3].descriptorCount = static_cast<uint32_t>(1);
+
+    blurPoolSizes[4].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    blurPoolSizes[4].descriptorCount = static_cast<uint32_t>(1);
+
+    blurPoolSizes[5].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    blurPoolSizes[5].descriptorCount = static_cast<uint32_t>(1);
 
     VkDescriptorPoolCreateInfo blurPoolInfo{};
     blurPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -240,7 +259,7 @@ void DescriptorManager::createDescriptorPool(VkDevice &device) {
     quadPoolSizes[5].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     quadPoolSizes[5].descriptorCount = static_cast<uint32_t>(1);
 
-    quadPoolSizes[6].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    quadPoolSizes[6].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     quadPoolSizes[6].descriptorCount = static_cast<uint32_t>(1);
 
     VkDescriptorPoolCreateInfo quadPoolInfo{};
@@ -257,12 +276,12 @@ void DescriptorManager::createDescriptorPool(VkDevice &device) {
   }
 }
 
-void DescriptorManager::createDescriptorSets(
-    VkDevice &device, std::vector<VkDescriptorSet> &descriptorSets,
-    std::vector<VkDescriptorSet> &quadDescriptorSets,
-    std::vector<VkDescriptorSet> &blurDescriptorSets,
-    std::vector<VkBuffer> &shaderStorageBuffers,
-    std::unordered_map<std::string, Uniform> &uniforms) {
+void DescriptorManager::createDescriptorSets(VkDevice &device, 
+                                             std::vector<VkDescriptorSet> &descriptorSets,
+                                             std::vector<VkDescriptorSet> &quadDescriptorSets,
+                                             std::vector<VkDescriptorSet> &blurDescriptorSets,
+                                             std::vector<VkBuffer> &shaderStorageBuffers,
+                                             std::unordered_map<std::string, Uniform> &uniforms) {
   // Simulation Descriptor sets
   {
     std::vector<VkDescriptorSetLayout> layouts(Utils::MAX_FRAMES_IN_FLIGHT,
@@ -399,7 +418,7 @@ void DescriptorManager::createDescriptorSets(
     }
 
     for (size_t i = 0; i < Utils::MAX_FRAMES_IN_FLIGHT; i++) {
-      std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
+      std::array<VkWriteDescriptorSet, 6> descriptorWrites{};
 
       VkDescriptorImageInfo depthImageInfo = {};
       depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -415,10 +434,10 @@ void DescriptorManager::createDescriptorSets(
       descriptorWrites[0].descriptorCount = 1;
       descriptorWrites[0].pImageInfo = &depthImageInfo;
 
-      VkDescriptorImageInfo imageInfo{};
-      imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-      imageInfo.imageView = swapchainManager->getBlurImageView();
-      imageInfo.sampler = VK_NULL_HANDLE;
+      VkDescriptorImageInfo blurImageInfo{};
+      blurImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+      blurImageInfo.imageView = swapchainManager->getBlurImageView(i);
+      blurImageInfo.sampler = VK_NULL_HANDLE;
 
       descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
       descriptorWrites[1].dstSet = blurDescriptorSets[i];
@@ -426,7 +445,7 @@ void DescriptorManager::createDescriptorSets(
       descriptorWrites[1].dstArrayElement = 0;
       descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
       descriptorWrites[1].descriptorCount = 1;
-      descriptorWrites[1].pImageInfo = &imageInfo;
+      descriptorWrites[1].pImageInfo = &blurImageInfo;
 
       VkDescriptorBufferInfo modelUniformBufferInfo{};
       modelUniformBufferInfo.buffer = uniforms["Model"].getBuffer(i);
@@ -453,6 +472,33 @@ void DescriptorManager::createDescriptorSets(
       descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
       descriptorWrites[3].descriptorCount = 1;
       descriptorWrites[3].pBufferInfo = &blurSettingsBufferInfo;
+
+      VkDescriptorImageInfo blurImageInfo2{};
+      blurImageInfo2.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+      blurImageInfo2.imageView = swapchainManager->getBlurImageView2(i);
+      blurImageInfo2.sampler = VK_NULL_HANDLE;
+
+      descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      descriptorWrites[4].dstSet = blurDescriptorSets[i];
+      descriptorWrites[4].dstBinding = 4;
+      descriptorWrites[4].dstArrayElement = 0;
+      descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+      descriptorWrites[4].descriptorCount = 1;
+      descriptorWrites[4].pImageInfo = &blurImageInfo2;
+
+      VkDescriptorImageInfo depthImageInfo2 = {};
+      depthImageInfo2.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+      depthImageInfo2.imageView = swapchainManager->getDepthImageView2();
+      depthImageInfo2.sampler = sampler;
+
+      descriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      descriptorWrites[5].dstSet = blurDescriptorSets[i];
+      descriptorWrites[5].dstBinding = 5;
+      descriptorWrites[5].dstArrayElement = 0;
+      descriptorWrites[5].descriptorType =
+        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+      descriptorWrites[5].descriptorCount = 1;
+      descriptorWrites[5].pImageInfo = &depthImageInfo2;
 
       vkUpdateDescriptorSets(device,
                              static_cast<uint32_t>(descriptorWrites.size()),
@@ -523,7 +569,7 @@ void DescriptorManager::createDescriptorSets(
 
       VkDescriptorImageInfo imageInfo{};
       imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-      imageInfo.imageView = swapchainManager->getBlurImageView();
+      imageInfo.imageView = swapchainManager->getBlurImageView(i);
       imageInfo.sampler = VK_NULL_HANDLE;
 
       descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -564,15 +610,14 @@ void DescriptorManager::createDescriptorSets(
 
       VkDescriptorImageInfo volumeThicknessmageInfo{};
       volumeThicknessmageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-      volumeThicknessmageInfo.imageView = swapchainManager->getDepthImageView2();
-      volumeThicknessmageInfo.sampler = sampler;
+      volumeThicknessmageInfo.imageView = swapchainManager->getBlurImageView2(i);
+      volumeThicknessmageInfo.sampler = VK_NULL_HANDLE;
 
       descriptorWrites[6].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
       descriptorWrites[6].dstSet = quadDescriptorSets[i];
       descriptorWrites[6].dstBinding = 6;
       descriptorWrites[6].dstArrayElement = 0;
-      descriptorWrites[6].descriptorType =
-        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+      descriptorWrites[6].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
       descriptorWrites[6].descriptorCount = 1;
       descriptorWrites[6].pImageInfo = &volumeThicknessmageInfo;
 
@@ -588,7 +633,7 @@ void DescriptorManager::recreateDescriptorSets(VkDevice& device,
                                                std::vector<VkDescriptorSet>& quadDescriptorSets,
                                                std::vector<VkDescriptorSet>& blurDescriptorSets) {
   // Simulation Descriptor sets
-      {
+  {
         std::vector<VkDescriptorSetLayout> layouts(Utils::MAX_FRAMES_IN_FLIGHT,
           descriptorSetLayout);
         VkDescriptorSetAllocateInfo allocInfo{};
@@ -698,7 +743,7 @@ void DescriptorManager::recreateDescriptorSets(VkDevice& device,
     }
 
     for (size_t i = 0; i < Utils::MAX_FRAMES_IN_FLIGHT; i++) {
-      std::array<VkWriteDescriptorSet, 4> descriptorWrites{};
+      std::array<VkWriteDescriptorSet, 6> descriptorWrites{};
 
       VkDescriptorImageInfo depthImageInfo = {};
       depthImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -714,10 +759,10 @@ void DescriptorManager::recreateDescriptorSets(VkDevice& device,
       descriptorWrites[0].descriptorCount = 1;
       descriptorWrites[0].pImageInfo = &depthImageInfo;
 
-      VkDescriptorImageInfo imageInfo{};
-      imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-      imageInfo.imageView = swapchainManager->getBlurImageView();
-      imageInfo.sampler = VK_NULL_HANDLE;
+      VkDescriptorImageInfo blurImageInfo{};
+      blurImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+      blurImageInfo.imageView = swapchainManager->getBlurImageView(i);
+      blurImageInfo.sampler = VK_NULL_HANDLE;
 
       descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
       descriptorWrites[1].dstSet = blurDescriptorSets[i];
@@ -725,7 +770,7 @@ void DescriptorManager::recreateDescriptorSets(VkDevice& device,
       descriptorWrites[1].dstArrayElement = 0;
       descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
       descriptorWrites[1].descriptorCount = 1;
-      descriptorWrites[1].pImageInfo = &imageInfo;
+      descriptorWrites[1].pImageInfo = &blurImageInfo;
 
       VkDescriptorBufferInfo modelUniformBufferInfo{};
       modelUniformBufferInfo.buffer = (*uniforms)["Model"].getBuffer(i);
@@ -752,6 +797,33 @@ void DescriptorManager::recreateDescriptorSets(VkDevice& device,
       descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
       descriptorWrites[3].descriptorCount = 1;
       descriptorWrites[3].pBufferInfo = &blurSettingsBufferInfo;
+
+      VkDescriptorImageInfo blurImageInfo2{};
+      blurImageInfo2.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+      blurImageInfo2.imageView = swapchainManager->getBlurImageView2(i);
+      blurImageInfo2.sampler = VK_NULL_HANDLE;
+
+      descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      descriptorWrites[4].dstSet = blurDescriptorSets[i];
+      descriptorWrites[4].dstBinding = 4;
+      descriptorWrites[4].dstArrayElement = 0;
+      descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+      descriptorWrites[4].descriptorCount = 1;
+      descriptorWrites[4].pImageInfo = &blurImageInfo2;
+
+      VkDescriptorImageInfo depthImageInfo2 = {};
+      depthImageInfo2.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+      depthImageInfo2.imageView = swapchainManager->getDepthImageView2();
+      depthImageInfo2.sampler = sampler;
+
+      descriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      descriptorWrites[5].dstSet = blurDescriptorSets[i];
+      descriptorWrites[5].dstBinding = 5;
+      descriptorWrites[5].dstArrayElement = 0;
+      descriptorWrites[5].descriptorType =
+        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+      descriptorWrites[5].descriptorCount = 1;
+      descriptorWrites[5].pImageInfo = &depthImageInfo2;
 
       vkUpdateDescriptorSets(device,
                              static_cast<uint32_t>(descriptorWrites.size()),
@@ -822,7 +894,7 @@ void DescriptorManager::recreateDescriptorSets(VkDevice& device,
 
       VkDescriptorImageInfo imageInfo{};
       imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-      imageInfo.imageView = swapchainManager->getBlurImageView();
+      imageInfo.imageView = swapchainManager->getBlurImageView(i);
       imageInfo.sampler = VK_NULL_HANDLE;
 
       descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -863,15 +935,14 @@ void DescriptorManager::recreateDescriptorSets(VkDevice& device,
 
       VkDescriptorImageInfo volumeThicknessmageInfo{};
       volumeThicknessmageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-      volumeThicknessmageInfo.imageView = swapchainManager->getDepthImageView2();
-      volumeThicknessmageInfo.sampler = sampler;
+      volumeThicknessmageInfo.imageView = swapchainManager->getBlurImageView2(i);
+      volumeThicknessmageInfo.sampler = VK_NULL_HANDLE;
 
       descriptorWrites[6].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
       descriptorWrites[6].dstSet = quadDescriptorSets[i];
       descriptorWrites[6].dstBinding = 6;
       descriptorWrites[6].dstArrayElement = 0;
-      descriptorWrites[6].descriptorType =
-        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+      descriptorWrites[6].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
       descriptorWrites[6].descriptorCount = 1;
       descriptorWrites[6].pImageInfo = &volumeThicknessmageInfo;
 
