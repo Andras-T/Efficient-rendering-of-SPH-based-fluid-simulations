@@ -24,7 +24,7 @@ public:
   static constexpr char *VULKAN = "[vulkan]";
 
   static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
-  static constexpr int MOVABLE_PARTICLE_COUNT = 2500;
+  static constexpr int MOVABLE_PARTICLE_COUNT = 7500 - 5292 - 11;
   static constexpr int UNMOVABLE_PARTICLE_COUNT = 5292;
   static constexpr float SPHERE_RADIUS = 0.09f;
   static const int PARTICLE_COUNT =

@@ -1,12 +1,14 @@
 #pragma once
 
 struct ViewMode {
-  int mode = 4;
+  int mode = 6;
   float shininess = 20.0;
-  float ambient = 0.35;
-  float lightStrength = 0.25;
+  float ambient = 0.25;
+  float lightStrength = 0.15;
   float lightFOV = 60;
-  float reflection = 0.35f;
+  float reflection = 0.1f;
   float maxDepth = 0.67f;
-  float transparency = 2.3f;
+  float transparency = 0.9f;
+  float refraction = 0.95f;
+  float refractionStrength = 0.1f;
 };

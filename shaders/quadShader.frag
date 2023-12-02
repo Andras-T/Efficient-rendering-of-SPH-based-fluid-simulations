@@ -14,8 +14,7 @@ layout(location = 0) out vec4 outColor;
 layout(location = 1) in vec2 coord;
 layout(location = 2) in vec3 cubePos;
 
-layout(binding = 0) uniform sampler2D depthImage;
-layout(binding = 1) uniform MVP {
+layout(binding = 0) uniform MVP {
   mat4 model;
   mat4 view;
   mat4 proj;
@@ -27,7 +26,7 @@ layout(binding = 1) uniform MVP {
 }
 mvp;
 
-layout(binding = 2) uniform Model {
+layout(binding = 1) uniform Model {
   vec4 color;
   vec4 wallColor;
   vec2 windowSize;
@@ -38,12 +37,10 @@ layout(binding = 2) uniform Model {
 }
 model;
 
-layout(binding = 3, rgba32f) uniform image2D blurImage;
-
 float texelSizeX;
 float texelSizeY;
 
-layout(binding = 4) uniform ViewMode {
+layout(binding = 2) uniform ViewMode {
   int mode;
   float shininess;
   float ambient;
@@ -52,11 +49,16 @@ layout(binding = 4) uniform ViewMode {
   float reflection;
   float maxDepth;
   float transparency;
+  float refraction;
+  float refractionStrength;
 }
 viewMode;
 
-layout(binding = 5) uniform samplerCube cubemap;
-layout(binding = 6, rgba32f) uniform image2D bluredVolumeImage;
+layout(binding = 3) uniform samplerCube cubemap;
+layout(binding = 4) uniform sampler2D depthImage;
+layout(binding = 5, r32f) uniform image2D blurImage;
+layout(binding = 6, r32f) uniform image2D bluredVolumeImage;
+layout(binding = 7) uniform usampler2D volumeImage;
 
 layout(push_constant) uniform Constants { int stageIndex; }
 constants;
@@ -112,9 +114,13 @@ vec3 getNormal() {
 
   vec4 viewSpaceNormal = vec4(normalize(-cross(ddx, ddy)), 1.0);
 
-  vec4 worldNormal = inverse(removeTranslation(mvp.view)) * viewSpaceNormal;
+  vec4 worldNormal = inverse((mvp.view)) * viewSpaceNormal;
 
   return normalize(worldNormal).xyz;
+}
+
+float SchlickFresnel(float cosTheta, float F0) {
+    return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
 vec3 calcLight(float depth) {
@@ -132,9 +138,10 @@ vec3 calcLight(float depth) {
   float angle = acos(dot(normalize(lightDirection), normalize(viewDirection)));
   float maxAngle = viewMode.lightFOV / 180.0 * PI;
   vec3 normal = getNormal();
+  vec3 viewNormal = vec3(0.0f);
   if (angle < maxAngle) {
     vec3 halfVector = normalize(lightDirection + viewDirection);
-    vec3 viewNormal = normalize((mvp.view * vec4(normal, 1.0)).xyz);
+    viewNormal = normalize((mvp.view * vec4(normal, 1.0)).xyz);
 
     float diffuse = max(dot(viewNormal, lightDirection), 0.0f);
     float specular =
@@ -161,10 +168,14 @@ vec3 calcLight(float depth) {
   if (getImage2DValue(coord - pixel * vec2(texelSizeY)) < viewMode.maxDepth)
     reflectionScale += 0.25f;
 
-  if (normalize(normal).z < -0.25)
-    return outputColor + reflectionScale * 0.3f * reflection * viewMode.reflection;
+  //if (normalize(normal).z < -0.25)
+  //  return outputColor + reflectionScale * 0.3f * reflection * viewMode.reflection;
   
-  return outputColor + reflectionScale * reflection * viewMode.reflection;
+  float cosTheta = dot(normalize(viewNormal), normalize(viewDirection));
+  float F0 = 0.04;
+  float fresnel = SchlickFresnel(cosTheta, F0);
+
+  return outputColor + reflectionScale * reflection * viewMode.reflection + vec3(fresnel * 0.001);
 }
 
 void main() {
@@ -173,43 +184,61 @@ void main() {
   float originalDepth = texture(depthImage, coord).x;
 
   float blurValue = getImage2DValue(coord);
-  if (viewMode.mode == 0 && constants.stageIndex == 1) {      // Original Depth
-    if (originalDepth > 0.97) {
+  if (viewMode.mode == 0 && constants.stageIndex == 1) {
+    if (originalDepth > 0.99) {
       discard;
     }
-    outColor = vec4(vec3(originalDepth), 1.0);
-  } else if (viewMode.mode == 1 && constants.stageIndex == 1) { // Blured Depth
-    if (blurValue > 0.97) {
+    outColor = vec4(vec3(originalDepth * 1.45f), 1.0);
+  } else if (viewMode.mode == 1 && constants.stageIndex == 1) {
+    if (blurValue > 0.99) {
       discard;
     }
-    outColor = vec4(vec3(blurValue), 1.0);
-  } else if (viewMode.mode == 2 && constants.stageIndex == 1) { // Blured Normal
-    if (originalDepth > 0.97) {
+    outColor = vec4(vec3(blurValue * 1.45f), 1.0);
+  } else if(viewMode.mode == 2 && constants.stageIndex == 1) {
+    float volume = float(texture(volumeImage, coord).x);
+    if (originalDepth > 0.99f) {
       discard;
     }
-    outColor = vec4(getNormal(), 1.0);
-  } else if (viewMode.mode == 3 &&
-             constants.stageIndex == 1) {                       // Blured With Color
-    if (blurValue > 0.97) {
+    outColor = vec4(vec3(volume * 0.05f), 1.0);
+  } else if (viewMode.mode == 3 && constants.stageIndex == 1) {
+    ivec2 iCoord = ivec2(coord.x * model.windowSize.x,
+                         coord.y * model.windowSize.y);
+    float bluredVolume = imageLoad(bluredVolumeImage, iCoord).x;
+    if (blurValue > 0.99f) {
+      discard;
+    }
+    outColor = vec4(vec3(min(bluredVolume * 0.5f, 0.5f) + 0.25), 1.0f);
+  } else if (viewMode.mode == 4 && constants.stageIndex == 1) {
+    //if (originalDepth > 0.999) {
+    //  discard;
+    //}
+    outColor = vec4(getNormal() * 0.5f + vec3(0.5), 1.0);
+  } else if (viewMode.mode == 5 &&
+             constants.stageIndex == 1) {
+    if (blurValue > 0.99) {
       discard;
     }
     outColor = vec4(clamp(blurValue, 0.2, 0.75) * model.color.xyz, 1.0);
-  } else if (viewMode.mode == 4) {                              // Light & Background
+  } else if (viewMode.mode == 6) {
     if (constants.stageIndex == 0) {
       outColor = vec4(vec3(texture(cubemap, cubePos).xyz), 1.0);
     } else {
-      if (blurValue > 0.97) {
+      if (blurValue > 0.99) {
         discard;
       }
 
       ivec2 iCoord = ivec2(coord.x * model.windowSize.x,
                        coord.y * model.windowSize.y);
-      float volumeValue = 1.0f - imageLoad(bluredVolumeImage, iCoord).x;
+      float volumeValue = imageLoad(bluredVolumeImage, iCoord).x; //  * 0.75f + 0.2f
 
-      float thickness = (volumeValue - blurValue) * 4.0f + 0.15f;
+      vec4 viewPos = vec4(getEyePos(coord), 1.0f);
+      vec4 worldPos = inverse((mvp.view)) * viewPos;
+      vec3 dir = worldPos.xyz - mvp.cameraPos;
+      vec3 r = refract(dir, getNormal(), 1.0f/1.33f);
+      vec3 background = texture(cubemap, dir + viewMode.refractionStrength * volumeValue * r).xyz;
 
       vec3 light = calcLight(blurValue);
-      outColor = vec4(light, thickness * (4.0f - viewMode.transparency));
+      outColor = vec4(light + (1.0f - volumeValue + 0.6f) / 2.0f * background * viewMode.refraction, min(0.95f, imageLoad(bluredVolumeImage, iCoord).x * 0.75f + 0.4f) * viewMode.transparency);
     }
   } else {
     discard;

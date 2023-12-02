@@ -90,8 +90,10 @@ void FluidInstance::updateUniformBuffer(uint32_t currentImage,
     glm::vec3 cameraPos = inputState.fixedCamPos;
     glm::vec3 cameraTarget = inputState.fixedCamTarget;
     glm::vec3 cameraUp = glm::vec3(0.0f, 0.0f, 1.0f);
+    inputState.cameraFront = cameraTarget - cameraPos;
+    inputState.cameraRight = glm::cross(inputState.cameraFront, inputState.cameraUp);
 
-    view = glm::lookAt(cameraPos, cameraTarget, cameraUp);
+    view = glm::lookAt(inputState.fixedCamPos, inputState.fixedCamTarget, cameraUp);
   }
 
   glm::mat4 translateToCenter = glm::translate(
@@ -113,8 +115,8 @@ void FluidInstance::updateUniformBuffer(uint32_t currentImage,
   mvp.model = glm::translate(glm::mat4(1.0f), transformations.translate) *
               translateBack * rotationMatrix * scaleMatrix * translateToCenter;
   mvp.view = view;
-  float far = 10.0f;
-  float near = 0.1f;
+  float far = inputState.far;
+  float near = inputState.near;
   mvp.proj =
       glm::perspective(glm::radians(45.0f),
                        extent2D->width / (float)extent2D->height, near, far);

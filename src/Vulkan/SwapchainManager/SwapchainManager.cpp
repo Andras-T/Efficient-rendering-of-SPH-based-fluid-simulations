@@ -14,12 +14,18 @@ void SwapchainManager::init(Window& window, VkSurfaceKHR& surface,
 	this->physicalDevice = &physicalDevice;
 	this->device = &device;
 	this->indices = &indices;
-	blurImage.reserve(Utils::MAX_FRAMES_IN_FLIGHT);
+	blurImage1.reserve(Utils::MAX_FRAMES_IN_FLIGHT);
 	blurImage2.reserve(Utils::MAX_FRAMES_IN_FLIGHT);
-	blurImage.push_back(Image());
-	blurImage.push_back(Image());
+	blurVolumeImage1.reserve(Utils::MAX_FRAMES_IN_FLIGHT);
+	blurVolumeImage2.reserve(Utils::MAX_FRAMES_IN_FLIGHT);
+	blurImage1.push_back(Image());
+	blurImage1.push_back(Image());
 	blurImage2.push_back(Image());
 	blurImage2.push_back(Image());
+	blurVolumeImage1.push_back(Image());
+	blurVolumeImage1.push_back(Image());
+	blurVolumeImage2.push_back(Image());
+	blurVolumeImage2.push_back(Image());
 	createSwapChain();
 	logger.LogInfo("Swap chain created");
 	createImageViews();
@@ -129,14 +135,14 @@ void SwapchainManager::createDepthResources(
 
 			depthImage.createImageView(depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, *device);
 
-			depthImage2.createImage(swapChainExtent.width, swapChainExtent.height,
+			volumeImage.createImage(swapChainExtent.width, swapChainExtent.height,
 				depthFormat, VK_IMAGE_TILING_OPTIMAL,
 				VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
 				VK_IMAGE_USAGE_SAMPLED_BIT,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, *device,
 				*physicalDevice);
 
-			depthImage2.createImageView(depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, *device);
+			volumeImage.createImageView(depthFormat, VK_IMAGE_ASPECT_STENCIL_BIT, *device);
 
 			quadDepthImage.createImage(swapChainExtent.width, swapChainExtent.height,
 				depthFormat, VK_IMAGE_TILING_OPTIMAL,
@@ -155,21 +161,13 @@ void SwapchainManager::createDepthResources(
 		{
 			for (size_t i = 0; i < Utils::MAX_FRAMES_IN_FLIGHT; i++)
 			{
-			VkFormat blurFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
-			blurImage[i].createImage(
+			VkFormat blurFormat = VK_FORMAT_R32_SFLOAT;
+			blurImage1[i].createImage(
 				swapChainExtent.width, swapChainExtent.height, blurFormat,
 				VK_IMAGE_TILING_OPTIMAL,
 				VK_IMAGE_USAGE_STORAGE_BIT |
 				VK_IMAGE_USAGE_SAMPLED_BIT,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, *device, *physicalDevice);
-
-			blurImage[i].createImageView(blurFormat,
-				VK_IMAGE_ASPECT_COLOR_BIT, *device);
-
-			commandPoolManager.transitionImageLayout(blurImage[i].getImage(), blurFormat,
-				VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_LAYOUT_GENERAL);
-
 			blurImage2[i].createImage(
 				swapChainExtent.width, swapChainExtent.height, blurFormat,
 				VK_IMAGE_TILING_OPTIMAL,
@@ -177,10 +175,42 @@ void SwapchainManager::createDepthResources(
 				VK_IMAGE_USAGE_SAMPLED_BIT,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, *device, *physicalDevice);
 
+			blurImage1[i].createImageView(blurFormat,
+				VK_IMAGE_ASPECT_COLOR_BIT, *device);
 			blurImage2[i].createImageView(blurFormat,
 				VK_IMAGE_ASPECT_COLOR_BIT, *device);
 
+			commandPoolManager.transitionImageLayout(blurImage1[i].getImage(), blurFormat,
+				VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_LAYOUT_GENERAL);
 			commandPoolManager.transitionImageLayout(blurImage2[i].getImage(), blurFormat,
+				VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_LAYOUT_GENERAL);
+			
+			VkFormat blurVolumeFormat = blurFormat;
+
+			blurVolumeImage1[i].createImage(
+				swapChainExtent.width, swapChainExtent.height, blurVolumeFormat,
+				VK_IMAGE_TILING_OPTIMAL,
+				VK_IMAGE_USAGE_STORAGE_BIT |
+				VK_IMAGE_USAGE_SAMPLED_BIT,
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, *device, *physicalDevice);
+			blurVolumeImage2[i].createImage(
+				swapChainExtent.width, swapChainExtent.height, blurVolumeFormat,
+				VK_IMAGE_TILING_OPTIMAL,
+				VK_IMAGE_USAGE_STORAGE_BIT |
+				VK_IMAGE_USAGE_SAMPLED_BIT,
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, *device, *physicalDevice);
+
+			blurVolumeImage1[i].createImageView(blurVolumeFormat,
+				VK_IMAGE_ASPECT_COLOR_BIT, *device);
+			blurVolumeImage2[i].createImageView(blurVolumeFormat,
+				VK_IMAGE_ASPECT_COLOR_BIT, *device);
+
+			commandPoolManager.transitionImageLayout(blurVolumeImage1[i].getImage(), blurVolumeFormat,
+				VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_LAYOUT_GENERAL);
+			commandPoolManager.transitionImageLayout(blurVolumeImage2[i].getImage(), blurVolumeFormat,
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_LAYOUT_GENERAL);
 			}
@@ -222,7 +252,7 @@ void SwapchainManager::createFramebuffers(VulkanObject& vulkanObject) {
 				&swapChainFramebuffers[i]) != VK_SUCCESS) {
 				throw std::runtime_error("failed to create framebuffer!");
 			}
-			attachments = { swapChainImageViews[i], depthImage2.getImageView() };
+			attachments = { swapChainImageViews[i], volumeImage.getImageView() };
 			framebufferInfo.pAttachments = attachments.data();
 			if (vkCreateFramebuffer(*device, &framebufferInfo, nullptr,
 				&swapChainFramebuffers2[i]) != VK_SUCCESS) {
@@ -305,28 +335,34 @@ void SwapchainManager::cleanupSwapChain() {
 	// Destroy Images
 	{
 		vkDestroyImage(*device, getDepthImage(), nullptr);
-		vkDestroyImage(*device, getDepthImage2(), nullptr);
+		vkDestroyImage(*device, getVolumeImage(), nullptr);
 		vkDestroyImage(*device, getQuadDepthImage(), nullptr);
-		vkDestroyImage(*device, getBlurImage(0), nullptr);
-		vkDestroyImage(*device, getBlurImage(1), nullptr);
-		vkDestroyImage(*device, getBlurImage2(0), nullptr);
-		vkDestroyImage(*device, getBlurImage2(1), nullptr);
 
 		vkDestroyImageView(*device, getDepthImageView(), nullptr);
-		vkDestroyImageView(*device, getDepthImageView2(), nullptr);
+		vkDestroyImageView(*device, getVolumeImageView(), nullptr);
 		vkDestroyImageView(*device, getQuadDepthImageView(), nullptr);
-		vkDestroyImageView(*device, getBlurImageView(0), nullptr);
-		vkDestroyImageView(*device, getBlurImageView(1), nullptr);
-		vkDestroyImageView(*device, getBlurImageView2(0), nullptr);
-		vkDestroyImageView(*device, getBlurImageView2(1), nullptr);
 
 		vkFreeMemory(*device, getDepthImageMemory(), nullptr);
-		vkFreeMemory(*device, getDepthImageMemory2(), nullptr);
+		vkFreeMemory(*device, getVolumeImageMemory(), nullptr);
 		vkFreeMemory(*device, getQuadDepthImageMemory(), nullptr);
-		vkFreeMemory(*device, getBlurImageMemory(0), nullptr);
-		vkFreeMemory(*device, getBlurImageMemory(1), nullptr);
-		vkFreeMemory(*device, getBlurImageMemory2(0), nullptr);
-		vkFreeMemory(*device, getBlurImageMemory2(1), nullptr);
+
+		for (size_t i = 0; i < Utils::MAX_FRAMES_IN_FLIGHT; i++) {
+
+			vkDestroyImage(*device, getBlurImage1(i), nullptr);
+			vkDestroyImage(*device, getBlurImage2(i), nullptr);
+			vkDestroyImage(*device, getBlurVolumeImage1(i), nullptr);
+			vkDestroyImage(*device, getBlurVolumeImage2(i), nullptr);
+
+			vkDestroyImageView(*device, getBlurImageView1(i), nullptr);
+			vkDestroyImageView(*device, getBlurImageView2(i), nullptr);
+			vkDestroyImageView(*device, getBlurVolumeImageView1(i), nullptr);
+			vkDestroyImageView(*device, getBlurVolumeImageView2(i), nullptr);
+
+			vkFreeMemory(*device, getBlurImageMemory1(i), nullptr);
+			vkFreeMemory(*device, getBlurImageMemory2(i), nullptr);
+			vkFreeMemory(*device, getBlurVolumeImageMemory1(i), nullptr);
+			vkFreeMemory(*device, getBlurVolumeImageMemory2(i), nullptr);
+		}
 
 		texCube.cleanUp(*device);
 	}
@@ -354,7 +390,7 @@ void SwapchainManager::cleanupSwapChain() {
 
 VkFormat SwapchainManager::findDepthFormat() {
 	return findSupportedFormat(
-		{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
+		{VK_FORMAT_D32_SFLOAT_S8_UINT,
 		 VK_FORMAT_D24_UNORM_S8_UINT },
 		VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }

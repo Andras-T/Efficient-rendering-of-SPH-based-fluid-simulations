@@ -106,6 +106,23 @@ void Pipeline::init(VkDevice *device,
     depthStencil.stencilTestEnable = depthStencilOptions.enableStencilTest;
     depthStencil.minDepthBounds = 0.0f;
     depthStencil.maxDepthBounds = 1.0f;
+    depthStencil.front.failOp = VK_STENCIL_OP_KEEP;      // Action if the stencil test fails
+    depthStencil.front.passOp = VK_STENCIL_OP_INCREMENT_AND_CLAMP; // Increment the stencil value and clamp
+    depthStencil.front.depthFailOp = VK_STENCIL_OP_INCREMENT_AND_CLAMP; // Action if the stencil test passes, but depth fails
+    depthStencil.front.compareOp = VK_COMPARE_OP_ALWAYS; // Always pass the stencil test
+    // Stencil operations for back-facing fragments
+    depthStencil.back.failOp = VK_STENCIL_OP_KEEP;       // Action if the stencil test fails
+    depthStencil.back.passOp = VK_STENCIL_OP_INCREMENT_AND_CLAMP; // Increment the stencil value and clamp
+    depthStencil.back.depthFailOp = VK_STENCIL_OP_INCREMENT_AND_CLAMP;  // Action if the stencil test passes, but depth fails
+    depthStencil.back.compareOp = VK_COMPARE_OP_ALWAYS;  // Always pass the stencil test
+
+    depthStencil.front.compareMask = 0xFF;  // Stencil comparison mask for front-facing fragments
+    depthStencil.front.writeMask = 0xFF;    // Stencil write mask for front-facing fragments
+    depthStencil.front.reference = 0;       // Reference value for the stencil test
+
+    depthStencil.back.compareMask = 0xFF;  // Stencil comparison mask for back-facing fragments
+    depthStencil.back.writeMask = 0xFF;    // Stencil write mask for back-facing fragments
+    depthStencil.back.reference = 0;       // Reference value for the stencil test
 
     VkPipelineColorBlendAttachmentState colorBlendAttachment{};
     colorBlendAttachment.colorWriteMask =

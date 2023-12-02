@@ -130,10 +130,10 @@ void Render::drawFrame(uint32_t lastFrameTime) {
 
     recordCommandBuffer(commandBuffer, currentFrame, 0);
 
-    VkSemaphore waitSemaphores[] = {computeFinishedSemaphores[currentFrame], renderFinishedSemaphores[(currentFrame + 1) % 2]};
+    VkSemaphore waitSemaphores[] = {computeFinishedSemaphores[currentFrame]};
     VkPipelineStageFlags waitStages[] = {
         VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.waitSemaphoreCount = 1;
@@ -165,7 +165,7 @@ void Render::drawFrame(uint32_t lastFrameTime) {
     VkSemaphore waitSemaphores[] = { simulationFinishedSemaphores[currentFrame]};
     VkPipelineStageFlags waitStages[] = {
         VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT };
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.waitSemaphoreCount = 1;
@@ -201,7 +201,7 @@ void Render::drawFrame(uint32_t lastFrameTime) {
     VkSemaphore waitSemaphores[] = {simulation2FinishedSemaphores[currentFrame]};
     VkPipelineStageFlags waitStages[] = {
         VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT };
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.waitSemaphoreCount = 1;
@@ -235,7 +235,7 @@ void Render::drawFrame(uint32_t lastFrameTime) {
     VkSemaphore waitSemaphores[] = {blur1FinishedSemaphores[currentFrame]};
     VkPipelineStageFlags waitStages[] = {
         VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT };
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.waitSemaphoreCount = 1;
@@ -283,7 +283,7 @@ void Render::drawFrame(uint32_t lastFrameTime) {
                                     imageAvailableSemaphores[currentFrame]};
     VkPipelineStageFlags waitStages[] = {
         VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT };
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.waitSemaphoreCount = 2;
@@ -434,7 +434,7 @@ void Render::recordCommandBuffer(VkCommandBuffer &commandBuffer,
   clearValues[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
   clearValues[1].depthStencil = {1.0f, 0};
   if ( index > 0)
-    clearValues[1].depthStencil = { 0.9f, 0 };
+    clearValues[1].depthStencil = { 1.0f, 0 };
   renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
   renderPassInfo.pClearValues = clearValues.data();
 

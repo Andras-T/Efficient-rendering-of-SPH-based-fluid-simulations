@@ -4,7 +4,7 @@ layout(location = 0) in vec4 inPosition;
 layout(location = 1) out vec2 coord;
 layout(location = 2) out vec3 cubePos;
 
-layout(binding = 1) uniform MVP {
+layout(binding = 0) uniform MVP {
   mat4 model;
   mat4 view;
   mat4 proj;

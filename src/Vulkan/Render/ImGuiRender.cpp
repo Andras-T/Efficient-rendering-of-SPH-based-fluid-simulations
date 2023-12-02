@@ -2,6 +2,7 @@
 #include "ImGuiRender.h"
 #include "Vulkan/Utils/Structs/ImVecUtils.h"
 #include "imgui_internal.h"
+#include <fstream>
 
 void ImGuiRender::draw(VkCommandBuffer &commandBuffer) {
   ImGui_ImplVulkan_NewFrame();
@@ -85,8 +86,14 @@ void ImGuiRender::createAppearanceMenu(int width, int height) {
   ImGui::DragFloat("Max Depth", &uniformData.viewMode.maxDepth, 0.01f, 0.0f,
     1.0f, "%.2f", 0);
 
-  ImGui::DragFloat("Transparency", &uniformData.viewMode.transparency, 0.1f, 0.0f,
+  ImGui::DragFloat("Transparency", &uniformData.viewMode.transparency, 0.05f, 0.0f,
     4.0f, "%.2f", 0);
+
+  ImGui::DragFloat("Refraction", &uniformData.viewMode.refraction, 0.05f, 0.0f,
+    4.0f, "%.2f", 0);
+
+  ImGui::DragFloat("Refraction Strength", &uniformData.viewMode.refractionStrength, 0.05f, 0.0f,
+    1.0f, "%.2f", 0);
 
   ImGui::Spacing();
 
@@ -103,8 +110,8 @@ void ImGuiRender::createAppearanceMenu(int width, int height) {
     }
     const auto draw_list_size = ImVec2(355, 160);
 
-    constexpr int itemSize = 5;
-    const char *items[itemSize] = {"Depth view", "Blured depth view",
+    constexpr int itemSize = 7;
+    const char *items[itemSize] = {"Depth view", "Blured depth view", "volume view", "Blured volume view",
                                    "Normal vector view", "Colored view",
                                    "Lights & Background"};
 
@@ -182,6 +189,12 @@ void ImGuiRender::createMenuBar() {
       ImGui::Text("Status: ");
       ImGui::Text("%.3f ms/frame (%.1f FPS)", 1000.0 / ImGui::GetIO().Framerate,
                   ImGui::GetIO().Framerate);
+
+      std::ofstream outfile;
+      outfile.open("fps_log.txt", std::ios_base::app); // append instead of overwrite
+      outfile << std::to_string(ImGui::GetIO().Framerate) << "\n";
+      outfile.close();
+
       ImGui::EndMenuBar();
     }
     ImGui::End();
@@ -220,6 +233,8 @@ void ImGuiRender::createTransformationsMenu(int width, int height) {
   ImGui::Checkbox("Free camera", &inputState.freeCam);
   ImGui::Spacing();
   ImGui::SliderFloat("Speed", &inputState.cameraSpeed, 0.1f, 10.0f);
+  ImGui::DragFloat("Far plane", &inputState.far, 0.01f, 0.1f, 10.0f, "%.3f", 0);
+  ImGui::DragFloat("Near plane", &inputState.near, 0.001f, 0.001f, 2.0f, "%.4f", 0);
   {
     ImGui::Spacing();
     ImGui::Spacing();
@@ -229,7 +244,8 @@ void ImGuiRender::createTransformationsMenu(int width, int height) {
     ImGui::Text("Model Settings: ");
     ImGui::Spacing();
 
-    ImGui::SliderFloat("Scale", &uniformData.transformations.s, 0.01f, 5.0f);
+    ImGui::SliderFloat("Scale", &uniformData.transformations.s, 0.001f, 5.0f);
+
     ImGui::SliderFloat("Scale X", &uniformData.transformations.scale.x, 0.001f,
                        1.0f);
     ImGui::SliderFloat("Scale Y", &uniformData.transformations.scale.y, 0.001f,
@@ -284,10 +300,10 @@ void ImGuiRender::createTransformationsMenu(int width, int height) {
     ImGui::Spacing();
 
     ImGui::DragFloat("Kernel size",
-      &uniformData.blurSettings.kernelSize, 1.0f, 1.0f, 25.0f,
+      &uniformData.blurSettings.kernelSize, 1.0f, 1.0f, 50.0f,
       "%.0f", 0);
     ImGui::DragFloat("Sigma",
-      &uniformData.blurSettings.sigma, 0.1f, 0.1f, 50.0f,
+      &uniformData.blurSettings.sigma, 0.1f, 0.1f, 60.0f,
       "%.1f", 0);
     ImGui::DragFloat("Blur direction X", &uniformData.blurSettings.blurDir.x,
                      1.0f, 1.0f, 3.0f, "%.1f", 0);

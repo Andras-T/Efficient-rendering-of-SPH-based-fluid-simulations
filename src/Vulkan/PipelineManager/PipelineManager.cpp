@@ -21,7 +21,7 @@ void PipelineManager::init(VkDevice &device,
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     DepthStencilOptions depthStencilOptions(VK_TRUE, VK_TRUE, VK_TRUE,
-                                            VK_FALSE);
+      VK_TRUE);
     simulationPipeline.init(
         &device, descriptorSetLayout, vulkanObject.getSimulationRenderPass(),
         bindingDescription, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,

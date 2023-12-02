@@ -153,32 +153,42 @@ void stageOne() {
 }
 
 void stageTwo() {
-  Particle currentParticle = particlesIn[gl_GlobalInvocationID.x];
-  if (currentParticle.movable > 0.0f)
-    particlesOut[gl_GlobalInvocationID.x].acceleration =
-        getAcceleration(currentParticle.position.xyz, currentParticle.velocity,
-                        gl_GlobalInvocationID.x);
+  //Particle currentParticle = particlesIn[gl_GlobalInvocationID.x];
+  //if (currentParticle.movable > 0.0f)
+  //  particlesOut[gl_GlobalInvocationID.x].acceleration =
+  //      getAcceleration(currentParticle.position.xyz, currentParticle.velocity,
+  //                      gl_GlobalInvocationID.x);
 }
 
 void stageThree() {
   Particle currentParticle = particlesIn[gl_GlobalInvocationID.x];
+  vec3 acceleration = currentParticle.acceleration;
+
   if (currentParticle.movable > 0.0f) {
-    vec3 additionalVelocity = currentParticle.acceleration *
-                                               attributes.timeStep *
+    vec3 additionalVelocity = acceleration * attributes.timeStep *
                                                mvp.deltaTime / 2.0f;
+  
     velocity_ = currentParticle.velocity + additionalVelocity;
+    
     if (isnan(velocity_.x) || isnan(velocity_.y) || isnan(velocity_.z))
       velocity_ = particlesIn[gl_GlobalInvocationID.x].velocity * 0.9;
 
     position_ = currentParticle.position.xyz +
                 velocity_ * attributes.timeStep * mvp.deltaTime;
-    velocity_ += additionalVelocity;
+    
+    acceleration = getAcceleration(currentParticle.position.xyz, velocity_, gl_GlobalInvocationID.x);
+
+    if (isnan(acceleration.x) || isnan(acceleration.y) || isnan(acceleration.z))
+      acceleration = particlesIn[gl_GlobalInvocationID.x].acceleration * 0.9;
+
+    velocity_ += acceleration * attributes.timeStep * mvp.deltaTime / 2.0f;
 
     if (isnan(velocity_.x) || isnan(velocity_.y) || isnan(velocity_.z))
       velocity_ = particlesIn[gl_GlobalInvocationID.x].velocity * 0.9;
 
     checkBoundary(0.885f);
     
+    particlesOut[gl_GlobalInvocationID.x].acceleration = acceleration;
     particlesOut[gl_GlobalInvocationID.x].velocity =
         velocity_ * (1.0 - attributes.dampingVelocity);
     particlesOut[gl_GlobalInvocationID.x].position = vec4(position_, 1.0f);

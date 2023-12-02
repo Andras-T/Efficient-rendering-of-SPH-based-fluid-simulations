@@ -33,10 +33,12 @@ layout(binding = 4) uniform Model {
 model;
 
 layout(location = 0) in vec4 inPosition;
+
 layout(location = 0) out float movable;
 layout(location = 1) out vec2 texCoord;
 layout(location = 2) out vec3 toCamera;
 layout(location = 3) out vec3 cameraPos;
+layout(location = 4) out vec4 particlePos;
 
 layout(std140, binding = 1) readonly buffer ParticleSSBOIn {
   Particle particlesIn[];
@@ -47,11 +49,12 @@ void main() {
   Particle p = particlesIn[instanceIndex];
 
   gl_Position = mvp.proj *
-                (vec4(inPosition.xyz, 0.0) + mvp.viewModel * p.position);
+                (vec4(inPosition.xy, 0.0, 0.0) + mvp.viewModel * p.position);
   
   movable = p.movable;
   texCoord = inPosition.xy;
   vec4 transformedP = mvp.model * p.position;
   toCamera = mvp.cameraPos - transformedP.xyz;
   cameraPos = mvp.cameraPos;
+  particlePos = p.position;
 }

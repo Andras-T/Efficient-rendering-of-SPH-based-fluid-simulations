@@ -24,10 +24,12 @@ private:
 	std::vector<VkFramebuffer> blurSwapChainFramebuffers;
 
 	Image depthImage;
-	Image depthImage2;
+	Image volumeImage;
 	Image quadDepthImage;
-	std::vector<Image> blurImage;
+	std::vector<Image> blurImage1;
 	std::vector<Image> blurImage2;
+	std::vector<Image> blurVolumeImage1;
+	std::vector<Image> blurVolumeImage2;
 
 	TexCube texCube;
 
@@ -105,9 +107,9 @@ public:
 	VkDeviceMemory& getDepthImageMemory() { return depthImage.getImageMemory(); }
 	VkImageView& getDepthImageView() { return depthImage.getImageView(); }
 
-	VkImage& getDepthImage2() { return depthImage2.getImage(); }
-	VkDeviceMemory& getDepthImageMemory2() { return depthImage2.getImageMemory(); }
-	VkImageView& getDepthImageView2() { return depthImage2.getImageView(); }
+	VkImage& getVolumeImage() { return volumeImage.getImage(); }
+	VkDeviceMemory& getVolumeImageMemory() { return volumeImage.getImageMemory(); }
+	VkImageView& getVolumeImageView() { return volumeImage.getImageView(); }
 
 	VkImage& getQuadDepthImage() { return quadDepthImage.getImage(); }
 	VkDeviceMemory& getQuadDepthImageMemory() { return quadDepthImage.getImageMemory(); }
@@ -117,11 +119,19 @@ public:
 	VkDeviceMemory& getTexCubeImageMemory() { return texCube.getImageMemory(); }
 	VkImageView& getTexCubeImageView() { return texCube.getImageView(); }
 
-	VkImage& getBlurImage(size_t i) { return blurImage[i].getImage(); }
-	VkDeviceMemory& getBlurImageMemory(size_t i) { return blurImage[i].getImageMemory(); }
-	VkImageView& getBlurImageView(size_t i) { return blurImage[i].getImageView(); }
+	VkImage& getBlurImage1(size_t i) { return blurImage1[i].getImage(); }
+	VkDeviceMemory& getBlurImageMemory1(size_t i) { return blurImage1[i].getImageMemory(); }
+	VkImageView& getBlurImageView1(size_t i) { return blurImage1[i].getImageView(); }
 
 	VkImage& getBlurImage2(size_t i) { return blurImage2[i].getImage(); }
 	VkDeviceMemory& getBlurImageMemory2(size_t i) { return blurImage2[i].getImageMemory(); }
 	VkImageView& getBlurImageView2(size_t i) { return blurImage2[i].getImageView(); }
+
+	VkImage& getBlurVolumeImage1(size_t i) { return blurVolumeImage1[i].getImage(); }
+	VkDeviceMemory& getBlurVolumeImageMemory1(size_t i) { return blurVolumeImage1[i].getImageMemory(); }
+	VkImageView& getBlurVolumeImageView1(size_t i) { return blurVolumeImage1[i].getImageView(); }
+
+	VkImage& getBlurVolumeImage2(size_t i) { return blurVolumeImage2[i].getImage(); }
+	VkDeviceMemory& getBlurVolumeImageMemory2(size_t i) { return blurVolumeImage2[i].getImageMemory(); }
+	VkImageView& getBlurVolumeImageView2(size_t i) { return blurVolumeImage2[i].getImageView(); }
 };

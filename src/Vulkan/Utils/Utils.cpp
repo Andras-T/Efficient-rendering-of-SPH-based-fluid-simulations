@@ -192,7 +192,7 @@ void Utils::createSphere(std::vector<glm::vec4> &vertices, float radius,
 }
 
 void Utils::createQuad(std::vector<glm::vec4> &vertices) {
-  const float size = 0.1f;
+  const float size = 0.01f;
   vertices.push_back(glm::vec4(-size, -size, 0.0f, 1.0f));
   vertices.push_back(glm::vec4(size, -size, 0.0f, 1.0f));
   vertices.push_back(glm::vec4(-size, size, 0.0f, 1.0f));
