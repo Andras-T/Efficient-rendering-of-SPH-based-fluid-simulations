@@ -25,6 +25,9 @@ public:
 
   static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
   static constexpr int MOVABLE_PARTICLE_COUNT = 7500 - 5292 - 11;
+  //static constexpr int MOVABLE_PARTICLE_COUNT = 10000 - 5292;
+  //static constexpr int MOVABLE_PARTICLE_COUNT = 20000 - 5292;
+  //static constexpr int MOVABLE_PARTICLE_COUNT = 30000 - 5292 - 319;
   static constexpr int UNMOVABLE_PARTICLE_COUNT = 5292;
   static constexpr float SPHERE_RADIUS = 0.09f;
   static const int PARTICLE_COUNT =

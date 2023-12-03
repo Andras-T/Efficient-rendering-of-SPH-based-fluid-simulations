@@ -23,6 +23,7 @@ layout(binding = 0) uniform MVP {
   mat4 inverseProj;
   vec3 cameraPos;
   float deltaTime;
+  vec4 lightPosition;
 }
 mvp;
 
@@ -123,55 +124,52 @@ float SchlickFresnel(float cosTheta, float F0) {
     return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
-vec3 calcLight(float depth) {
+vec3 calcLight() {
   vec3 outputColor = vec3(0.0);
-
-  headLight.color = vec3(0.9, 0.9, 0.6);
-  headLight.position = (mvp.view * vec4(mvp.cameraPos, 1.0)).xyz;
-
-  vec3 hitPosition = getViewPos(coord, depth);
-  vec3 viewDirection = getViewPos(vec2(0.5, 0.5), 1.0);
-
-  vec3 lightDirection = normalize(hitPosition - headLight.position);
   vec3 reflection = vec3(0.0f);
 
-  float angle = acos(dot(normalize(lightDirection), normalize(viewDirection)));
-  float maxAngle = viewMode.lightFOV / 180.0 * PI;
-  vec3 normal = getNormal();
-  vec3 viewNormal = vec3(0.0f);
-  if (angle < maxAngle) {
-    vec3 halfVector = normalize(lightDirection + viewDirection);
-    viewNormal = normalize((mvp.view * vec4(normal, 1.0)).xyz);
+  headLight.color = vec3(0.9, 0.9, 0.6);
+  headLight.position = mvp.lightPosition.xyz;
 
-    float diffuse = max(dot(viewNormal, lightDirection), 0.0f);
+  vec3 forwardDirection = normalize((inverse((mvp.view)) * vec4(getViewPos(vec2(0.5, 0.5), 1.0), 1.0f)).xyz);
+
+  vec4 viewPos = vec4(getEyePos(coord), 1.0f);
+  vec4 worldPos = inverse((mvp.view)) * viewPos;
+  vec3 viewDirection = normalize(worldPos.xyz - mvp.cameraPos);
+  vec3 lightDirection = normalize(worldPos.xyz - headLight.position);
+
+  //float angle = acos(dot(normalize(lightDirection), forwardDirection));
+  //float maxAngle = viewMode.lightFOV / 180.0 * PI;
+  vec3 normal = getNormal();
+  //if (angle < maxAngle) {
+    vec3 halfVector = normalize(lightDirection + viewDirection);
+
+    float diffuse = max(dot(normal, lightDirection), 0.0f);
     float specular =
-        pow(max(dot(viewNormal, halfVector), 0.0f), viewMode.shininess);
+        pow(max(dot(normal, halfVector), 0.0f), viewMode.shininess);
 
     outputColor +=
-        (diffuse + specular) * headLight.color * (1.0 - angle / maxAngle);
-  }
+        (diffuse + specular) * headLight.color;// * (1.0 - angle / maxAngle);
+  //}
 
   outputColor *= viewMode.lightStrength;
   outputColor += viewMode.ambient * model.color.xyz;
 
-  vec3 R = reflect(lightDirection, normalize(normal));
+  vec3 R = reflect(viewDirection, normal);
   reflection = texture(cubemap, R).xyz;
 
-  float reflectionScale = 0.0f;
-  float pixel = 15.0f;
-  if (getImage2DValue(coord + pixel * vec2(texelSizeX)) < viewMode.maxDepth)
-    reflectionScale += 0.25f;
-  if (getImage2DValue(coord - pixel * vec2(texelSizeX)) < viewMode.maxDepth)
-    reflectionScale += 0.25f;
-  if (getImage2DValue(coord + pixel * vec2(texelSizeY)) < viewMode.maxDepth)
-    reflectionScale += 0.25f;
-  if (getImage2DValue(coord - pixel * vec2(texelSizeY)) < viewMode.maxDepth)
-    reflectionScale += 0.25f;
+  float reflectionScale = 1.0f; // change it to 0
+  //float pixel = 15.0f;
+  //if (getImage2DValue(coord + pixel * vec2(texelSizeX)) < viewMode.maxDepth)
+  //  reflectionScale += 0.25f;
+  //if (getImage2DValue(coord - pixel * vec2(texelSizeX)) < viewMode.maxDepth)
+  //  reflectionScale += 0.25f;
+  //if (getImage2DValue(coord + pixel * vec2(texelSizeY)) < viewMode.maxDepth)
+  //  reflectionScale += 0.25f;
+  //if (getImage2DValue(coord - pixel * vec2(texelSizeY)) < viewMode.maxDepth)
+  //  reflectionScale += 0.25f;
 
-  //if (normalize(normal).z < -0.25)
-  //  return outputColor + reflectionScale * 0.3f * reflection * viewMode.reflection;
-  
-  float cosTheta = dot(normalize(viewNormal), normalize(viewDirection));
+  float cosTheta = dot(normal, viewDirection);
   float F0 = 0.04;
   float fresnel = SchlickFresnel(cosTheta, F0);
 
@@ -237,7 +235,7 @@ void main() {
       vec3 r = refract(dir, getNormal(), 1.0f/1.33f);
       vec3 background = texture(cubemap, dir + viewMode.refractionStrength * volumeValue * r).xyz;
 
-      vec3 light = calcLight(blurValue);
+      vec3 light = calcLight();
       outColor = vec4(light + (1.0f - volumeValue + 0.6f) / 2.0f * background * viewMode.refraction, min(0.95f, imageLoad(bluredVolumeImage, iCoord).x * 0.75f + 0.4f) * viewMode.transparency);
     }
   } else {

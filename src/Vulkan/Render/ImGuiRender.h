@@ -7,43 +7,49 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
 #include <string>
+#include <fstream>
 
 class ImGuiRender {
 
 private:
-  bool firstTime = true;
-  bool showTransformationsMenu = true;
-  bool showAppearanceMenu = true;
-  int activeInstance = 0;
+	bool firstTime = true;
+	bool showTransformationsMenu = true;
+	bool showAppearanceMenu = true;
+	int activeInstance = 0;
 
-  Window *window;
-  InputState inputState;
-  UniformData &uniformData;
-  FluidInstance *instance;
+	std::ofstream outfile;
+
+	Window* window;
+	InputState inputState;
+	UniformData& uniformData;
+	FluidInstance* instance;
 
 public:
-  VkClearColorValue backgroundColor = {0.25f, 0.25f, 0.25f, 1.0f};
+	VkClearColorValue backgroundColor = { 0.25f, 0.25f, 0.25f, 1.0f };
 
-  ImGuiRender(UniformData &uniformData) : uniformData(uniformData) {}
+	ImGuiRender(UniformData& uniformData) : uniformData(uniformData) {}
 
-  void init(Window &window, FluidInstance *instance) {
-    this->window = &window;
-    this->instance = instance;
-  }
+	void init(Window& window, FluidInstance* instance) {
+		this->window = &window;
+		this->instance = instance;
+		outfile.open("fps_log.txt", std::ios_base::app); // append instead of overwrite
+	}
 
-  void draw(VkCommandBuffer &commandBuffer);
+	~ImGuiRender() { outfile.close(); }
 
-  void createMenuBar();
+	void draw(VkCommandBuffer& commandBuffer);
 
-  void createTransformationsMenu(int width, int height);
+	void createMenuBar();
 
-  void createAppearanceMenu(int width, int height);
+	void createTransformationsMenu(int width, int height);
 
-  void createPlayButton(int width, int height);
+	void createAppearanceMenu(int width, int height);
 
-  void createJoyStick(int width, int height, int dockingWindowWidth);
+	void createPlayButton(int width, int height);
 
-  void menuShortcuts();
+	void createJoyStick(int width, int height, int dockingWindowWidth);
 
-  InputState &getInputState() { return inputState; }
+	void menuShortcuts();
+
+	InputState& getInputState() { return inputState; }
 };

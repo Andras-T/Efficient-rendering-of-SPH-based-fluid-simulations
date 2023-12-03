@@ -28,9 +28,21 @@ void Window::init() {
   glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
   glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
 
-  glfwSetWindowMonitor(window, nullptr, xpos + 50, ypos + 50,
-                       mode->width * 0.85f, mode->height * 0.85f,
-                       mode->refreshRate);
+  //glfwSetWindowMonitor(window, nullptr, xpos + 50, ypos + 50,
+  //                     mode->width * 0.85f, mode->height * 0.85f,
+  //                     mode->refreshRate);
+
+  //glfwSetWindowMonitor(window, nullptr, xpos + 50, ypos + 50,
+  //  1920, 1080,
+  //  mode->refreshRate);
+
+  glfwSetWindowMonitor(window, nullptr, xpos, ypos,
+    2560, 1440,
+    mode->refreshRate);
+
+    //glfwSetWindowMonitor(window, nullptr, xpos + 50, ypos + 50,
+  //  1080, 720,
+  //  mode->refreshRate);
 
   glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 

@@ -126,6 +126,7 @@ void FluidInstance::updateUniformBuffer(uint32_t currentImage,
   mvp.viewModel = mvp.view * mvp.model;
   mvp.inverseModel = glm::inverse(mvp.model);
   mvp.inverseProj = glm::inverse(mvp.proj);
+  mvp.lightPosition = transformations.lightPosition;
 
   uniformData.attributes.center = this->center;
 
