@@ -1,0 +1,13 @@
+BasedOnStyle: Google
+ColumnLimit: 100
+DerivePointerAlignment: false
+PointerAlignment: Left
+IncludeBlocks: Regroup
+IncludeCategories:
+  # Own headers, then third-party, then the standard library.
+  - Regex: '^"'
+    Priority: 1
+  - Regex: '^<[a-zA-Z_]+\.h(pp)?>$|^<[a-zA-Z_]+/'
+    Priority: 2
+  - Regex: '^<'
+    Priority: 3
