@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  LINUX_PACKAGES: >-
+    ninja-build mesa-vulkan-drivers vulkan-validationlayers libvulkan1
+    libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
+    libxkbcommon-dev libwayland-dev wayland-protocols
+
+jobs:
+  format:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: clang-format
+        run: git ls-files '*.cpp' '*.hpp' | xargs clang-format-18 --dry-run --Werror
+
+  linux:
+    name: linux-${{ matrix.compiler }}-${{ matrix.preset }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { compiler: gcc, cc: gcc, cxx: g++, preset: debug }
+          - { compiler: clang, cc: clang, cxx: clang++, preset: release }
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install packages
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends $LINUX_PACKAGES
+      - uses: actions/cache@v4
+        with:
+          path: .deps
+          key: deps-linux-${{ hashFiles('cmake/Dependencies.cmake') }}
+      - name: Configure
+        run: cmake --preset ${{ matrix.preset }} -DSPH_WARNINGS_AS_ERRORS=ON
+      - name: Build
+        run: cmake --build --preset ${{ matrix.preset }}
+      - name: Test
+        run: ctest --preset ${{ matrix.preset }}
+      - name: Headless capture
+        run: build/${{ matrix.preset }}/bin/sph-fluid --validation --frames 3 --capture capture.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: capture-${{ matrix.compiler }}-${{ matrix.preset }}
+          path: capture.png
+
+  tidy:
+    runs-on: ubuntu-24.04
+    env:
+      CC: clang
+      CXX: clang++
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install packages
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends $LINUX_PACKAGES clang-tidy-18
+      - uses: actions/cache@v4
+        with:
+          path: .deps
+          key: deps-linux-${{ hashFiles('cmake/Dependencies.cmake') }}
+      - name: Configure and build
+        run: cmake --preset debug && cmake --build --preset debug
+      - name: clang-tidy
+        run: run-clang-tidy-18 -p build/debug -quiet -warnings-as-errors='*' "$PWD/(src|tests)/"
+
+  windows:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: seanmiddleditch/gha-setup-ninja@v6
+      - uses: actions/cache@v4
+        with:
+          path: .deps
+          key: deps-windows-${{ hashFiles('cmake/Dependencies.cmake') }}
+      - name: Configure
+        run: cmake --preset debug -DSPH_WARNINGS_AS_ERRORS=ON
+      - name: Build
+        run: cmake --build --preset debug
+      # Hosted Windows runners have no Vulkan driver, so only CPU tests run here.
+      - name: Test
+        run: ctest --preset debug -L cpu
