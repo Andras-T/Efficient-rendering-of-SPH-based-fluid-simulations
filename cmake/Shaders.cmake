@@ -53,7 +53,7 @@ constexpr std::array Entries{
 }  // namespace
 
 std::span<const std::uint32_t> sph::shaders::Find(std::string_view name) {
-  const auto* it = std::ranges::find(Entries, name, &Entry::name);
+  const auto it = std::ranges::find(Entries, name, &Entry::name);
   return it == Entries.end() ? std::span<const std::uint32_t>{} : it->code;
 }
 ]=])
