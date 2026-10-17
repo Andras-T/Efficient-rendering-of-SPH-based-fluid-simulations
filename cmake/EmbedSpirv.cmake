@@ -1,0 +1,10 @@
+# Turns a SPIR-V binary into a comma-separated list of 32-bit words (cmake -P script).
+file(READ ${INPUT} bytes HEX)
+string(LENGTH "${bytes}" length)
+math(EXPR remainder "${length} % 8")
+if(length EQUAL 0 OR NOT remainder EQUAL 0)
+  message(FATAL_ERROR "${INPUT} is not a valid SPIR-V binary")
+endif()
+set(byte "[0-9a-f][0-9a-f]")
+string(REGEX REPLACE "(${byte})(${byte})(${byte})(${byte})" "0x\\4\\3\\2\\1,\n" words "${bytes}")
+file(WRITE ${OUTPUT} "${words}")

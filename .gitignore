@@ -1,0 +1,18 @@
+# Build trees and dependency download cache
+/build/
+/out/
+/.deps/
+
+# Tooling
+/.cache/
+/compile_commands.json
+.vs/
+.vscode/
+.idea/
+*.user
+
+# Runtime output
+*.png
+!/docs/**/*.png
+*.rdc
+imgui.ini
