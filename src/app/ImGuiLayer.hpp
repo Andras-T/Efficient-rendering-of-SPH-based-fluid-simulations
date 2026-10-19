@@ -16,7 +16,7 @@ class Context;
 class ImGuiLayer {
  public:
   ImGuiLayer(const gpu::Context& context, GLFWwindow* window, VkFormat colorFormat,
-             std::uint32_t imageCount);
+             VkFormat depthFormat, std::uint32_t imageCount);
   ~ImGuiLayer();
 
   ImGuiLayer(const ImGuiLayer&) = delete;
@@ -31,6 +31,7 @@ class ImGuiLayer {
 
  private:
   VkFormat colorFormat_;
+  VkFormat depthFormat_ = VK_FORMAT_UNDEFINED;
 };
 
 }  // namespace sph

@@ -12,8 +12,8 @@
 namespace sph {
 
 ImGuiLayer::ImGuiLayer(const gpu::Context& context, GLFWwindow* window, VkFormat colorFormat,
-                       std::uint32_t imageCount)
-    : colorFormat_(colorFormat) {
+                       VkFormat depthFormat, std::uint32_t imageCount)
+    : colorFormat_(colorFormat), depthFormat_(depthFormat) {
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
   ImGui::GetIO().IniFilename = nullptr;
@@ -39,6 +39,7 @@ ImGuiLayer::ImGuiLayer(const gpu::Context& context, GLFWwindow* window, VkFormat
       .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
       .colorAttachmentCount = 1,
       .pColorAttachmentFormats = &colorFormat_,
+      .depthAttachmentFormat = depthFormat_,
   };
   if (!ImGui_ImplVulkan_Init(&info)) {
     ImGui_ImplGlfw_Shutdown();

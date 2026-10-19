@@ -9,7 +9,8 @@
 #include "gpu/Image.hpp"
 #include "gpu/Timestamps.hpp"
 #include "render/Renderer.hpp"
-#include "sim/GpuParticles.hpp"
+#include "sim/CpuSolver.hpp"
+#include "sim/SphSolver.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -73,8 +74,12 @@ std::vector<std::uint8_t> RenderOffscreen(const gpu::Context& context,
   ownedCamera.frame(scene.params.domainMin, scene.params.domainMax);
   const render::Camera& camera = request.camera == nullptr ? ownedCamera : *request.camera;
 
-  sim::GpuParticles particles(context);
-  particles.upload(scene.particles);
+  sim::Scene simulated = scene;
+  if (request.simulate && !simulated.particles.empty()) {
+    sim::CalibrateRestDensity(simulated.particles, simulated.params);
+  }
+  sim::SphSolver solver(context);
+  solver.upload(simulated.particles, simulated.params);
 
   render::Renderer renderer(context, CaptureFormat);
   renderer.resize(extent);
@@ -91,7 +96,17 @@ std::vector<std::uint8_t> RenderOffscreen(const gpu::Context& context,
     const bool needPixels = !request.sequenceDirectory.empty() || (frame + 1 >= frameCount);
     gpu::ImmediateSubmit(context, [&](VkCommandBuffer commandBuffer) {
       profiler.beginFrame(commandBuffer, 0);
-      renderer.record(commandBuffer, renderTarget, camera, particles, scene.params);
+      if (request.simulate) {
+        solver.record(commandBuffer, solver.params().substeps);
+        gpu::GlobalBarrier(
+            commandBuffer, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+            VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+            VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+            VK_ACCESS_2_SHADER_STORAGE_READ_BIT);
+        profiler.mark(commandBuffer, "sim");
+      }
+      renderer.record(commandBuffer, renderTarget, camera, solver.particleAddress(), solver.count(),
+                      solver.params());
       profiler.mark(commandBuffer, "render");
       profiler.endFrame(commandBuffer);
       if (needPixels) {
@@ -137,7 +152,8 @@ int RunHeadless(const Options& options) {
   const auto pixels = RenderOffscreen(context, {.extent = extent,
                                                 .frames = options.frames,
                                                 .sequenceDirectory = options.sequenceDirectory,
-                                                .preset = options.scene});
+                                                .preset = options.scene,
+                                                .simulate = true});
   const std::chrono::duration<double, std::milli> elapsed =
       std::chrono::steady_clock::now() - start;
   LogInfo("Rendered {} frame(s) of '{}' at {}x{} in {:.1f} ms", options.frames,

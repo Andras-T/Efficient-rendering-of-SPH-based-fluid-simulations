@@ -21,8 +21,43 @@ struct Particle {
   float pad2;
 };
 
+struct GpuSimParams {
+  vec3 domainMin;
+  float kernelRadius;
+  vec3 domainMax;
+  float kernelRadius2;
+  vec3 gravity;
+  float mass;
+  float restDensity;
+  float stiffness;
+  float eosGamma;
+  float viscosity;
+  float dt;
+  float restitution;
+  float collisionRadius;
+  float invCellSize;
+  uvec3 gridSize;
+  uint particleCount;
+  uint cellCount;
+  uint pad0;
+  uint pad1;
+  uint pad2;
+};
+
 layout(scalar, buffer_reference, buffer_reference_align = 16) readonly buffer ParticleBuffer {
   Particle particles[];
+};
+
+layout(scalar, buffer_reference, buffer_reference_align = 16) buffer ParticleRW {
+  Particle particles[];
+};
+
+layout(scalar, buffer_reference, buffer_reference_align = 4) buffer UintRW {
+  coherent uint data[];
+};
+
+layout(scalar, buffer_reference, buffer_reference_align = 16) readonly buffer ParamsBuffer {
+  GpuSimParams p;
 };
 
 layout(scalar, buffer_reference, buffer_reference_align = 16) readonly buffer FrameBuffer {
@@ -33,10 +68,6 @@ layout(scalar, buffer_reference, buffer_reference_align = 16) readonly buffer Fr
   ParticleBuffer particles;
   uint count;
   uint pad;
-};
-
-layout(push_constant, scalar) uniform PushConstants {
-  FrameBuffer frame;
 };
 
 #endif

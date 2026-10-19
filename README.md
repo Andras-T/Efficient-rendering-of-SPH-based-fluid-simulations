@@ -2,7 +2,7 @@
 
 Real-time fluid simulation on the GPU: smoothed particle hydrodynamics in Vulkan compute shaders, rendered as a screen-space fluid surface.
 
-> Work in progress. The original thesis project is being rebuilt from scratch; this branch contains the foundation (build, Vulkan context, headless rendering, tests, CI).
+> Work in progress. WCSPH now runs on the GPU against a CPU reference; screen-space fluid rendering is next.
 
 ## Build
 
@@ -18,7 +18,7 @@ build/release/bin/sph-fluid --capture out.png        # last frame
 build/release/bin/sph-fluid --sequence frames --frames 12
 ```
 
-In the window: right-drag orbits, middle-drag pans, scroll zooms. GPU timings and camera controls are in the overlay.
+In the window: right-drag orbits, middle-drag pans, scroll zooms. Pause, scene presets, and GPU timings are in the overlay.
 
 On Linux without a GPU, install Mesa's lavapipe (`mesa-vulkan-drivers`).
 

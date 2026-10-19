@@ -10,8 +10,9 @@
 #include "gpu/Timestamps.hpp"
 #include "render/Camera.hpp"
 #include "render/Renderer.hpp"
-#include "sim/GpuParticles.hpp"
+#include "sim/CpuSolver.hpp"
 #include "sim/Scene.hpp"
+#include "sim/SphSolver.hpp"
 #include "ui/Hud.hpp"
 
 #include <GLFW/glfw3.h>
@@ -70,15 +71,18 @@ int RunWindowed(const Options& options) {
   gpu::Swapchain swapchain(context, window.framebufferExtent());
   render::Renderer renderer(context, swapchain.format());
   renderer.resize(swapchain.extent());
-  ImGuiLayer imgui(context, window.handle(), swapchain.format(), swapchain.imageCount());
+  ImGuiLayer imgui(context, window.handle(), swapchain.format(), render::Renderer::DepthFormat,
+                   swapchain.imageCount());
   gpu::GpuProfiler profiler(context, FramesInFlight);
   sim::Scene scene = sim::BuildScene(options.scene);
-  sim::GpuParticles particles(context);
-  particles.upload(scene.particles);
+  sim::CalibrateRestDensity(scene.particles, scene.params);
+  sim::SphSolver solver(context);
+  solver.upload(scene.particles, scene.params);
   render::Camera camera;
   camera.setAspect(swapchain.extent());
   camera.frame(scene.params.domainMin, scene.params.domainMax);
   sim::ScenePreset preset = options.scene;
+  bool paused = false;
 
   std::array<FrameResources, FramesInFlight> frames{};
   for (auto& frame : frames) {
@@ -109,6 +113,13 @@ int RunWindowed(const Options& options) {
     gpu::Check(vkWaitForFences(context.device(), 1, &inFlight, VK_TRUE, NoTimeout),
                "vkWaitForFences");
     profiler.resolve(flight);
+    // Particle buffers are updated in place, so consecutive frames cannot overlap.
+    if (frameNumber > 0) {
+      const auto previous = static_cast<std::uint32_t>((frameNumber - 1) % FramesInFlight);
+      const VkFence previousFence = frames.at(previous).inFlight.get();
+      gpu::Check(vkWaitForFences(context.device(), 1, &previousFence, VK_TRUE, NoTimeout),
+                 "vkWaitForFences");
+    }
 
     std::uint32_t imageIndex = 0;
     const VkResult acquired =
@@ -134,15 +145,22 @@ int RunWindowed(const Options& options) {
         .camera = &camera,
         .timings = profiler.intervals(),
         .preset = preset,
-        .particleCount = particles.count(),
+        .particleCount = solver.count(),
+        .paused = paused,
+        .timeStep = solver.params().timeStep,
+        .substeps = solver.params().substeps,
+        .restDensity = solver.params().restDensity,
+        .viscosity = solver.params().viscosity,
     };
     if (ui::DrawHud(hud)) {
       preset = hud.preset;
       scene = sim::BuildScene(preset);
-      particles.upload(scene.particles);
+      sim::CalibrateRestDensity(scene.particles, scene.params);
+      solver.upload(scene.particles, scene.params);
       camera.frame(scene.params.domainMin, scene.params.domainMax);
       camera.setAspect(swapchain.extent());
     }
+    paused = hud.paused;
     imgui.endFrame();
 
     const VkCommandBuffer commandBuffer = frame.commandBuffer;
@@ -153,8 +171,17 @@ int RunWindowed(const Options& options) {
     gpu::Check(vkBeginCommandBuffer(commandBuffer, &beginInfo), "vkBeginCommandBuffer");
     const VkImage image = swapchain.image(imageIndex);
     profiler.beginFrame(commandBuffer, flight);
+    if (!paused) {
+      solver.record(commandBuffer, solver.params().substeps);
+      gpu::GlobalBarrier(
+          commandBuffer, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+          VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+          VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+          VK_ACCESS_2_SHADER_STORAGE_READ_BIT);
+      profiler.mark(commandBuffer, "sim");
+    }
     renderer.record(commandBuffer, {image, swapchain.view(imageIndex), swapchain.extent()}, camera,
-                    particles, scene.params,
+                    solver.particleAddress(), solver.count(), solver.params(),
                     [&](VkCommandBuffer overlay) { imgui.record(overlay); });
     profiler.mark(commandBuffer, "render");
     profiler.endFrame(commandBuffer);

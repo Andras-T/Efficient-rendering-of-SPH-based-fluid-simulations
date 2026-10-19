@@ -66,6 +66,10 @@ bool DrawHud(HudState& state) {
   ImGui::Text("%.1f FPS (%.2f ms)", static_cast<double>(io.Framerate),
               1000.0 / static_cast<double>(io.Framerate));
   ImGui::Text("%u particles", state.particleCount);
+  ImGui::Checkbox("Pause", &state.paused);
+  ImGui::Text("dt %.4f x %u", static_cast<double>(state.timeStep), state.substeps);
+  ImGui::Text("rest density %.1f", static_cast<double>(state.restDensity));
+  ImGui::Text("viscosity %.2f", static_cast<double>(state.viscosity));
   int scene = PresetIndex(state.preset);
   if (ImGui::Combo("Scene", &scene, "Dam break\0Drop\0Double dam\0")) {
     state.preset = PresetFromIndex(scene);
@@ -75,7 +79,7 @@ bool DrawHud(HudState& state) {
 
   if (state.camera != nullptr) {
     render::Camera& camera = *state.camera;
-    ImGui::SetNextWindowPos({12.0F, 150.0F}, ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos({12.0F, 240.0F}, ImGuiCond_FirstUseEver);
     ImGui::Begin("Camera", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     float yaw = Degrees(camera.yaw());
     float pitch = Degrees(camera.pitch());
@@ -105,7 +109,7 @@ bool DrawHud(HudState& state) {
     ImGui::End();
   }
 
-  ImGui::SetNextWindowPos({12.0F, 440.0F}, ImGuiCond_FirstUseEver);
+  ImGui::SetNextWindowPos({12.0F, 530.0F}, ImGuiCond_FirstUseEver);
   ImGui::Begin("GPU", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
   if (state.timings.empty()) {
     ImGui::TextUnformatted("No timestamp queries this frame");

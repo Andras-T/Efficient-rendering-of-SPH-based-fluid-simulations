@@ -5,5 +5,15 @@ sph_add_shader_library(sph_shaders
     ComputeSmoke.comp
     Particle.vert
     Particle.frag
+    HashCount.comp
+    Scan.comp
+    ScanBlocks.comp
+    ScanAdd.comp
+    Scatter.comp
+    Density.comp
+    Forces.comp
+    Integrate.comp
   INCLUDES
-    Types.glsl)
+    Types.glsl
+    Kernels.glsl
+    SphPush.glsl)
