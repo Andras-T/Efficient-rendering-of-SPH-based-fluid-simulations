@@ -18,7 +18,7 @@ struct BackgroundSettings {
 // Vertical gradient drawn with a single fullscreen triangle.
 class BackgroundPass {
  public:
-  BackgroundPass(const gpu::Context& context, VkFormat colorFormat);
+  BackgroundPass(const gpu::Context& context, VkFormat colorFormat, VkFormat depthFormat);
 
   // Must be recorded inside a rendering scope with viewport and scissor set.
   void record(VkCommandBuffer commandBuffer, const BackgroundSettings& settings) const;

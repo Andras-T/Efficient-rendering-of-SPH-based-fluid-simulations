@@ -10,6 +10,8 @@
 #include "gpu/Timestamps.hpp"
 #include "render/Camera.hpp"
 #include "render/Renderer.hpp"
+#include "sim/GpuParticles.hpp"
+#include "sim/Scene.hpp"
 #include "ui/Hud.hpp"
 
 #include <GLFW/glfw3.h>
@@ -66,11 +68,17 @@ int RunWindowed(const Options& options) {
   Window window("SPH Fluid", options.width, options.height);
   const gpu::Context context({.validation = options.validation, .window = window.handle()});
   gpu::Swapchain swapchain(context, window.framebufferExtent());
-  const render::Renderer renderer(context, swapchain.format());
+  render::Renderer renderer(context, swapchain.format());
+  renderer.resize(swapchain.extent());
   ImGuiLayer imgui(context, window.handle(), swapchain.format(), swapchain.imageCount());
   gpu::GpuProfiler profiler(context, FramesInFlight);
+  sim::Scene scene = sim::BuildScene(options.scene);
+  sim::GpuParticles particles(context);
+  particles.upload(scene.particles);
   render::Camera camera;
   camera.setAspect(swapchain.extent());
+  camera.frame(scene.params.domainMin, scene.params.domainMax);
+  sim::ScenePreset preset = options.scene;
 
   std::array<FrameResources, FramesInFlight> frames{};
   for (auto& frame : frames) {
@@ -82,6 +90,7 @@ int RunWindowed(const Options& options) {
     context.waitIdle();
     swapchain.recreate(window.framebufferExtent());
     renderFinished = CreateRenderFinished(context, swapchain.imageCount());
+    renderer.resize(swapchain.extent());
     camera.setAspect(swapchain.extent());
   };
 
@@ -119,7 +128,21 @@ int RunWindowed(const Options& options) {
 
     imgui.beginFrame();
     ui::ApplyCameraInput(camera);
-    ui::DrawHud(context.deviceName(), swapchain.extent(), camera, profiler.intervals());
+    ui::HudState hud{
+        .deviceName = context.deviceName(),
+        .extent = swapchain.extent(),
+        .camera = &camera,
+        .timings = profiler.intervals(),
+        .preset = preset,
+        .particleCount = particles.count(),
+    };
+    if (ui::DrawHud(hud)) {
+      preset = hud.preset;
+      scene = sim::BuildScene(preset);
+      particles.upload(scene.particles);
+      camera.frame(scene.params.domainMin, scene.params.domainMax);
+      camera.setAspect(swapchain.extent());
+    }
     imgui.endFrame();
 
     const VkCommandBuffer commandBuffer = frame.commandBuffer;
@@ -130,7 +153,8 @@ int RunWindowed(const Options& options) {
     gpu::Check(vkBeginCommandBuffer(commandBuffer, &beginInfo), "vkBeginCommandBuffer");
     const VkImage image = swapchain.image(imageIndex);
     profiler.beginFrame(commandBuffer, flight);
-    renderer.record(commandBuffer, {image, swapchain.view(imageIndex), swapchain.extent()},
+    renderer.record(commandBuffer, {image, swapchain.view(imageIndex), swapchain.extent()}, camera,
+                    particles, scene.params,
                     [&](VkCommandBuffer overlay) { imgui.record(overlay); });
     profiler.mark(commandBuffer, "render");
     profiler.endFrame(commandBuffer);

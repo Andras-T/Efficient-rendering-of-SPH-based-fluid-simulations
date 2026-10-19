@@ -44,6 +44,11 @@ void Camera::setAspect(VkExtent2D extent) {
   setAspect(static_cast<float>(extent.width) / static_cast<float>(extent.height));
 }
 
+void Camera::frame(glm::vec3 domainMin, glm::vec3 domainMax) {
+  setTarget(0.5F * (domainMin + domainMax));
+  setDistance(std::max(glm::length(domainMax - domainMin) * 1.15F, 1.0F));
+}
+
 void Camera::reset() { *this = Camera{}; }
 
 void Camera::orbit(float deltaYaw, float deltaPitch) {

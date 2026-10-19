@@ -1,4 +1,9 @@
-sph_add_shader_library(sph_shaders SOURCES
-  FullscreenTriangle.vert
-  Background.frag
-  ComputeSmoke.comp)
+sph_add_shader_library(sph_shaders
+  SOURCES
+    FullscreenTriangle.vert
+    Background.frag
+    ComputeSmoke.comp
+    Particle.vert
+    Particle.frag
+  INCLUDES
+    Types.glsl)

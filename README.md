@@ -13,6 +13,7 @@ cmake --preset release
 cmake --build --preset release
 ctest --preset release
 build/release/bin/sph-fluid                          # window
+build/release/bin/sph-fluid --scene drop             # dam, drop, or double
 build/release/bin/sph-fluid --capture out.png        # last frame
 build/release/bin/sph-fluid --sequence frames --frames 12
 ```

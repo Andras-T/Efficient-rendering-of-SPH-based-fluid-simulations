@@ -18,7 +18,11 @@ add_library(sph_engine STATIC
   gpu/Vulkan.cpp
   render/BackgroundPass.cpp
   render/Camera.cpp
+  render/ParticlePass.cpp
   render/Renderer.cpp
+  sim/GpuParticles.cpp
+  sim/Scene.cpp
+  sim/SimParams.cpp
   ui/Hud.cpp)
 target_include_directories(sph_engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(sph_engine PUBLIC
