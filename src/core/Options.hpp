@@ -22,6 +22,7 @@ struct Options {
   std::filesystem::path sequenceDirectory;
   sim::ScenePreset scene = sim::ScenePreset::DamBreak;
   render::DebugView view = render::DebugView::Final;
+  sim::SolverMethod solver = sim::SolverMethod::Wcsph;
 };
 
 // Throws std::invalid_argument on unknown flags or malformed values.

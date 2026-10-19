@@ -75,6 +75,7 @@ std::vector<std::uint8_t> RenderOffscreen(const gpu::Context& context,
   const render::Camera& camera = request.camera == nullptr ? ownedCamera : *request.camera;
 
   sim::Scene simulated = scene;
+  simulated.params.solver = request.solver;
   if (request.simulate && !simulated.particles.empty()) {
     sim::CalibrateRestDensity(simulated.particles, simulated.params);
   }
@@ -107,7 +108,7 @@ std::vector<std::uint8_t> RenderOffscreen(const gpu::Context& context,
         profiler.mark(commandBuffer, "sim");
       }
       renderer.record(commandBuffer, renderTarget, camera, solver.particleAddress(), solver.count(),
-                      solver.params());
+                      solver.foamAddress(), solver.foamCapacity(), solver.params());
       profiler.mark(commandBuffer, "render");
       profiler.endFrame(commandBuffer);
       if (needPixels) {
@@ -155,7 +156,8 @@ int RunHeadless(const Options& options) {
                                                 .sequenceDirectory = options.sequenceDirectory,
                                                 .preset = options.scene,
                                                 .simulate = true,
-                                                .view = options.view});
+                                                .view = options.view,
+                                                .solver = options.solver});
   const std::chrono::duration<double, std::milli> elapsed =
       std::chrono::steady_clock::now() - start;
   LogInfo("Rendered {} frame(s) of '{}' at {}x{} in {:.1f} ms", options.frames,

@@ -15,6 +15,13 @@ void main() {
   }
 
   Particle self = pc.particles.particles[i];
+  if (self.flags != ParticleFlagFluid) {
+    self.density = p.restDensity;
+    self.pressure = 0.0;
+    pc.particles.particles[i] = self;
+    return;
+  }
+
   const ivec3 center = CellCoords(self.position, p);
   float density = 0.0;
 

@@ -1,5 +1,7 @@
 #include "sim/Scene.hpp"
 
+#include "sim/Kernels.hpp"
+
 #include <glm/geometric.hpp>
 
 #include <algorithm>
@@ -58,12 +60,34 @@ void AddSphere(Scene& scene, glm::vec3 center, float radius, std::uint32_t flags
   scene.particles.erase(last, scene.particles.end());
 }
 
-void AddFloor(Scene& scene) {
+void AddBoxBoundaries(Scene& scene) {
   const float spacing = scene.params.particleSpacing;
   const glm::vec3 min = scene.params.domainMin;
-  glm::vec3 max = scene.params.domainMax;
-  max.y = min.y + spacing;
-  AddBlock(scene, min, max, ParticleFlagBoundary);
+  const glm::vec3 max = scene.params.domainMax;
+  const auto steps = [spacing](float begin, float end) {
+    return std::max(1, static_cast<int>(std::floor((end - begin) / spacing)));
+  };
+  const int nx = steps(min.x, max.x);
+  const int ny = steps(min.y, max.y);
+  const int nz = steps(min.z, max.z);
+  for (int z = 0; z < nz; ++z) {
+    for (int y = 0; y < ny; ++y) {
+      for (int x = 0; x < nx; ++x) {
+        const bool shell = y == 0 || x == 0 || x == nx - 1 || z == 0 || z == nz - 1;
+        if (!shell) {
+          continue;
+        }
+        const glm::vec3 position{
+            min.x + (static_cast<float>(x) + 0.5F) * spacing,
+            min.y + (static_cast<float>(y) + 0.5F) * spacing,
+            min.z + (static_cast<float>(z) + 0.5F) * spacing,
+        };
+        if (position.x < max.x && position.y < max.y && position.z < max.z) {
+          AddParticle(scene, position, ParticleFlagBoundary);
+        }
+      }
+    }
+  }
 }
 
 }  // namespace
@@ -110,7 +134,7 @@ Scene BuildScene(ScenePreset preset, const SimParams& params) {
     case ScenePreset::Empty:
       break;
     case ScenePreset::DamBreak: {
-      AddFloor(scene);
+      AddBoxBoundaries(scene);
       glm::vec3 fluidMax = max;
       fluidMax.x = min.x + 0.42F * (max.x - min.x);
       fluidMax.y = min.y + 0.70F * (max.y - min.y);
@@ -118,7 +142,7 @@ Scene BuildScene(ScenePreset preset, const SimParams& params) {
       break;
     }
     case ScenePreset::Drop: {
-      AddFloor(scene);
+      AddBoxBoundaries(scene);
       glm::vec3 poolMax = max;
       poolMax.y = min.y + spacing * 3.0F;
       AddBlock(scene, min, poolMax, ParticleFlagFluid);
@@ -127,7 +151,7 @@ Scene BuildScene(ScenePreset preset, const SimParams& params) {
       break;
     }
     case ScenePreset::DoubleDam: {
-      AddFloor(scene);
+      AddBoxBoundaries(scene);
       glm::vec3 leftMax = max;
       leftMax.x = min.x + 0.28F * (max.x - min.x);
       leftMax.y = min.y + 0.65F * (max.y - min.y);
@@ -140,7 +164,28 @@ Scene BuildScene(ScenePreset preset, const SimParams& params) {
       break;
     }
   }
+  CalibrateBoundaryPsi(scene);
   return scene;
+}
+
+void CalibrateBoundaryPsi(Scene& scene) {
+  const float h = scene.params.supportRadius();
+  const float rest = scene.params.restDensity;
+  for (Particle& boundary : scene.particles) {
+    if (boundary.flags != ParticleFlagBoundary) {
+      continue;
+    }
+    float sum = 0.0F;
+    for (const Particle& other : scene.particles) {
+      if (other.flags != ParticleFlagBoundary) {
+        continue;
+      }
+      const glm::vec3 delta = boundary.position - other.position;
+      sum += Poly6(glm::dot(delta, delta), h);
+    }
+    boundary.mass = rest / std::max(sum, KernelEpsilon);
+    boundary.density = rest;
+  }
 }
 
 }  // namespace sph::sim

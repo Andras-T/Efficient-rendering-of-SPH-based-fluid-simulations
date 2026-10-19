@@ -20,6 +20,7 @@ TEST(DebugViewTest, ParsesStageNames) {
   EXPECT_EQ(render::ParseDebugView("smooth"), render::DebugView::SmoothDepth);
   EXPECT_EQ(render::ParseDebugView("thickness"), render::DebugView::Thickness);
   EXPECT_EQ(render::ParseDebugView("normals"), render::DebugView::Normals);
+  EXPECT_EQ(render::ParseDebugView("foam"), render::DebugView::Foam);
   EXPECT_THROW(
       {
         const auto parsed = render::ParseDebugView("bloom");
@@ -30,10 +31,11 @@ TEST(DebugViewTest, ParsesStageNames) {
 
 TEST(DebugViewTest, CyclesThroughEveryStage) {
   EXPECT_EQ(render::NextDebugView(render::DebugView::Final), render::DebugView::Particles);
-  EXPECT_EQ(render::NextDebugView(render::DebugView::Normals), render::DebugView::Final);
-  EXPECT_EQ(render::PrevDebugView(render::DebugView::Final), render::DebugView::Normals);
+  EXPECT_EQ(render::NextDebugView(render::DebugView::Normals), render::DebugView::Foam);
+  EXPECT_EQ(render::NextDebugView(render::DebugView::Foam), render::DebugView::Final);
+  EXPECT_EQ(render::PrevDebugView(render::DebugView::Final), render::DebugView::Foam);
   EXPECT_EQ(render::PrevDebugView(render::DebugView::Particles), render::DebugView::Final);
-  EXPECT_EQ(render::DebugViewCount, 9);
+  EXPECT_EQ(render::DebugViewCount, 10);
 }
 
 TEST(DebugViewTest, ClassifiesPasses) {

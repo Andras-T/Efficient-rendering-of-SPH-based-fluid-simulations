@@ -176,6 +176,23 @@ TEST(GpuSphTest, CursorForcePushesNearbyFluid) {
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 
+TEST(GpuSphTest, DfsphOneStepMatchesCpuReference) {
+  const gpu::Context context({.validation = true});
+  sim::Scene scene = MakeCloud();
+  scene.params.solver = sim::SolverMethod::Dfsph;
+  scene.params.densityIterations = 2;
+  std::vector<sim::Particle> cpu = scene.particles;
+  sim::StepCpu(cpu, scene.params, 1);
+
+  sim::SphSolver solver(context);
+  solver.upload(scene.particles, scene.params);
+  solver.step(1);
+  std::vector<sim::Particle> gpu = scene.particles;
+  solver.download(gpu);
+  ExpectMatched(gpu, cpu, scene.params.particleSpacing);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
 TEST(GpuSphTest, SettledTankStaysNearRestDensity) {
   const gpu::Context context({.validation = true});
   sim::Scene scene = MakeTank();

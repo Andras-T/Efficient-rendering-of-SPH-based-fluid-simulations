@@ -18,5 +18,6 @@ struct Scene {
 [[nodiscard]] const char* ScenePresetName(ScenePreset preset);
 [[nodiscard]] ScenePreset ParseScenePreset(std::string_view name);
 [[nodiscard]] Scene BuildScene(ScenePreset preset, const SimParams& params = {});
+void CalibrateBoundaryPsi(Scene& scene);
 
 }  // namespace sph::sim

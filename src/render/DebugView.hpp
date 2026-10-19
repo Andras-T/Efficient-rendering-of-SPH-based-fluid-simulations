@@ -15,9 +15,10 @@ enum class DebugView : std::uint8_t {
   SmoothDepth = 6,
   Thickness = 7,
   Normals = 8,
+  Foam = 9,
 };
 
-constexpr auto DebugViewCount = static_cast<std::uint8_t>(DebugView::Normals) + 1;
+constexpr auto DebugViewCount = static_cast<std::uint8_t>(DebugView::Foam) + 1;
 
 [[nodiscard]] const char* DebugViewName(DebugView view);
 [[nodiscard]] DebugView ParseDebugView(std::string_view name);

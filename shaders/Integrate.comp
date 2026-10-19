@@ -2,6 +2,7 @@
 #extension GL_GOOGLE_include_directive : require
 
 #include "Types.glsl"
+#include "Kernels.glsl"
 #include "SphPush.glsl"
 
 layout(local_size_x = 64) in;
@@ -21,34 +22,8 @@ void main() {
     return;
   }
 
-  vec3 acceleration = particle.force / particle.density + p.gravity;
-  if (p.cursorRadius > 0.0) {
-    const vec3 toParticle = particle.position - p.cursorPosition;
-    const float dist2 = dot(toParticle, toParticle);
-    const float radius2 = p.cursorRadius * p.cursorRadius;
-    if (dist2 < radius2) {
-      const float falloff = 1.0 - dist2 / radius2;
-      acceleration += p.cursorForce * (falloff * falloff);
-    }
-  }
-  particle.velocity += acceleration * p.dt;
+  particle.velocity += NonPressureAccel(particle, p) * p.dt;
   particle.position += particle.velocity * p.dt;
-
-  const vec3 minBound = p.domainMin + vec3(p.collisionRadius);
-  const vec3 maxBound = p.domainMax - vec3(p.collisionRadius);
-  for (int axis = 0; axis < 3; ++axis) {
-    if (particle.position[axis] < minBound[axis]) {
-      particle.position[axis] = minBound[axis];
-      if (particle.velocity[axis] < 0.0) {
-        particle.velocity[axis] *= -p.restitution;
-      }
-    } else if (particle.position[axis] > maxBound[axis]) {
-      particle.position[axis] = maxBound[axis];
-      if (particle.velocity[axis] > 0.0) {
-        particle.velocity[axis] *= -p.restitution;
-      }
-    }
-  }
-
+  CollideBox(particle.position, particle.velocity, p);
   pc.particles.particles[i] = particle;
 }

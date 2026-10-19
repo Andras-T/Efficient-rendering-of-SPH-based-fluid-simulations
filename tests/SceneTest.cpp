@@ -16,6 +16,26 @@ TEST(SceneTest, MassIsDensityTimesVolume) {
   EXPECT_NEAR(params.supportRadius(), 0.10F, 1.0e-6F);
 }
 
+TEST(SceneTest, BoundariesCoverTheBoxShell) {
+  const Scene scene = BuildScene(ScenePreset::DamBreak);
+  bool floor = false;
+  bool wallX = false;
+  bool wallZ = false;
+  for (const Particle& particle : scene.particles) {
+    if (particle.flags != ParticleFlagBoundary) {
+      continue;
+    }
+    EXPECT_GT(particle.mass, 0.0F);
+    floor = floor || particle.position.y < scene.params.domainMin.y + scene.params.particleSpacing;
+    wallX = wallX ||
+            particle.position.x > scene.params.domainMax.x - scene.params.particleSpacing * 1.5F;
+    wallZ = wallZ || particle.position.z < scene.params.domainMin.z + scene.params.particleSpacing;
+  }
+  EXPECT_TRUE(floor);
+  EXPECT_TRUE(wallX);
+  EXPECT_TRUE(wallZ);
+}
+
 TEST(SceneTest, DamBreakFillsLeftSideWithFloor) {
   const Scene scene = BuildScene(ScenePreset::DamBreak);
   ASSERT_FALSE(scene.particles.empty());

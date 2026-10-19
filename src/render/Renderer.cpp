@@ -90,6 +90,7 @@ Renderer::Renderer(const gpu::Context& context, VkFormat colorFormat)
       skyPass_(context, HdrFormat, hdri_),
       particlePass_(context, HdrFormat, DepthFormat),
       fluidPass_(context, HdrFormat, DepthFormat, hdri_),
+      foamPass_(context, HdrFormat, DepthFormat),
       tonemapPass_(context, colorFormat),
       hdrSampler_(gpu::CreateSampler(context.device(), VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
                                      VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE)),
@@ -128,6 +129,7 @@ void Renderer::resize(VkExtent2D extent) {
 
 void Renderer::record(VkCommandBuffer commandBuffer, const RenderTarget& target,
                       const Camera& camera, VkDeviceAddress particles, std::uint32_t particleCount,
+                      VkDeviceAddress foam, std::uint32_t foamCapacity,
                       const sim::SimParams& params, const OverlayCallback& overlay) {
   resize(target.extent);
 
@@ -189,7 +191,13 @@ void Renderer::record(VkCommandBuffer commandBuffer, const RenderTarget& target,
   skyPass_.record(commandBuffer, frameAddress);
   vkCmdEndRendering(commandBuffer);
 
-  if (IsParticleView(settings_.view)) {
+  const float foamRadius = params.renderRadius() * 0.42F;
+  if (settings_.view == DebugView::Foam) {
+    BeginColorDepth(commandBuffer, hdr_.view(), depth_.view(), target.extent,
+                    VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_LOAD_OP_CLEAR);
+    foamPass_.record(commandBuffer, frameAddress, foam, foamCapacity, foamRadius);
+    vkCmdEndRendering(commandBuffer);
+  } else if (IsParticleView(settings_.view)) {
     BeginColorDepth(commandBuffer, hdr_.view(), depth_.view(), target.extent,
                     VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_LOAD_OP_CLEAR);
     particlePass_.record(commandBuffer, frameAddress, particleCount);
@@ -209,6 +217,12 @@ void Renderer::record(VkCommandBuffer commandBuffer, const RenderTarget& target,
     BeginColor(commandBuffer, hdr_.view(), target.extent, VK_ATTACHMENT_LOAD_OP_LOAD);
     fluidPass_.recordComposite(commandBuffer, frameAddress);
     vkCmdEndRendering(commandBuffer);
+    if (settings_.view == DebugView::Final) {
+      BeginColorDepth(commandBuffer, hdr_.view(), depth_.view(), target.extent,
+                      VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_LOAD_OP_LOAD);
+      foamPass_.record(commandBuffer, frameAddress, foam, foamCapacity, foamRadius);
+      vkCmdEndRendering(commandBuffer);
+    }
   }
 
   gpu::TransitionImage(commandBuffer,

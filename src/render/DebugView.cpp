@@ -25,6 +25,8 @@ const char* DebugViewName(DebugView view) {
       return "thickness";
     case DebugView::Normals:
       return "normals";
+    case DebugView::Foam:
+      return "foam";
   }
   return "final";
 }
@@ -56,6 +58,9 @@ DebugView ParseDebugView(std::string_view name) {
   }
   if (name == "normals") {
     return DebugView::Normals;
+  }
+  if (name == "foam") {
+    return DebugView::Foam;
   }
   throw std::invalid_argument(std::format("unknown view '{}'", name));
 }

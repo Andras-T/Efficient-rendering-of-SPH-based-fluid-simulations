@@ -1,0 +1,61 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "Types.glsl"
+#include "Kernels.glsl"
+#include "SphPush.glsl"
+
+layout(local_size_x = 64) in;
+
+uint Hash(uint x) {
+  x ^= x >> 16;
+  x *= 0x7feb352du;
+  x ^= x >> 15;
+  x *= 0x846ca68bu;
+  x ^= x >> 16;
+  return x;
+}
+
+void main() {
+  const uint i = gl_GlobalInvocationID.x;
+  const GpuSimParams p = pc.params.p;
+  if (i >= p.particleCount || p.foamCapacity == 0) {
+    return;
+  }
+
+  const Particle self = pc.particles.particles[i];
+  if (self.flags != ParticleFlagFluid) {
+    return;
+  }
+
+  const float speed = length(self.velocity);
+  const float missing = max(0.0, (p.restDensity - self.density) / max(p.restDensity, 1.0));
+  if (speed < 0.55 || (missing < 0.16 && speed < 1.15)) {
+    return;
+  }
+  if ((Hash(i * 17u + pc.foamSeed) & 3u) != 0u) {
+    return;
+  }
+
+  const uint h = Hash(i * 747796405u + pc.foamSeed);
+  const vec3 jitter = vec3(float(h & 255u), float((h >> 8u) & 255u), float((h >> 16u) & 255u)) /
+                          255.0 -
+                      0.5;
+  for (uint probe = 0; probe < 8u; ++probe) {
+    const uint slot = (h + probe * 17u) % p.foamCapacity;
+    if (atomicCompSwap(pc.foam.particles[slot].alive, 0u, 1u) == 0u) {
+      const float kindRoll = float((h >> 24u) & 255u) / 255.0;
+      const float life = mix(0.28, 0.95, float((h >> 4u) & 255u) / 255.0);
+      vec3 velocity = self.velocity + jitter * 0.35;
+      if (kindRoll > 0.72) {
+        velocity.y += 0.25;
+      } else if (kindRoll < 0.22) {
+        velocity.y -= 0.08;
+      }
+      pc.foam.particles[slot].position = self.position + jitter * (p.kernelRadius * 0.25);
+      pc.foam.particles[slot].velocity = velocity;
+      pc.foam.particles[slot].life = life;
+      return;
+    }
+  }
+}

@@ -35,6 +35,12 @@ TEST(OptionsTest, CaptureImpliesHeadless) {
   EXPECT_EQ(options.capturePath, "out.png");
 }
 
+TEST(OptionsTest, ParsesSolver) {
+  EXPECT_EQ(Parse({"--solver", "dfsph"}).solver, sim::SolverMethod::Dfsph);
+  EXPECT_EQ(Parse({"--solver", "wcsph"}).solver, sim::SolverMethod::Wcsph);
+  EXPECT_THROW(Parse({"--solver", "pbf"}), std::invalid_argument);
+}
+
 TEST(OptionsTest, ParsesScenePreset) {
   EXPECT_EQ(Parse({"--scene", "drop"}).scene, sim::ScenePreset::Drop);
   EXPECT_EQ(Parse({"--scene", "double"}).scene, sim::ScenePreset::DoubleDam);

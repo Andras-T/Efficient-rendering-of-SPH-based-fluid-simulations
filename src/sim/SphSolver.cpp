@@ -29,9 +29,12 @@ struct SphPush {
   VkDeviceAddress fill = 0;
   VkDeviceAddress blockSums = 0;
   VkDeviceAddress params = 0;
+  VkDeviceAddress foam = 0;
+  std::uint32_t solvePass = 0;
+  std::uint32_t foamSeed = 0;
 };
 
-static_assert(sizeof(SphPush) == 72);
+static_assert(sizeof(SphPush) == 88);
 
 constexpr VkBufferUsageFlags StorageUsage =
     VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
@@ -78,6 +81,10 @@ GpuSimParams MakeGpuParams(const SimParams& params, const Grid& grid, std::uint3
       .cursorRadius = cursorRadius,
       .cursorPosition = cursorPosition,
       .cursorForce = cursorForce,
+      .solverMode = params.solver == SolverMethod::Dfsph ? SolverModeDfsph : SolverModeWcsph,
+      .densityIterations = params.densityIterations,
+      .foamCapacity = FoamCapacity,
+      .foamDt = params.timeStep * static_cast<float>(std::max(1U, params.substeps)),
   };
 }
 
@@ -105,7 +112,17 @@ SphSolver::SphSolver(const gpu::Context& context) : context_(&context) {
   density_ = MakeCompute(device, layout, "Density.comp");
   forces_ = MakeCompute(device, layout, "Forces.comp");
   integrate_ = MakeCompute(device, layout, "Integrate.comp");
+  kick_ = MakeCompute(device, layout, "Kick.comp");
+  drift_ = MakeCompute(device, layout, "Drift.comp");
+  alpha_ = MakeCompute(device, layout, "DfsphAlpha.comp");
+  kappa_ = MakeCompute(device, layout, "DfsphKappa.comp");
+  apply_ = MakeCompute(device, layout, "DfsphApply.comp");
+  foamSpawn_ = MakeCompute(device, layout, "FoamSpawn.comp");
+  foamAdvect_ = MakeCompute(device, layout, "FoamAdvect.comp");
   params_ = MakeStorage(context, sizeof(GpuSimParams));
+  foam_ = MakeStorage(context, static_cast<VkDeviceSize>(FoamCapacity) * sizeof(FoamParticle));
+  std::memset(foam_.mapped<std::uint8_t>().data(), 0, foam_.mapped<std::uint8_t>().size());
+  foam_.flush();
 }
 
 void SphSolver::ensureParticleBuffers(std::uint32_t particleCount) {
@@ -173,7 +190,14 @@ void SphSolver::setViscosity(float viscosity) {
   }
 }
 
-void SphSolver::push(VkCommandBuffer commandBuffer) const {
+void SphSolver::setSolver(SolverMethod solver) {
+  paramsHost_.solver = solver;
+  if (params_.handle() != VK_NULL_HANDLE) {
+    writeParams(count_, cellCount_);
+  }
+}
+
+void SphSolver::push(VkCommandBuffer commandBuffer, std::uint32_t solvePass) const {
   const SphPush constants{
       .particles = particles_.address(),
       .sorted = sorted_.address(),
@@ -184,16 +208,27 @@ void SphSolver::push(VkCommandBuffer commandBuffer) const {
       .fill = fill_.address(),
       .blockSums = blockSums_.address(),
       .params = params_.address(),
+      .foam = foam_.address(),
+      .solvePass = solvePass,
+      .foamSeed = foamSeed_,
   };
   vkCmdPushConstants(commandBuffer, layout_.get(), VK_SHADER_STAGE_COMPUTE_BIT, 0,
                      sizeof(constants), &constants);
 }
 
-void SphSolver::dispatchParticles(VkCommandBuffer commandBuffer, VkPipeline pipeline) const {
+void SphSolver::dispatchParticles(VkCommandBuffer commandBuffer, VkPipeline pipeline,
+                                  std::uint32_t solvePass) const {
   const std::uint32_t groups = DispatchCount(count_, SphGroupSize);
   if (groups == 0) {
     return;
   }
+  vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+  push(commandBuffer, solvePass);
+  vkCmdDispatch(commandBuffer, groups, 1, 1);
+}
+
+void SphSolver::dispatchFoam(VkCommandBuffer commandBuffer, VkPipeline pipeline) const {
+  const std::uint32_t groups = DispatchCount(FoamCapacity, SphGroupSize);
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
   push(commandBuffer);
   vkCmdDispatch(commandBuffer, groups, 1, 1);
@@ -257,7 +292,37 @@ void SphSolver::recordSubstep(VkCommandBuffer commandBuffer) const {
   ComputeToCompute(commandBuffer);
   dispatchParticles(commandBuffer, forces_.get());
   ComputeToCompute(commandBuffer);
-  dispatchParticles(commandBuffer, integrate_.get());
+  if (paramsHost_.solver != SolverMethod::Dfsph) {
+    dispatchParticles(commandBuffer, integrate_.get());
+    ComputeToCompute(commandBuffer);
+    return;
+  }
+
+  dispatchParticles(commandBuffer, kick_.get());
+  ComputeToCompute(commandBuffer);
+  dispatchParticles(commandBuffer, alpha_.get());
+  ComputeToCompute(commandBuffer);
+  const std::uint32_t densityIters = std::max(1U, paramsHost_.densityIterations);
+  for (std::uint32_t iter = 0; iter < densityIters; ++iter) {
+    dispatchParticles(commandBuffer, density_.get());
+    ComputeToCompute(commandBuffer);
+    dispatchParticles(commandBuffer, kappa_.get(), 0);
+    ComputeToCompute(commandBuffer);
+    dispatchParticles(commandBuffer, apply_.get());
+    ComputeToCompute(commandBuffer);
+  }
+  dispatchParticles(commandBuffer, kappa_.get(), 1);
+  ComputeToCompute(commandBuffer);
+  dispatchParticles(commandBuffer, apply_.get());
+  ComputeToCompute(commandBuffer);
+  dispatchParticles(commandBuffer, drift_.get());
+  ComputeToCompute(commandBuffer);
+}
+
+void SphSolver::recordFoam(VkCommandBuffer commandBuffer) const {
+  dispatchParticles(commandBuffer, foamSpawn_.get());
+  ComputeToCompute(commandBuffer);
+  dispatchFoam(commandBuffer, foamAdvect_.get());
   ComputeToCompute(commandBuffer);
 }
 
@@ -272,6 +337,9 @@ void SphSolver::upload(std::span<const Particle> particles, const SimParams& par
     std::memcpy(particles_.mapped<std::uint8_t>().data(), particles.data(), particles.size_bytes());
     particles_.flush();
   }
+  std::memset(foam_.mapped<std::uint8_t>().data(), 0, foam_.mapped<std::uint8_t>().size());
+  foam_.flush();
+  foamSeed_ = 1;
   writeParams(count_, cellCount_);
 }
 
@@ -282,6 +350,8 @@ void SphSolver::record(VkCommandBuffer commandBuffer, std::uint32_t substeps) co
   for (std::uint32_t step = 0; step < substeps; ++step) {
     recordSubstep(commandBuffer);
   }
+  recordFoam(commandBuffer);
+  ++foamSeed_;
 }
 
 void SphSolver::step(std::uint32_t substeps) {

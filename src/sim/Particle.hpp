@@ -8,11 +8,22 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string_view>
 
 namespace sph::sim {
 
 constexpr std::uint32_t ParticleFlagFluid = 0;
 constexpr std::uint32_t ParticleFlagBoundary = 1;
+
+constexpr std::uint32_t SolverModeWcsph = 0;
+constexpr std::uint32_t SolverModeDfsph = 1;
+
+constexpr std::uint32_t FoamSpray = 0;
+constexpr std::uint32_t FoamFoam = 1;
+constexpr std::uint32_t FoamBubble = 2;
+constexpr std::uint32_t FoamCapacity = 4096;
+
+enum class SolverMethod : std::uint8_t { Wcsph, Dfsph };
 
 // Scalar-layout particle; must match shaders/Types.glsl.
 struct Particle {
@@ -23,12 +34,21 @@ struct Particle {
   glm::vec3 force{0.0F};
   float pressure = 0.0F;
   std::uint32_t flags = ParticleFlagFluid;
-  float pad0 = 0.0F;
-  float pad1 = 0.0F;
-  float pad2 = 0.0F;
+  float alpha = 0.0F;
+  float kappa = 0.0F;
+  float divergence = 0.0F;
 };
 
 static_assert(sizeof(Particle) == 64);
+
+struct FoamParticle {
+  glm::vec3 position{0.0F};
+  float life = 0.0F;
+  glm::vec3 velocity{0.0F};
+  std::uint32_t alive = 0;
+};
+
+static_assert(sizeof(FoamParticle) == 32);
 
 struct GpuSimParams {
   glm::vec3 domainMin{0.0F};
@@ -51,9 +71,13 @@ struct GpuSimParams {
   float cursorRadius = 0.0F;
   glm::vec3 cursorPosition{0.0F};
   glm::vec3 cursorForce{0.0F};
+  std::uint32_t solverMode = SolverModeWcsph;
+  std::uint32_t densityIterations = 2;
+  std::uint32_t foamCapacity = FoamCapacity;
+  float foamDt = 0.0F;
 };
 
-static_assert(sizeof(GpuSimParams) == 128);
+static_assert(sizeof(GpuSimParams) == 144);
 
 struct FrameUniforms {
   glm::mat4 view{1.0F};
@@ -80,5 +104,8 @@ static_assert(offsetof(FrameUniforms, particles) == 272);
 static_assert(offsetof(FrameUniforms, absorption) == 288);
 static_assert(offsetof(FrameUniforms, exposure) == 348);
 static_assert(sizeof(FrameUniforms) == 352);
+
+[[nodiscard]] const char* SolverMethodName(SolverMethod method);
+[[nodiscard]] SolverMethod ParseSolverMethod(std::string_view name);
 
 }  // namespace sph::sim

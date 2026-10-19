@@ -26,6 +26,7 @@ struct HudState {
   std::uint32_t substeps = 0;
   float restDensity = 0.0F;
   float viscosity = 0.0F;
+  sim::SolverMethod solver = sim::SolverMethod::Wcsph;
   render::DebugView view = render::DebugView::Final;
   float exposure = 0.85F;
   glm::vec3 absorption{2.45F, 0.42F, 0.12F};

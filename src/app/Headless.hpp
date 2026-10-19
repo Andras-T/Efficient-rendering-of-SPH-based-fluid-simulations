@@ -25,6 +25,7 @@ struct OffscreenRequest {
   const render::Camera* camera = nullptr;
   bool simulate = false;
   render::DebugView view = render::DebugView::Final;
+  sim::SolverMethod solver = sim::SolverMethod::Wcsph;
 };
 
 // Renders offscreen and returns the last frame as tightly packed sRGB RGBA8.

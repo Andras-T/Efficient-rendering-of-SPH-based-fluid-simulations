@@ -1,5 +1,7 @@
 #pragma once
 
+#include "sim/Particle.hpp"
+
 #include <glm/vec3.hpp>
 
 #include <cstdint>
@@ -18,6 +20,8 @@ struct SimParams {
   float restitution = 0.05F;
   float timeStep = 0.0012F;
   std::uint32_t substeps = 8;
+  SolverMethod solver = SolverMethod::Wcsph;
+  std::uint32_t densityIterations = 2;
 
   [[nodiscard]] float mass() const;
   [[nodiscard]] float supportRadius() const;

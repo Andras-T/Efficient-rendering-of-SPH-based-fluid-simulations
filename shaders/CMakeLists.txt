@@ -20,6 +20,15 @@ sph_add_shader_library(sph_shaders
     Density.comp
     Forces.comp
     Integrate.comp
+    Kick.comp
+    Drift.comp
+    DfsphAlpha.comp
+    DfsphKappa.comp
+    DfsphApply.comp
+    FoamSpawn.comp
+    FoamAdvect.comp
+    Foam.vert
+    Foam.frag
   INCLUDES
     Types.glsl
     Kernels.glsl

@@ -69,6 +69,8 @@ Options ParseOptions(std::span<const std::string_view> args) {
       options.scene = sim::ParseScenePreset(value());
     } else if (arg == "--view") {
       options.view = render::ParseDebugView(value());
+    } else if (arg == "--solver") {
+      options.solver = sim::ParseSolverMethod(value());
     } else if (arg == "--validation") {
       options.validation = true;
     } else if (arg == "--no-validation") {
@@ -95,7 +97,8 @@ std::string_view UsageText() {
   --capture PATH     write the last frame as PNG (implies --headless)
   --sequence DIR     write every frame as DIR/0000.png (implies --headless)
   --scene NAME       empty, dam, drop, or double (default: dam)
-  --view NAME        final, particles, density, velocity, cell, depth, smooth, thickness, normals
+  --view NAME        final, particles, density, velocity, cell, depth, smooth, thickness, normals, foam
+  --solver NAME      wcsph or dfsph (default: wcsph)
   --validation       enable Vulkan validation layers (default in debug builds)
   --no-validation    disable Vulkan validation layers
   -h, --help         show this help

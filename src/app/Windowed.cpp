@@ -76,6 +76,7 @@ int RunWindowed(const Options& options) {
                    swapchain.imageCount());
   gpu::GpuProfiler profiler(context, FramesInFlight);
   sim::Scene scene = sim::BuildScene(options.scene);
+  scene.params.solver = options.solver;
   sim::CalibrateRestDensity(scene.particles, scene.params);
   sim::SphSolver solver(context);
   solver.upload(scene.particles, scene.params);
@@ -153,6 +154,7 @@ int RunWindowed(const Options& options) {
         .substeps = solver.params().substeps,
         .restDensity = solver.params().restDensity,
         .viscosity = solver.params().viscosity,
+        .solver = solver.params().solver,
         .view = renderer.settings().view,
         .exposure = renderer.settings().exposure,
         .absorption = renderer.settings().absorption,
@@ -161,13 +163,19 @@ int RunWindowed(const Options& options) {
     if (hudResult.sceneChanged || hudResult.resetScene) {
       preset = hud.preset;
       scene = sim::BuildScene(preset);
+      scene.params.solver = hud.solver;
       sim::CalibrateRestDensity(scene.particles, scene.params);
       solver.upload(scene.particles, scene.params);
       cursorDrag = {};
       camera.frame(scene.params.domainMin, scene.params.domainMax);
       camera.setAspect(swapchain.extent());
-    } else if (hud.viscosity != solver.params().viscosity) {
-      solver.setViscosity(hud.viscosity);
+    } else {
+      if (hud.viscosity != solver.params().viscosity) {
+        solver.setViscosity(hud.viscosity);
+      }
+      if (hud.solver != solver.params().solver) {
+        solver.setSolver(hud.solver);
+      }
     }
     paused = hud.paused;
     renderer.settings().view = hud.view;
@@ -195,7 +203,8 @@ int RunWindowed(const Options& options) {
       profiler.mark(commandBuffer, "sim");
     }
     renderer.record(commandBuffer, {image, swapchain.view(imageIndex), swapchain.extent()}, camera,
-                    solver.particleAddress(), solver.count(), solver.params(),
+                    solver.particleAddress(), solver.count(), solver.foamAddress(),
+                    solver.foamCapacity(), solver.params(),
                     [&](VkCommandBuffer overlay) { imgui.record(overlay); });
     profiler.mark(commandBuffer, "render");
     profiler.endFrame(commandBuffer);

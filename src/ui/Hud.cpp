@@ -133,6 +133,10 @@ HudResult DrawHud(HudState& state) {
   ImGui::Text("dt %.4f x %u", static_cast<double>(state.timeStep), state.substeps);
   ImGui::Text("rest density %.1f", static_cast<double>(state.restDensity));
   ImGui::SliderFloat("Viscosity", &state.viscosity, 0.0F, 2.0F, "%.2f");
+  int solver = state.solver == sim::SolverMethod::Dfsph ? 1 : 0;
+  if (ImGui::Combo("Solver", &solver, "WCSPH\0DFSPH\0")) {
+    state.solver = solver == 1 ? sim::SolverMethod::Dfsph : sim::SolverMethod::Wcsph;
+  }
   int scene = PresetIndex(state.preset);
   if (ImGui::Combo("Scene", &scene, "Empty\0Dam break\0Drop\0Double dam\0")) {
     state.preset = PresetFromIndex(scene);
@@ -149,12 +153,12 @@ HudResult DrawHud(HudState& state) {
   int view = static_cast<int>(state.view);
   if (ImGui::Combo(
           "View", &view,
-          "Final\0Particles\0Density\0Velocity\0Cell\0Depth\0Smooth\0Thickness\0Normals\0")) {
+          "Final\0Particles\0Density\0Velocity\0Cell\0Depth\0Smooth\0Thickness\0Normals\0Foam\0")) {
     state.view = static_cast<render::DebugView>(view);
   }
   ImGui::SliderFloat("Exposure", &state.exposure, 0.05F, 4.0F, "%.2f");
   ImGui::SliderFloat3("Absorption", &state.absorption.x, 0.0F, 8.0F, "%.2f");
-  ImGui::TextUnformatted("[ ] or 1-9 to cycle views");
+  ImGui::TextUnformatted("[ ] or 1-9 to cycle views, including foam");
   ImGui::End();
 
   if (state.camera != nullptr) {

@@ -5,6 +5,7 @@
 #include "render/Camera.hpp"
 #include "render/DebugView.hpp"
 #include "render/FluidPass.hpp"
+#include "render/FoamPass.hpp"
 #include "render/Hdri.hpp"
 #include "render/ParticlePass.hpp"
 #include "render/SkyPass.hpp"
@@ -48,7 +49,8 @@ class Renderer {
   // Draws the frame and leaves `target` in COLOR_ATTACHMENT_OPTIMAL.
   // `overlay` is recorded last, inside a separate rendering scope.
   void record(VkCommandBuffer commandBuffer, const RenderTarget& target, const Camera& camera,
-              VkDeviceAddress particles, std::uint32_t particleCount, const sim::SimParams& params,
+              VkDeviceAddress particles, std::uint32_t particleCount, VkDeviceAddress foam,
+              std::uint32_t foamCapacity, const sim::SimParams& params,
               const OverlayCallback& overlay = {});
 
  private:
@@ -57,6 +59,7 @@ class Renderer {
   SkyPass skyPass_;
   ParticlePass particlePass_;
   FluidPass fluidPass_;
+  FoamPass foamPass_;
   TonemapPass tonemapPass_;
   gpu::Unique<VkSampler> hdrSampler_;
   gpu::Image hdr_;

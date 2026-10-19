@@ -47,4 +47,36 @@ uint CellIndex(ivec3 cell, GpuSimParams p) {
   return uint(cell.x) + uint(cell.y) * p.gridSize.x + uint(cell.z) * p.gridSize.x * p.gridSize.y;
 }
 
+void CollideBox(inout vec3 position, inout vec3 velocity, GpuSimParams p) {
+  const vec3 minBound = p.domainMin + vec3(p.collisionRadius);
+  const vec3 maxBound = p.domainMax - vec3(p.collisionRadius);
+  for (int axis = 0; axis < 3; ++axis) {
+    if (position[axis] < minBound[axis]) {
+      position[axis] = minBound[axis];
+      if (velocity[axis] < 0.0) {
+        velocity[axis] *= -p.restitution;
+      }
+    } else if (position[axis] > maxBound[axis]) {
+      position[axis] = maxBound[axis];
+      if (velocity[axis] > 0.0) {
+        velocity[axis] *= -p.restitution;
+      }
+    }
+  }
+}
+
+vec3 NonPressureAccel(Particle particle, GpuSimParams p) {
+  vec3 acceleration = particle.force / particle.density + p.gravity;
+  if (p.cursorRadius > 0.0) {
+    const vec3 toParticle = particle.position - p.cursorPosition;
+    const float dist2 = dot(toParticle, toParticle);
+    const float radius2 = p.cursorRadius * p.cursorRadius;
+    if (dist2 < radius2) {
+      const float falloff = 1.0 - dist2 / radius2;
+      acceleration += p.cursorForce * (falloff * falloff);
+    }
+  }
+  return acceleration;
+}
+
 #endif

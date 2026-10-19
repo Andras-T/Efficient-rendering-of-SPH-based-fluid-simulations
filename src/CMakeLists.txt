@@ -20,6 +20,7 @@ add_library(sph_engine STATIC
   render/Camera.cpp
   render/DebugView.cpp
   render/FluidPass.cpp
+  render/FoamPass.cpp
   render/Hdri.cpp
   render/ParticlePass.cpp
   render/Renderer.cpp

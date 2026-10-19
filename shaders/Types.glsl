@@ -7,6 +7,13 @@
 
 const uint ParticleFlagFluid = 0;
 const uint ParticleFlagBoundary = 1;
+const uint SolverModeWcsph = 0;
+const uint SolverModeDfsph = 1;
+const uint FoamSpray = 0;
+const uint FoamFoam = 1;
+const uint FoamBubble = 2;
+const uint SolvePassDensity = 0;
+const uint SolvePassDivergence = 1;
 
 struct Particle {
   vec3 position;
@@ -16,9 +23,16 @@ struct Particle {
   vec3 force;
   float pressure;
   uint flags;
-  float pad0;
-  float pad1;
-  float pad2;
+  float alpha;
+  float kappa;
+  float divergence;
+};
+
+struct FoamParticle {
+  vec3 position;
+  float life;
+  vec3 velocity;
+  uint alive;
 };
 
 struct GpuSimParams {
@@ -42,6 +56,10 @@ struct GpuSimParams {
   float cursorRadius;
   vec3 cursorPosition;
   vec3 cursorForce;
+  uint solverMode;
+  uint densityIterations;
+  uint foamCapacity;
+  float foamDt;
 };
 
 layout(scalar, buffer_reference, buffer_reference_align = 16) readonly buffer ParticleBuffer {
@@ -60,6 +78,10 @@ layout(scalar, buffer_reference, buffer_reference_align = 16) readonly buffer Pa
   GpuSimParams p;
 };
 
+layout(scalar, buffer_reference, buffer_reference_align = 16) buffer FoamRW {
+  coherent FoamParticle particles[];
+};
+
 const uint DebugViewFinal = 0;
 const uint DebugViewParticles = 1;
 const uint DebugViewDensity = 2;
@@ -69,6 +91,7 @@ const uint DebugViewRawDepth = 5;
 const uint DebugViewSmoothDepth = 6;
 const uint DebugViewThickness = 7;
 const uint DebugViewNormals = 8;
+const uint DebugViewFoam = 9;
 
 layout(scalar, buffer_reference, buffer_reference_align = 16) readonly buffer FrameBuffer {
   mat4 view;

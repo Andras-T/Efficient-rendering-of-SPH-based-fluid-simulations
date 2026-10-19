@@ -11,6 +11,9 @@ layout(push_constant, scalar) uniform PushConstants {
   UintRW fill;
   UintRW blockSums;
   ParamsBuffer params;
+  FoamRW foam;
+  uint solvePass;
+  uint foamSeed;
 } pc;
 
 #endif
