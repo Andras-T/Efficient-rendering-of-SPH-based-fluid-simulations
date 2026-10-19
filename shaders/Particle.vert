@@ -3,6 +3,10 @@
 
 #include "Types.glsl"
 
+layout(push_constant, scalar) uniform PushConstants {
+  FrameBuffer frame;
+};
+
 layout(location = 0) out vec3 outViewPos;
 layout(location = 1) out vec3 outViewCenter;
 layout(location = 2) flat out uint outFlags;

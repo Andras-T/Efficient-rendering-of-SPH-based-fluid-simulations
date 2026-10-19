@@ -18,6 +18,11 @@ struct HudState {
   std::span<const gpu::GpuProfiler::Interval> timings;
   sim::ScenePreset preset = sim::ScenePreset::DamBreak;
   std::uint32_t particleCount = 0;
+  bool paused = false;
+  float timeStep = 0.0F;
+  std::uint32_t substeps = 0;
+  float restDensity = 0.0F;
+  float viscosity = 0.0F;
 };
 
 void ApplyCameraInput(render::Camera& camera);

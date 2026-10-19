@@ -5,9 +5,9 @@
 #include "render/BackgroundPass.hpp"
 #include "render/Camera.hpp"
 #include "render/ParticlePass.hpp"
-#include "sim/GpuParticles.hpp"
 #include "sim/SimParams.hpp"
 
+#include <cstdint>
 #include <functional>
 
 namespace sph::render {
@@ -31,7 +31,7 @@ class Renderer {
   // Draws the frame and leaves `target` in COLOR_ATTACHMENT_OPTIMAL.
   // `overlay` is recorded last, inside the same rendering scope.
   void record(VkCommandBuffer commandBuffer, const RenderTarget& target, const Camera& camera,
-              const sim::GpuParticles& particles, const sim::SimParams& params,
+              VkDeviceAddress particles, std::uint32_t particleCount, const sim::SimParams& params,
               const OverlayCallback& overlay = {});
 
   [[nodiscard]] BackgroundSettings& background() { return background_; }

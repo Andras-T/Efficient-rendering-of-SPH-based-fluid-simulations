@@ -2,6 +2,7 @@
 
 #include "gpu/Vulkan.hpp"
 
+#include <glm/ext/vector_uint3.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 
@@ -27,6 +28,31 @@ struct Particle {
 };
 
 static_assert(sizeof(Particle) == 64);
+
+struct GpuSimParams {
+  glm::vec3 domainMin{0.0F};
+  float kernelRadius = 0.0F;
+  glm::vec3 domainMax{0.0F};
+  float kernelRadius2 = 0.0F;
+  glm::vec3 gravity{0.0F};
+  float mass = 0.0F;
+  float restDensity = 0.0F;
+  float stiffness = 0.0F;
+  float eosGamma = 0.0F;
+  float viscosity = 0.0F;
+  float dt = 0.0F;
+  float restitution = 0.0F;
+  float collisionRadius = 0.0F;
+  float invCellSize = 0.0F;
+  glm::uvec3 gridSize{1, 1, 1};
+  std::uint32_t particleCount = 0;
+  std::uint32_t cellCount = 0;
+  std::uint32_t pad0 = 0;
+  std::uint32_t pad1 = 0;
+  std::uint32_t pad2 = 0;
+};
+
+static_assert(sizeof(GpuSimParams) == 112);
 
 struct FrameUniforms {
   glm::mat4 view{1.0F};

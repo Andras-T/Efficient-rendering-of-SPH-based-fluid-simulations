@@ -20,9 +20,12 @@ add_library(sph_engine STATIC
   render/Camera.cpp
   render/ParticlePass.cpp
   render/Renderer.cpp
+  sim/CpuSolver.cpp
   sim/GpuParticles.cpp
+  sim/Grid.cpp
   sim/Scene.cpp
   sim/SimParams.cpp
+  sim/SphSolver.cpp
   ui/Hud.cpp)
 target_include_directories(sph_engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(sph_engine PUBLIC

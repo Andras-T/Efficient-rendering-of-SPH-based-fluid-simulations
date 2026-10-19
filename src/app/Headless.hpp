@@ -22,6 +22,7 @@ struct OffscreenRequest {
   sim::ScenePreset preset = sim::ScenePreset::Empty;
   const sim::Scene* scene = nullptr;
   const render::Camera* camera = nullptr;
+  bool simulate = false;
 };
 
 // Renders offscreen and returns the last frame as tightly packed sRGB RGBA8.

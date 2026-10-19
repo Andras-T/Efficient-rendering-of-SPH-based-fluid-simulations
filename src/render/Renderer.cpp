@@ -38,7 +38,7 @@ void Renderer::resize(VkExtent2D extent) {
 }
 
 void Renderer::record(VkCommandBuffer commandBuffer, const RenderTarget& target,
-                      const Camera& camera, const sim::GpuParticles& particles,
+                      const Camera& camera, VkDeviceAddress particles, std::uint32_t particleCount,
                       const sim::SimParams& params, const OverlayCallback& overlay) {
   resize(target.extent);
 
@@ -47,8 +47,8 @@ void Renderer::record(VkCommandBuffer commandBuffer, const RenderTarget& target,
   uniforms.projection = camera.projection();
   uniforms.lightDirection = glm::normalize(uniforms.lightDirection);
   uniforms.radius = params.renderRadius();
-  uniforms.particles = particles.address();
-  uniforms.count = particles.count();
+  uniforms.particles = particles;
+  uniforms.count = particleCount;
   uniforms_.mapped<sim::FrameUniforms>().front() = uniforms;
   uniforms_.flush();
 
@@ -110,7 +110,7 @@ void Renderer::record(VkCommandBuffer commandBuffer, const RenderTarget& target,
   vkCmdSetScissor(commandBuffer, 0, 1, &area);
 
   backgroundPass_.record(commandBuffer, background_);
-  particlePass_.record(commandBuffer, uniforms_.address(), particles.count());
+  particlePass_.record(commandBuffer, uniforms_.address(), particleCount);
   if (overlay) {
     overlay(commandBuffer);
   }
