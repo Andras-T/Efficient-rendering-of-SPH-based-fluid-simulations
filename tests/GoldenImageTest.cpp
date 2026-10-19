@@ -9,7 +9,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdlib>
 #include <filesystem>
 #include <string>
 #include <string_view>
@@ -80,10 +79,10 @@ void CompareGolden(const gpu::Context& context, std::string_view name,
   const auto rgba = RenderOffscreen(context, request);
   ASSERT_EQ(rgba.size(), std::size_t{request.extent.width} * request.extent.height * 4);
   const auto path = GoldenPath(name);
-  if (const char* write = std::getenv("SPH_WRITE_GOLDENS"); write != nullptr && *write != '\0') {
-    std::filesystem::create_directories(path.parent_path());
-    WritePng(path, request.extent, rgba);
-  }
+#ifdef SPH_WRITE_GOLDENS
+  std::filesystem::create_directories(path.parent_path());
+  WritePng(path, request.extent, rgba);
+#endif
   ASSERT_TRUE(std::filesystem::exists(path)) << path.string();
   VkExtent2D loaded{};
   const auto expected = ReadPng(path, loaded);
