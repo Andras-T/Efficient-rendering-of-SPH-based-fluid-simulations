@@ -77,6 +77,7 @@ Context::Context(const ContextDesc& desc) {
     features13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
     features13.synchronization2 = VK_TRUE;
     features13.dynamicRendering = VK_TRUE;
+    features13.shaderDemoteToHelperInvocation = VK_TRUE;
 
     vkb::PhysicalDeviceSelector selector(instance_);
     selector.set_minimum_version(1, 3)

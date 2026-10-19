@@ -2,7 +2,9 @@
 
 Real-time fluid simulation on the GPU: smoothed particle hydrodynamics in Vulkan compute shaders, rendered as a screen-space fluid surface.
 
-> Work in progress. The original thesis project is being rebuilt from scratch; this branch contains the foundation (build, Vulkan context, headless rendering, tests, CI).
+![Dam break](docs/showcase.gif)
+
+WCSPH by default (Tait EOS, poly6 / spiky / viscosity Laplacian) on a uniform grid, with DFSPH as a toggle. Solid walls use Akinci boundary particles. Diffuse foam and spray spawn from splashes and crests. Screen-space fluid rendering: eye-depth impostors, additive thickness, narrow-range smoothing, Schlick Fresnel, Beer–Lambert absorption, and a Poly Haven HDRI.
 
 ## Build
 
@@ -13,14 +15,20 @@ cmake --preset release
 cmake --build --preset release
 ctest --preset release
 build/release/bin/sph-fluid                          # window
+build/release/bin/sph-fluid --scene drop             # empty, dam, drop, or double
+build/release/bin/sph-fluid --view depth             # stage explorer
+build/release/bin/sph-fluid --solver dfsph           # incompressible DFSPH
 build/release/bin/sph-fluid --capture out.png        # last frame
 build/release/bin/sph-fluid --sequence frames --frames 12
+cmake --install build/release --prefix dist          # dist/bin/sph-fluid
 ```
 
-In the window: right-drag orbits, middle-drag pans, scroll zooms. GPU timings and camera controls are in the overlay.
+In the window: left-drag stirs the fluid, right-drag orbits, middle-drag pans, scroll zooms. Space pauses. `[` `]` and 1–9 step through the stage explorer (including foam). The overlay has scene presets, WCSPH/DFSPH, a viscosity slider, Reset, exposure, and GPU timings.
 
 On Linux without a GPU, install Mesa's lavapipe (`mesa-vulkan-drivers`).
 
 ## Credits
 
 Started as the thesis "Efficient rendering of SPH based fluid simulations" by András Tóth, with guidance from András Máté Fridvalszky.
+
+Environment lighting uses [Kloofendal 48d Partly Cloudy Puresky](https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky) from [Poly Haven](https://polyhaven.com), licensed [CC0](https://creativecommons.org/publicdomain/zero/1.0/).

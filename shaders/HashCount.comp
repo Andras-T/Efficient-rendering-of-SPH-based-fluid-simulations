@@ -1,0 +1,19 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "Types.glsl"
+#include "Kernels.glsl"
+#include "SphPush.glsl"
+
+layout(local_size_x = 64) in;
+
+void main() {
+  const uint i = gl_GlobalInvocationID.x;
+  const GpuSimParams p = pc.params.p;
+  if (i >= p.particleCount) {
+    return;
+  }
+  const uint cell = CellIndex(CellCoords(pc.particles.particles[i].position, p), p);
+  pc.cellOf.data[i] = cell;
+  atomicAdd(pc.counts.data[cell], 1);
+}

@@ -54,6 +54,23 @@ TEST(CameraTest, ReverseZNearPlaneMapsToOne) {
   EXPECT_GT(farClip.z / farClip.w, 0.0F);
 }
 
+TEST(CameraTest, CenterRayHitsTargetPlane) {
+  Camera camera;
+  camera.setTarget({0.4F, 0.3F, -0.2F});
+  camera.setYawPitch(0.55F, -0.25F);
+  camera.setDistance(3.5F);
+  camera.setAspect(16.0F / 9.0F);
+
+  EXPECT_GT(glm::dot(camera.worldDirection({0.0F, 0.0F}), camera.forward()), 0.999F);
+
+  const auto hit = camera.hitPlane({0.0F, 0.0F}, camera.target(), camera.forward());
+  if (!hit.has_value()) {
+    FAIL() << "center ray missed the target plane";
+    return;
+  }
+  EXPECT_NEAR(glm::length(*hit - camera.target()), 0.0F, 1.0e-4F);
+}
+
 TEST(CameraTest, AspectFollowsExtent) {
   Camera camera;
   camera.setAspect(VkExtent2D{1920, 1080});

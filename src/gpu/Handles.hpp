@@ -56,5 +56,17 @@ Unique<VkSemaphore> CreateBinarySemaphore(VkDevice device);
 Unique<VkCommandPool> CreateCommandPool(VkDevice device, std::uint32_t queueFamily,
                                         VkCommandPoolCreateFlags flags = 0);
 Unique<VkShaderModule> CreateShaderModule(VkDevice device, std::span<const std::uint32_t> spirv);
+Unique<VkSampler> CreateSampler(VkDevice device, VkSamplerAddressMode addressU,
+                                VkSamplerAddressMode addressV);
+Unique<VkDescriptorSetLayout> CreateDescriptorSetLayout(
+    VkDevice device, std::span<const VkDescriptorSetLayoutBinding> bindings);
+Unique<VkDescriptorPool> CreateDescriptorPool(VkDevice device, std::uint32_t maxSets,
+                                              std::span<const VkDescriptorPoolSize> sizes);
+VkDescriptorSet AllocateDescriptorSet(VkDevice device, VkDescriptorPool pool,
+                                      VkDescriptorSetLayout layout);
+void WriteCombinedImage(VkDevice device, VkDescriptorSet set, std::uint32_t binding,
+                        VkImageView view, VkSampler sampler);
+void WriteStorageImage(VkDevice device, VkDescriptorSet set, std::uint32_t binding,
+                       VkImageView view);
 
 }  // namespace sph::gpu

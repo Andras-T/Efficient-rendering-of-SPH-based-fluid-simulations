@@ -1,0 +1,27 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "Types.glsl"
+#include "SphPush.glsl"
+
+layout(local_size_x = 256) in;
+
+shared uint temp[256];
+
+void main() {
+  const uint lid = gl_LocalInvocationID.x;
+  const uint blockCount = (pc.params.p.cellCount + 255u) / 256u;
+  temp[lid] = lid < blockCount ? pc.blockSums.data[lid] : 0u;
+  barrier();
+
+  for (uint stride = 1u; stride < 256u; stride *= 2u) {
+    const uint addend = lid >= stride ? temp[lid - stride] : 0u;
+    barrier();
+    temp[lid] += addend;
+    barrier();
+  }
+
+  if (lid < blockCount) {
+    pc.blockSums.data[lid] = lid == 0u ? 0u : temp[lid - 1u];
+  }
+}

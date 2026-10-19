@@ -9,6 +9,8 @@
 #include "gpu/Image.hpp"
 #include "gpu/Timestamps.hpp"
 #include "render/Renderer.hpp"
+#include "sim/CpuSolver.hpp"
+#include "sim/SphSolver.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -45,9 +47,9 @@ void CopyTargetToBuffer(VkCommandBuffer commandBuffer, VkImage image, VkBuffer b
 
 }  // namespace
 
-std::vector<std::uint8_t> RenderOffscreen(const gpu::Context& context, VkExtent2D extent,
-                                          std::uint32_t frames,
-                                          const std::filesystem::path& sequenceDirectory) {
+std::vector<std::uint8_t> RenderOffscreen(const gpu::Context& context,
+                                          const OffscreenRequest& request) {
+  const VkExtent2D extent = request.extent;
   const gpu::Image target(
       context, {
                    .extent = extent,
@@ -62,21 +64,51 @@ std::vector<std::uint8_t> RenderOffscreen(const gpu::Context& context, VkExtent2
                                  .allocationFlags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT |
                                                     VMA_ALLOCATION_CREATE_MAPPED_BIT,
                              });
-  const render::Renderer renderer(context, CaptureFormat);
+
+  const sim::Scene ownedScene =
+      request.scene == nullptr ? sim::BuildScene(request.preset) : sim::Scene{};
+  const sim::Scene& scene = request.scene == nullptr ? ownedScene : *request.scene;
+
+  render::Camera ownedCamera;
+  ownedCamera.setAspect(extent);
+  ownedCamera.frame(scene.params.domainMin, scene.params.domainMax);
+  const render::Camera& camera = request.camera == nullptr ? ownedCamera : *request.camera;
+
+  sim::Scene simulated = scene;
+  simulated.params.solver = request.solver;
+  if (request.simulate && !simulated.particles.empty()) {
+    sim::CalibrateRestDensity(simulated.particles, simulated.params);
+  }
+  sim::SphSolver solver(context);
+  solver.upload(simulated.particles, simulated.params);
+
+  render::Renderer renderer(context, CaptureFormat);
+  renderer.settings().view = request.view;
+  renderer.resize(extent);
   const render::RenderTarget renderTarget{target.handle(), target.view(), extent};
   gpu::GpuProfiler profiler(context, 1);
 
-  if (!sequenceDirectory.empty()) {
-    std::filesystem::create_directories(sequenceDirectory);
+  if (!request.sequenceDirectory.empty()) {
+    std::filesystem::create_directories(request.sequenceDirectory);
   }
 
   std::vector<std::uint8_t> lastFrame;
-  const std::uint32_t frameCount = std::max(frames, 1U);
+  const std::uint32_t frameCount = std::max(request.frames, 1U);
   for (std::uint32_t frame = 0; frame < frameCount; ++frame) {
-    const bool needPixels = !sequenceDirectory.empty() || (frame + 1 >= frameCount);
+    const bool needPixels = !request.sequenceDirectory.empty() || (frame + 1 >= frameCount);
     gpu::ImmediateSubmit(context, [&](VkCommandBuffer commandBuffer) {
       profiler.beginFrame(commandBuffer, 0);
-      renderer.record(commandBuffer, renderTarget);
+      if (request.simulate) {
+        solver.record(commandBuffer, solver.params().substeps);
+        gpu::GlobalBarrier(
+            commandBuffer, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+            VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+            VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+            VK_ACCESS_2_SHADER_STORAGE_READ_BIT);
+        profiler.mark(commandBuffer, "sim");
+      }
+      renderer.record(commandBuffer, renderTarget, camera, solver.particleAddress(), solver.count(),
+                      solver.foamAddress(), solver.foamCapacity(), solver.params());
       profiler.mark(commandBuffer, "render");
       profiler.endFrame(commandBuffer);
       if (needPixels) {
@@ -90,8 +122,8 @@ std::vector<std::uint8_t> RenderOffscreen(const gpu::Context& context, VkExtent2
     }
     readback.invalidate();
     const auto pixels = readback.mapped<const std::uint8_t>();
-    if (!sequenceDirectory.empty()) {
-      WritePng(SequenceFramePath(sequenceDirectory, frame), extent, pixels);
+    if (!request.sequenceDirectory.empty()) {
+      WritePng(SequenceFramePath(request.sequenceDirectory, frame), extent, pixels);
     }
     if (frame + 1 >= frameCount) {
       lastFrame.assign(pixels.begin(), pixels.end());
@@ -107,16 +139,29 @@ std::vector<std::uint8_t> RenderOffscreen(const gpu::Context& context, VkExtent2
   return lastFrame;
 }
 
+std::vector<std::uint8_t> RenderOffscreen(const gpu::Context& context, VkExtent2D extent,
+                                          std::uint32_t frames,
+                                          const std::filesystem::path& sequenceDirectory) {
+  return RenderOffscreen(
+      context, {.extent = extent, .frames = frames, .sequenceDirectory = sequenceDirectory});
+}
+
 int RunHeadless(const Options& options) {
   const gpu::Context context({.validation = options.validation});
   const VkExtent2D extent{options.width, options.height};
 
   const auto start = std::chrono::steady_clock::now();
-  const auto pixels = RenderOffscreen(context, extent, options.frames, options.sequenceDirectory);
+  const auto pixels = RenderOffscreen(context, {.extent = extent,
+                                                .frames = options.frames,
+                                                .sequenceDirectory = options.sequenceDirectory,
+                                                .preset = options.scene,
+                                                .simulate = true,
+                                                .view = options.view,
+                                                .solver = options.solver});
   const std::chrono::duration<double, std::milli> elapsed =
       std::chrono::steady_clock::now() - start;
-  LogInfo("Rendered {} frame(s) at {}x{} in {:.1f} ms", options.frames, extent.width, extent.height,
-          elapsed.count());
+  LogInfo("Rendered {} frame(s) of '{}' at {}x{} in {:.1f} ms", options.frames,
+          sim::ScenePresetName(options.scene), extent.width, extent.height, elapsed.count());
 
   if (!options.capturePath.empty()) {
     WritePng(options.capturePath, extent, pixels);

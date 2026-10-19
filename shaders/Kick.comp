@@ -1,0 +1,27 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "Types.glsl"
+#include "Kernels.glsl"
+#include "SphPush.glsl"
+
+layout(local_size_x = 64) in;
+
+void main() {
+  const uint i = gl_GlobalInvocationID.x;
+  const GpuSimParams p = pc.params.p;
+  if (i >= p.particleCount) {
+    return;
+  }
+
+  Particle particle = pc.particles.particles[i];
+  if (particle.flags != ParticleFlagFluid) {
+    particle.velocity = vec3(0.0);
+    particle.force = vec3(0.0);
+    pc.particles.particles[i] = particle;
+    return;
+  }
+
+  particle.velocity += NonPressureAccel(particle, p) * p.dt;
+  pc.particles.particles[i] = particle;
+}

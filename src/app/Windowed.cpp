@@ -10,6 +10,9 @@
 #include "gpu/Timestamps.hpp"
 #include "render/Camera.hpp"
 #include "render/Renderer.hpp"
+#include "sim/CpuSolver.hpp"
+#include "sim/Scene.hpp"
+#include "sim/SphSolver.hpp"
 #include "ui/Hud.hpp"
 
 #include <GLFW/glfw3.h>
@@ -66,11 +69,23 @@ int RunWindowed(const Options& options) {
   Window window("SPH Fluid", options.width, options.height);
   const gpu::Context context({.validation = options.validation, .window = window.handle()});
   gpu::Swapchain swapchain(context, window.framebufferExtent());
-  const render::Renderer renderer(context, swapchain.format());
-  ImGuiLayer imgui(context, window.handle(), swapchain.format(), swapchain.imageCount());
+  render::Renderer renderer(context, swapchain.format());
+  renderer.settings().view = options.view;
+  renderer.resize(swapchain.extent());
+  ImGuiLayer imgui(context, window.handle(), swapchain.format(), VK_FORMAT_UNDEFINED,
+                   swapchain.imageCount());
   gpu::GpuProfiler profiler(context, FramesInFlight);
+  sim::Scene scene = sim::BuildScene(options.scene);
+  scene.params.solver = options.solver;
+  sim::CalibrateRestDensity(scene.particles, scene.params);
+  sim::SphSolver solver(context);
+  solver.upload(scene.particles, scene.params);
   render::Camera camera;
   camera.setAspect(swapchain.extent());
+  camera.frame(scene.params.domainMin, scene.params.domainMax);
+  sim::ScenePreset preset = options.scene;
+  bool paused = false;
+  ui::CursorDrag cursorDrag;
 
   std::array<FrameResources, FramesInFlight> frames{};
   for (auto& frame : frames) {
@@ -82,6 +97,7 @@ int RunWindowed(const Options& options) {
     context.waitIdle();
     swapchain.recreate(window.framebufferExtent());
     renderFinished = CreateRenderFinished(context, swapchain.imageCount());
+    renderer.resize(swapchain.extent());
     camera.setAspect(swapchain.extent());
   };
 
@@ -100,6 +116,13 @@ int RunWindowed(const Options& options) {
     gpu::Check(vkWaitForFences(context.device(), 1, &inFlight, VK_TRUE, NoTimeout),
                "vkWaitForFences");
     profiler.resolve(flight);
+    // Particle buffers are updated in place, so consecutive frames cannot overlap.
+    if (frameNumber > 0) {
+      const auto previous = static_cast<std::uint32_t>((frameNumber - 1) % FramesInFlight);
+      const VkFence previousFence = frames.at(previous).inFlight.get();
+      gpu::Check(vkWaitForFences(context.device(), 1, &previousFence, VK_TRUE, NoTimeout),
+                 "vkWaitForFences");
+    }
 
     std::uint32_t imageIndex = 0;
     const VkResult acquired =
@@ -119,7 +142,47 @@ int RunWindowed(const Options& options) {
 
     imgui.beginFrame();
     ui::ApplyCameraInput(camera);
-    ui::DrawHud(context.deviceName(), swapchain.extent(), camera, profiler.intervals());
+    ui::HudState hud{
+        .deviceName = context.deviceName(),
+        .extent = swapchain.extent(),
+        .camera = &camera,
+        .timings = profiler.intervals(),
+        .preset = preset,
+        .particleCount = solver.count(),
+        .paused = paused,
+        .timeStep = solver.params().timeStep,
+        .substeps = solver.params().substeps,
+        .restDensity = solver.params().restDensity,
+        .viscosity = solver.params().viscosity,
+        .solver = solver.params().solver,
+        .view = renderer.settings().view,
+        .exposure = renderer.settings().exposure,
+        .absorption = renderer.settings().absorption,
+    };
+    const ui::HudResult hudResult = ui::DrawHud(hud);
+    if (hudResult.sceneChanged || hudResult.resetScene) {
+      preset = hud.preset;
+      scene = sim::BuildScene(preset);
+      scene.params.solver = hud.solver;
+      sim::CalibrateRestDensity(scene.particles, scene.params);
+      solver.upload(scene.particles, scene.params);
+      cursorDrag = {};
+      camera.frame(scene.params.domainMin, scene.params.domainMax);
+      camera.setAspect(swapchain.extent());
+    } else {
+      if (hud.viscosity != solver.params().viscosity) {
+        solver.setViscosity(hud.viscosity);
+      }
+      if (hud.solver != solver.params().solver) {
+        solver.setSolver(hud.solver);
+      }
+    }
+    paused = hud.paused;
+    renderer.settings().view = hud.view;
+    renderer.settings().exposure = hud.exposure;
+    renderer.settings().absorption = hud.absorption;
+    const ui::CursorForce cursor = ui::SampleMouseStir(camera, paused, cursorDrag);
+    solver.setCursor(cursor.position, cursor.force, cursor.radius);
     imgui.endFrame();
 
     const VkCommandBuffer commandBuffer = frame.commandBuffer;
@@ -130,7 +193,18 @@ int RunWindowed(const Options& options) {
     gpu::Check(vkBeginCommandBuffer(commandBuffer, &beginInfo), "vkBeginCommandBuffer");
     const VkImage image = swapchain.image(imageIndex);
     profiler.beginFrame(commandBuffer, flight);
-    renderer.record(commandBuffer, {image, swapchain.view(imageIndex), swapchain.extent()},
+    if (!paused) {
+      solver.record(commandBuffer, solver.params().substeps);
+      gpu::GlobalBarrier(
+          commandBuffer, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+          VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+          VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+          VK_ACCESS_2_SHADER_STORAGE_READ_BIT);
+      profiler.mark(commandBuffer, "sim");
+    }
+    renderer.record(commandBuffer, {image, swapchain.view(imageIndex), swapchain.extent()}, camera,
+                    solver.particleAddress(), solver.count(), solver.foamAddress(),
+                    solver.foamCapacity(), solver.params(),
                     [&](VkCommandBuffer overlay) { imgui.record(overlay); });
     profiler.mark(commandBuffer, "render");
     profiler.endFrame(commandBuffer);

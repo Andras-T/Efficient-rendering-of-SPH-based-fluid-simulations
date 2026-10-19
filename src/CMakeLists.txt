@@ -18,7 +18,20 @@ add_library(sph_engine STATIC
   gpu/Vulkan.cpp
   render/BackgroundPass.cpp
   render/Camera.cpp
+  render/DebugView.cpp
+  render/FluidPass.cpp
+  render/FoamPass.cpp
+  render/Hdri.cpp
+  render/ParticlePass.cpp
   render/Renderer.cpp
+  render/SkyPass.cpp
+  render/TonemapPass.cpp
+  sim/CpuSolver.cpp
+  sim/GpuParticles.cpp
+  sim/Grid.cpp
+  sim/Scene.cpp
+  sim/SimParams.cpp
+  sim/SphSolver.cpp
   ui/Hud.cpp)
 target_include_directories(sph_engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(sph_engine PUBLIC
@@ -28,6 +41,7 @@ target_compile_definitions(sph_engine PUBLIC
   GLFW_INCLUDE_NONE
   GLM_FORCE_DEPTH_ZERO_TO_ONE
   GLM_FORCE_RADIANS)
+target_compile_definitions(sph_engine PRIVATE "SPH_HDRI_PATH=\"${SPH_HDRI_PATH}\"")
 target_link_libraries(sph_engine
   PUBLIC volk::volk vk-bootstrap::vk-bootstrap GPUOpen::VulkanMemoryAllocator glm::glm glfw
   PRIVATE imgui stb sph_shaders)
@@ -36,3 +50,6 @@ sph_set_warnings(sph_engine)
 add_executable(sph-fluid main.cpp)
 target_link_libraries(sph-fluid PRIVATE sph_engine)
 sph_set_warnings(sph-fluid)
+
+include(GNUInstallDirs)
+install(TARGETS sph-fluid RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

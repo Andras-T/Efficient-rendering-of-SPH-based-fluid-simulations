@@ -1,0 +1,48 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "Types.glsl"
+#include "SphPush.glsl"
+
+layout(local_size_x = 64) in;
+
+void main() {
+  const uint i = gl_GlobalInvocationID.x;
+  const GpuSimParams p = pc.params.p;
+  if (i >= p.foamCapacity) {
+    return;
+  }
+
+  FoamParticle foam = pc.foam.particles[i];
+  if (foam.alive == 0u) {
+    return;
+  }
+
+  const float dt = max(p.foamDt, 1.0e-5);
+  foam.life -= dt;
+  if (foam.life <= 0.0) {
+    foam.alive = 0u;
+    foam.life = 0.0;
+    pc.foam.particles[i] = foam;
+    return;
+  }
+
+  float drag = 2.4;
+  vec3 gravity = p.gravity;
+  if (foam.position.y < p.domainMin.y + 0.12) {
+    gravity *= 0.18;
+    drag = 7.0;
+  } else if (foam.velocity.y > 0.15) {
+    gravity *= 0.55;
+  }
+  foam.velocity += gravity * dt;
+  foam.velocity *= max(0.0, 1.0 - drag * dt);
+  foam.position += foam.velocity * dt;
+
+  if (any(lessThan(foam.position, p.domainMin - vec3(0.05))) ||
+      any(greaterThan(foam.position, p.domainMax + vec3(0.05)))) {
+    foam.alive = 0u;
+    foam.life = 0.0;
+  }
+  pc.foam.particles[i] = foam;
+}

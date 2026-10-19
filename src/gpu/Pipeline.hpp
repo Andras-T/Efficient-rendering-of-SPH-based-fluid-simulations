@@ -21,6 +21,7 @@ struct GraphicsPipelineDesc {
   VkCullModeFlags cullMode = VK_CULL_MODE_NONE;
   bool depthTest = false;
   bool depthWrite = false;
+  bool additiveBlend = false;
 };
 
 // Dynamic rendering pipeline with dynamic viewport and scissor.

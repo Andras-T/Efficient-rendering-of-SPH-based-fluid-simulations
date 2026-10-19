@@ -1,5 +1,8 @@
 #pragma once
 
+#include "render/DebugView.hpp"
+#include "sim/Scene.hpp"
+
 #include <cstdint>
 #include <filesystem>
 #include <span>
@@ -17,6 +20,9 @@ struct Options {
   std::uint32_t frames = 0;
   std::filesystem::path capturePath;
   std::filesystem::path sequenceDirectory;
+  sim::ScenePreset scene = sim::ScenePreset::DamBreak;
+  render::DebugView view = render::DebugView::Final;
+  sim::SolverMethod solver = sim::SolverMethod::Wcsph;
 };
 
 // Throws std::invalid_argument on unknown flags or malformed values.
