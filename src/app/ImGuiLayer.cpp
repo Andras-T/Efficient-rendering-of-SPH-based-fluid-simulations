@@ -6,6 +6,7 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
 
+#include <algorithm>
 #include <stdexcept>
 
 namespace sph {
@@ -32,7 +33,7 @@ ImGuiLayer::ImGuiLayer(const gpu::Context& context, GLFWwindow* window, VkFormat
   info.Queue = context.queue();
   info.DescriptorPoolSize = IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE;
   info.MinImageCount = 2;
-  info.ImageCount = imageCount;
+  info.ImageCount = std::max(imageCount, 8U);
   info.UseDynamicRendering = true;
   info.PipelineInfoMain.PipelineRenderingCreateInfo = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,

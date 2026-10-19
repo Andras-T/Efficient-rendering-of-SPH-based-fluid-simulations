@@ -115,6 +115,12 @@ Context::Context(const ContextDesc& desc) {
     allocatorInfo.pVulkanFunctions = &functions;
     allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_3;
     Check(vmaCreateAllocator(&allocatorInfo, &allocator_), "vmaCreateAllocator");
+
+    VkPhysicalDeviceProperties properties{};
+    vkGetPhysicalDeviceProperties(device_.physical_device, &properties);
+    timestampPeriod_ = properties.limits.timestampPeriod;
+    timestampsSupported_ =
+        properties.limits.timestampComputeAndGraphics == VK_TRUE && timestampPeriod_ > 0.0F;
   } catch (...) {
     destroy();
     throw;

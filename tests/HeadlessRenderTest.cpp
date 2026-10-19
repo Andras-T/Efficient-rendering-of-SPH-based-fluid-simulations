@@ -1,10 +1,12 @@
 #include "app/Headless.hpp"
+#include "core/Capture.hpp"
 #include "gpu/Context.hpp"
 
 #include <gtest/gtest.h>
 
 #include <cstdint>
 #include <cstdlib>
+#include <filesystem>
 
 namespace sph {
 namespace {
@@ -38,6 +40,23 @@ TEST(HeadlessRenderTest, BackgroundIsVerticalGradient) {
   EXPECT_LE(std::abs(left.r - right.r), 1);
   EXPECT_LE(std::abs(left.b - right.b), 1);
   EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
+TEST(HeadlessRenderTest, SequenceWritesEveryFrame) {
+  const gpu::Context context({.validation = true});
+  constexpr VkExtent2D Extent{32, 24};
+  const auto directory = std::filesystem::temp_directory_path() / "sph-fluid-sequence-test";
+  std::filesystem::remove_all(directory);
+
+  const auto rgba = RenderOffscreen(context, Extent, 3, directory);
+  EXPECT_EQ(rgba.size(), std::size_t{Extent.width} * Extent.height * 4);
+  for (std::uint32_t frame = 0; frame < 3; ++frame) {
+    const auto path = SequenceFramePath(directory, frame);
+    ASSERT_TRUE(std::filesystem::exists(path)) << path.string();
+    EXPECT_GT(std::filesystem::file_size(path), 0U);
+  }
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+  std::filesystem::remove_all(directory);
 }
 
 }  // namespace

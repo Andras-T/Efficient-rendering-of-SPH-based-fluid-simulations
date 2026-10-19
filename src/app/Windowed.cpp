@@ -7,10 +7,12 @@
 #include "gpu/Context.hpp"
 #include "gpu/Handles.hpp"
 #include "gpu/Swapchain.hpp"
+#include "gpu/Timestamps.hpp"
+#include "render/Camera.hpp"
 #include "render/Renderer.hpp"
+#include "ui/Hud.hpp"
 
 #include <GLFW/glfw3.h>
-#include <imgui.h>
 
 #include <array>
 #include <limits>
@@ -58,16 +60,6 @@ std::vector<gpu::Unique<VkSemaphore>> CreateRenderFinished(const gpu::Context& c
   return semaphores;
 }
 
-void DrawStatsWindow(const gpu::Context& context) {
-  ImGui::SetNextWindowPos({12.0F, 12.0F}, ImGuiCond_FirstUseEver);
-  ImGui::Begin("SPH Fluid", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-  ImGui::Text("%.*s", static_cast<int>(context.deviceName().size()), context.deviceName().data());
-  const ImGuiIO& io = ImGui::GetIO();
-  ImGui::Text("%.1f FPS (%.2f ms)", static_cast<double>(io.Framerate),
-              1000.0 / static_cast<double>(io.Framerate));
-  ImGui::End();
-}
-
 }  // namespace
 
 int RunWindowed(const Options& options) {
@@ -76,6 +68,9 @@ int RunWindowed(const Options& options) {
   gpu::Swapchain swapchain(context, window.framebufferExtent());
   const render::Renderer renderer(context, swapchain.format());
   ImGuiLayer imgui(context, window.handle(), swapchain.format(), swapchain.imageCount());
+  gpu::GpuProfiler profiler(context, FramesInFlight);
+  render::Camera camera;
+  camera.setAspect(swapchain.extent());
 
   std::array<FrameResources, FramesInFlight> frames{};
   for (auto& frame : frames) {
@@ -87,6 +82,7 @@ int RunWindowed(const Options& options) {
     context.waitIdle();
     swapchain.recreate(window.framebufferExtent());
     renderFinished = CreateRenderFinished(context, swapchain.imageCount());
+    camera.setAspect(swapchain.extent());
   };
 
   std::uint64_t frameNumber = 0;
@@ -98,10 +94,12 @@ int RunWindowed(const Options& options) {
       continue;
     }
 
-    const FrameResources& frame = frames.at(frameNumber % FramesInFlight);
+    const auto flight = static_cast<std::uint32_t>(frameNumber % FramesInFlight);
+    const FrameResources& frame = frames.at(flight);
     const VkFence inFlight = frame.inFlight.get();
     gpu::Check(vkWaitForFences(context.device(), 1, &inFlight, VK_TRUE, NoTimeout),
                "vkWaitForFences");
+    profiler.resolve(flight);
 
     std::uint32_t imageIndex = 0;
     const VkResult acquired =
@@ -120,7 +118,8 @@ int RunWindowed(const Options& options) {
                "vkResetCommandPool");
 
     imgui.beginFrame();
-    DrawStatsWindow(context);
+    ui::ApplyCameraInput(camera);
+    ui::DrawHud(context.deviceName(), swapchain.extent(), camera, profiler.intervals());
     imgui.endFrame();
 
     const VkCommandBuffer commandBuffer = frame.commandBuffer;
@@ -130,8 +129,11 @@ int RunWindowed(const Options& options) {
     };
     gpu::Check(vkBeginCommandBuffer(commandBuffer, &beginInfo), "vkBeginCommandBuffer");
     const VkImage image = swapchain.image(imageIndex);
+    profiler.beginFrame(commandBuffer, flight);
     renderer.record(commandBuffer, {image, swapchain.view(imageIndex), swapchain.extent()},
                     [&](VkCommandBuffer overlay) { imgui.record(overlay); });
+    profiler.mark(commandBuffer, "render");
+    profiler.endFrame(commandBuffer);
     gpu::TransitionImage(commandBuffer,
                          {
                              .image = image,

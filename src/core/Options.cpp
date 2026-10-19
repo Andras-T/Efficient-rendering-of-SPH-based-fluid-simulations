@@ -62,6 +62,9 @@ Options ParseOptions(std::span<const std::string_view> args) {
     } else if (arg == "--capture") {
       options.capturePath = value();
       options.headless = true;
+    } else if (arg == "--sequence") {
+      options.sequenceDirectory = value();
+      options.headless = true;
     } else if (arg == "--validation") {
       options.validation = true;
     } else if (arg == "--no-validation") {
@@ -86,6 +89,7 @@ std::string_view UsageText() {
   --frames N         exit after N frames (headless default: 1)
   --size WxH         framebuffer size (default: 1280x720)
   --capture PATH     write the last frame as PNG (implies --headless)
+  --sequence DIR     write every frame as DIR/0000.png (implies --headless)
   --validation       enable Vulkan validation layers (default in debug builds)
   --no-validation    disable Vulkan validation layers
   -h, --help         show this help

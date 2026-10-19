@@ -35,6 +35,13 @@ TEST(OptionsTest, CaptureImpliesHeadless) {
   EXPECT_EQ(options.capturePath, "out.png");
 }
 
+TEST(OptionsTest, SequenceImpliesHeadless) {
+  const Options options = Parse({"--sequence", "frames", "--frames", "4"});
+  EXPECT_TRUE(options.headless);
+  EXPECT_EQ(options.sequenceDirectory, "frames");
+  EXPECT_EQ(options.frames, 4U);
+}
+
 TEST(OptionsTest, ParsesSize) {
   const Options options = Parse({"--size", "640x480"});
   EXPECT_EQ(options.width, 640U);

@@ -16,6 +16,7 @@ struct Options {
   // Frames to render before exiting; 0 runs until the window closes.
   std::uint32_t frames = 0;
   std::filesystem::path capturePath;
+  std::filesystem::path sequenceDirectory;
 };
 
 // Throws std::invalid_argument on unknown flags or malformed values.

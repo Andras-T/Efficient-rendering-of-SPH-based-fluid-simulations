@@ -38,6 +38,8 @@ class Context {
   [[nodiscard]] std::uint32_t queueFamily() const { return queueFamily_; }
   [[nodiscard]] VmaAllocator allocator() const { return allocator_; }
   [[nodiscard]] std::string_view deviceName() const { return device_.physical_device.name; }
+  [[nodiscard]] float timestampPeriod() const { return timestampPeriod_; }
+  [[nodiscard]] bool timestampsSupported() const { return timestampsSupported_; }
   [[nodiscard]] std::uint32_t validationErrorCount() const { return validationErrors_.load(); }
 
   void waitIdle() const;
@@ -51,6 +53,8 @@ class Context {
   VkQueue queue_ = VK_NULL_HANDLE;
   std::uint32_t queueFamily_ = 0;
   VmaAllocator allocator_ = nullptr;
+  float timestampPeriod_ = 0.0F;
+  bool timestampsSupported_ = false;
   std::atomic<std::uint32_t> validationErrors_{0};
 };
 
