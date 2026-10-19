@@ -3,6 +3,7 @@
 #include <glm/geometric.hpp>
 #include <imgui.h>
 
+#include <algorithm>
 #include <numbers>
 
 namespace sph::ui {
@@ -11,8 +12,9 @@ namespace {
 
 constexpr float RadiansToDegrees = 180.0F / std::numbers::pi_v<float>;
 constexpr float DegreesToRadians = std::numbers::pi_v<float> / 180.0F;
-constexpr float OrbitSensitivity = 0.005F;
+constexpr float OrbitSensitivity = 0.0055F;
 constexpr float PanInvertX = -1.0F;
+constexpr float TruckSpeed = 0.90F;
 constexpr float CursorRadius = 0.22F;
 constexpr float CursorAccelScale = 400.0F;
 constexpr float CursorAccelMax = 80.0F;
@@ -74,16 +76,73 @@ void ApplyHotkeys(HudState& state) {
 
 }  // namespace
 
-void ApplyCameraInput(render::Camera& camera) {
+void ApplyCameraInput(render::Camera& camera, glm::vec3 domainMin, glm::vec3 domainMax) {
   const ImGuiIO& io = ImGui::GetIO();
+  if (!io.WantCaptureKeyboard) {
+    const float dt = std::max(io.DeltaTime, 1.0e-4F);
+    float speed = camera.distance() * TruckSpeed * dt;
+    if (ImGui::IsKeyDown(ImGuiKey_LeftShift) || ImGui::IsKeyDown(ImGuiKey_RightShift)) {
+      speed *= 2.5F;
+    }
+    float right = 0.0F;
+    float up = 0.0F;
+    float forward = 0.0F;
+    if (ImGui::IsKeyDown(ImGuiKey_D)) {
+      right += speed;
+    }
+    if (ImGui::IsKeyDown(ImGuiKey_A)) {
+      right -= speed;
+    }
+    if (ImGui::IsKeyDown(ImGuiKey_E)) {
+      up += speed;
+    }
+    if (ImGui::IsKeyDown(ImGuiKey_Q)) {
+      up -= speed;
+    }
+    if (ImGui::IsKeyDown(ImGuiKey_W)) {
+      forward += speed;
+    }
+    if (ImGui::IsKeyDown(ImGuiKey_S)) {
+      forward -= speed;
+    }
+    if (right != 0.0F || up != 0.0F || forward != 0.0F) {
+      camera.truck(right, up, forward);
+    }
+    const float turn = 1.35F * dt;
+    if (ImGui::IsKeyDown(ImGuiKey_LeftArrow)) {
+      camera.orbit(turn, 0.0F);
+    }
+    if (ImGui::IsKeyDown(ImGuiKey_RightArrow)) {
+      camera.orbit(-turn, 0.0F);
+    }
+    if (ImGui::IsKeyDown(ImGuiKey_UpArrow)) {
+      camera.orbit(0.0F, turn);
+    }
+    if (ImGui::IsKeyDown(ImGuiKey_DownArrow)) {
+      camera.orbit(0.0F, -turn);
+    }
+    if (ImGui::IsKeyPressed(ImGuiKey_F)) {
+      camera.frame(domainMin, domainMax);
+    }
+  }
+
   if (io.WantCaptureMouse) {
     return;
   }
-  if (ImGui::IsMouseDragging(ImGuiMouseButton_Right)) {
+  const bool alt = ImGui::IsKeyDown(ImGuiKey_LeftAlt) || ImGui::IsKeyDown(ImGuiKey_RightAlt);
+  const bool shift = ImGui::IsKeyDown(ImGuiKey_LeftShift) || ImGui::IsKeyDown(ImGuiKey_RightShift);
+  const bool ctrl = ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl);
+  const bool lmb = ImGui::IsMouseDragging(ImGuiMouseButton_Left);
+  const bool rmb = ImGui::IsMouseDragging(ImGuiMouseButton_Right);
+  const bool mmb = ImGui::IsMouseDragging(ImGuiMouseButton_Middle);
+  if ((lmb && !ctrl && !shift) || (rmb && !alt)) {
     camera.orbit(-io.MouseDelta.x * OrbitSensitivity, -io.MouseDelta.y * OrbitSensitivity);
   }
-  if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle)) {
+  if (mmb || (lmb && shift)) {
     camera.pan({io.MouseDelta.x * PanInvertX, io.MouseDelta.y});
+  }
+  if (alt && rmb) {
+    camera.dolly(-io.MouseDelta.y * 0.04F);
   }
   if (io.MouseWheel != 0.0F) {
     camera.dolly(io.MouseWheel);
@@ -92,8 +151,9 @@ void ApplyCameraInput(render::Camera& camera) {
 
 CursorForce SampleMouseStir(const render::Camera& camera, bool paused, CursorDrag& drag) {
   const ImGuiIO& io = ImGui::GetIO();
+  const bool ctrl = ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl);
   if (paused || io.WantCaptureMouse || io.DisplaySize.x <= 0.0F || io.DisplaySize.y <= 0.0F ||
-      !ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+      !ctrl || !ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
     drag.haveHit = false;
     return {};
   }
@@ -132,7 +192,7 @@ HudResult DrawHud(HudState& state) {
   ImGui::Checkbox("Pause", &state.paused);
   ImGui::Text("dt %.4f x %u", static_cast<double>(state.timeStep), state.substeps);
   ImGui::Text("rest density %.1f", static_cast<double>(state.restDensity));
-  ImGui::SliderFloat("Viscosity", &state.viscosity, 0.0F, 2.0F, "%.2f");
+  ImGui::SliderFloat("Viscosity", &state.viscosity, 0.0F, 0.40F, "%.3f");
   int solver = state.solver == sim::SolverMethod::Dfsph ? 1 : 0;
   if (ImGui::Combo("Solver", &solver, "WCSPH\0DFSPH\0")) {
     state.solver = solver == 1 ? sim::SolverMethod::Dfsph : sim::SolverMethod::Wcsph;
@@ -145,7 +205,7 @@ HudResult DrawHud(HudState& state) {
   if (ImGui::Button("Reset")) {
     result.resetScene = true;
   }
-  ImGui::TextUnformatted("Space pauses, LMB drag stirs");
+  ImGui::TextUnformatted("Space pauses, Ctrl+LMB stirs");
   ImGui::End();
 
   ImGui::SetNextWindowPos({12.0F, 280.0F}, ImGuiCond_FirstUseEver);
@@ -184,7 +244,8 @@ HudResult DrawHud(HudState& state) {
     const glm::vec3 position = camera.position();
     ImGui::Text("Eye %.2f  %.2f  %.2f", static_cast<double>(position.x),
                 static_cast<double>(position.y), static_cast<double>(position.z));
-    ImGui::TextUnformatted("RMB orbit, MMB pan, scroll zoom");
+    ImGui::TextUnformatted("LMB/RMB orbit, MMB or Shift+LMB pan");
+    ImGui::TextUnformatted("Scroll zoom, WASD/QE move, arrows look, F frame");
     if (ImGui::Button("Reset")) {
       const float aspect = camera.aspect();
       camera.reset();

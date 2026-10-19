@@ -2,8 +2,10 @@
 #include "sim/Kernels.hpp"
 #include "sim/Scene.hpp"
 
+#include <glm/geometric.hpp>
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cmath>
 #include <vector>
 
@@ -14,11 +16,11 @@ Scene MakeTank() {
   SimParams params;
   params.particleSpacing = 0.08F;
   params.domainMin = {0.0F, 0.0F, 0.0F};
-  params.domainMax = {0.64F, 0.64F, 0.64F};
-  params.timeStep = 0.0008F;
+  params.domainMax = {0.72F, 0.72F, 0.72F};
+  params.timeStep = 0.0005F;
   params.substeps = 4;
   params.speedOfSound = 32.0F;
-  params.viscosity = 0.40F;
+  params.viscosity = 0.05F;
 
   Scene scene;
   scene.params = params;
@@ -30,9 +32,9 @@ Scene MakeTank() {
       for (int x = 0; x < Extent; ++x) {
         Particle particle;
         particle.position = {
-            (static_cast<float>(x) + 0.5F) * params.particleSpacing,
-            (static_cast<float>(y) + 0.5F) * params.particleSpacing,
-            (static_cast<float>(z) + 0.5F) * params.particleSpacing,
+            (static_cast<float>(x) + 1.0F) * params.particleSpacing,
+            (static_cast<float>(y) + 1.0F) * params.particleSpacing,
+            (static_cast<float>(z) + 1.0F) * params.particleSpacing,
         };
         particle.mass = params.mass();
         particle.density = params.restDensity;
@@ -68,6 +70,28 @@ TEST(CpuSolverTest, SettledTankStaysNearRestDensity) {
   const float mean = MeanInteriorDensity(scene.particles, scene.params);
   ASSERT_GT(mean, 0.0F);
   EXPECT_NEAR(mean, scene.params.restDensity, 0.01F * scene.params.restDensity);
+}
+
+TEST(CpuSolverTest, CollisionKeepsFluidOffBoundaryParticles) {
+  Scene scene = BuildScene(ScenePreset::DamBreak);
+  const float minGap = 0.25F * scene.params.particleSpacing;
+  ComputeDensityAndPressure(scene.particles, scene.params);
+  StepCpu(scene.particles, scene.params, 4);
+  float minBoundDist = 1.0e9F;
+  for (const Particle& fluid : scene.particles) {
+    if (fluid.flags != ParticleFlagFluid) {
+      continue;
+    }
+    EXPECT_TRUE(std::isfinite(fluid.position.x));
+    EXPECT_TRUE(std::isfinite(fluid.velocity.x));
+    for (const Particle& wall : scene.particles) {
+      if (wall.flags != ParticleFlagBoundary) {
+        continue;
+      }
+      minBoundDist = std::min(minBoundDist, glm::distance(fluid.position, wall.position));
+    }
+  }
+  EXPECT_GT(minBoundDist, minGap);
 }
 
 }  // namespace

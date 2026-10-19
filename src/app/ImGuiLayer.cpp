@@ -16,7 +16,9 @@ ImGuiLayer::ImGuiLayer(const gpu::Context& context, GLFWwindow* window, VkFormat
     : colorFormat_(colorFormat), depthFormat_(depthFormat) {
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
-  ImGui::GetIO().IniFilename = nullptr;
+  ImGuiIO& io = ImGui::GetIO();
+  io.IniFilename = nullptr;
+  io.ConfigWindowsMoveFromTitleBarOnly = true;
   ImGui::StyleColorsDark();
 
   if (!ImGui_ImplGlfw_InitForVulkan(window, true)) {

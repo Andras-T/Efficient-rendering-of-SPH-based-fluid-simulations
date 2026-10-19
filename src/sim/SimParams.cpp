@@ -1,5 +1,6 @@
 #include "sim/SimParams.hpp"
 
+#include <algorithm>
 #include <format>
 #include <stdexcept>
 
@@ -33,5 +34,9 @@ float SimParams::supportRadius() const { return particleSpacing * 2.0F; }
 float SimParams::renderRadius() const { return particleSpacing * 0.72F; }
 
 float SimParams::stiffness() const { return restDensity * speedOfSound * speedOfSound / eosGamma; }
+
+float SimParams::collisionRadius() const { return particleSpacing * 0.95F; }
+
+float SimParams::cflSpeed() const { return 0.40F * supportRadius() / std::max(timeStep, 1.0e-8F); }
 
 }  // namespace sph::sim

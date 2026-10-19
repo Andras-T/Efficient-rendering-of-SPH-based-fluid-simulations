@@ -60,6 +60,7 @@ struct GpuSimParams {
   uint densityIterations;
   uint foamCapacity;
   float foamDt;
+  float xsph;
 };
 
 layout(scalar, buffer_reference, buffer_reference_align = 16) readonly buffer ParticleBuffer {

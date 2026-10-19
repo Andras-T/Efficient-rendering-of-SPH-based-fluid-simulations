@@ -1,5 +1,6 @@
 #include "sim/Scene.hpp"
 
+#include "sim/CpuSolver.hpp"
 #include "sim/Kernels.hpp"
 
 #include <glm/geometric.hpp>
@@ -126,7 +127,8 @@ Scene BuildScene(ScenePreset preset, const SimParams& params) {
   Scene scene;
   scene.params = params;
   const float spacing = params.particleSpacing;
-  const glm::vec3 inset{spacing * 2.0F, spacing, spacing * 2.0F};
+  const float pad = params.collisionRadius() + 0.5F * spacing;
+  const glm::vec3 inset{pad, pad, pad};
   const glm::vec3 min = params.domainMin + inset;
   const glm::vec3 max = params.domainMax - inset;
 
@@ -164,6 +166,7 @@ Scene BuildScene(ScenePreset preset, const SimParams& params) {
       break;
     }
   }
+  CalibrateRestDensity(scene.particles, scene.params);
   CalibrateBoundaryPsi(scene);
   return scene;
 }

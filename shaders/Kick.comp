@@ -23,5 +23,6 @@ void main() {
   }
 
   particle.velocity += NonPressureAccel(particle, p) * p.dt;
+  LimitSpeed(particle.velocity, p);
   pc.particles.particles[i] = particle;
 }

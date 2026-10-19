@@ -48,9 +48,9 @@ struct CursorForce {
   float radius = 0.0F;
 };
 
-void ApplyCameraInput(render::Camera& camera);
+void ApplyCameraInput(render::Camera& camera, glm::vec3 domainMin, glm::vec3 domainMax);
 
-// Left-drag stirs fluid on the plane through the camera target.
+// Ctrl+left-drag stirs fluid on the plane through the camera target.
 [[nodiscard]] CursorForce SampleMouseStir(const render::Camera& camera, bool paused,
                                           CursorDrag& drag);
 

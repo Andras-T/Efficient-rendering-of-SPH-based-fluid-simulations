@@ -75,9 +75,10 @@ struct GpuSimParams {
   std::uint32_t densityIterations = 2;
   std::uint32_t foamCapacity = FoamCapacity;
   float foamDt = 0.0F;
+  float xsph = 0.0F;
 };
 
-static_assert(sizeof(GpuSimParams) == 144);
+static_assert(sizeof(GpuSimParams) == 148);
 
 struct FrameUniforms {
   glm::mat4 view{1.0F};

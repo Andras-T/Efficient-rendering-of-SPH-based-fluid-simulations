@@ -1,6 +1,9 @@
 #include "app/Headless.hpp"
+#include "app/ImageWriter.hpp"
 #include "core/Capture.hpp"
 #include "gpu/Context.hpp"
+#include "render/Camera.hpp"
+#include "sim/Scene.hpp"
 
 #include <gtest/gtest.h>
 
@@ -57,6 +60,35 @@ TEST(HeadlessRenderTest, SequenceWritesEveryFrame) {
   }
   EXPECT_EQ(context.validationErrorCount(), 0U);
   std::filesystem::remove_all(directory);
+}
+
+TEST(HeadlessRenderTest, OrbitCameraChangesTheView) {
+  const gpu::Context context({.validation = true});
+  constexpr VkExtent2D Extent{960, 540};
+  const sim::Scene scene = sim::BuildScene(sim::ScenePreset::DamBreak);
+  render::Camera camera;
+  camera.setAspect(Extent);
+  camera.frame(scene.params.domainMin, scene.params.domainMax);
+  const auto front = RenderOffscreen(
+      context,
+      {.extent = Extent, .frames = 80, .scene = &scene, .camera = &camera, .simulate = true});
+  camera.orbit(-1.15F, 0.22F);
+  camera.dolly(-1.4F);
+  const auto orbit = RenderOffscreen(
+      context,
+      {.extent = Extent, .frames = 80, .scene = &scene, .camera = &camera, .simulate = true});
+  ASSERT_EQ(front.size(), orbit.size());
+  int changed = 0;
+  for (std::size_t i = 0; i < front.size(); ++i) {
+    changed += front[i] != orbit[i] ? 1 : 0;
+  }
+  EXPECT_GT(changed, static_cast<int>(front.size() / 10));
+
+  const auto dir = std::filesystem::temp_directory_path() / "sph-m7-camera";
+  std::filesystem::create_directories(dir);
+  WritePng(dir / "m7-camera-front.png", Extent, front);
+  WritePng(dir / "m7-camera-orbit.png", Extent, orbit);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 
 }  // namespace
