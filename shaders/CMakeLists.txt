@@ -4,7 +4,14 @@ sph_add_shader_library(sph_shaders
     Background.frag
     ComputeSmoke.comp
     Particle.vert
+    ParticleBillboard.vert
     Particle.frag
+    ParticleDepth.frag
+    Thickness.frag
+    Sky.frag
+    Composite.frag
+    Tonemap.frag
+    SmoothDepth.comp
     HashCount.comp
     Scan.comp
     ScanBlocks.comp
@@ -16,4 +23,5 @@ sph_add_shader_library(sph_shaders
   INCLUDES
     Types.glsl
     Kernels.glsl
-    SphPush.glsl)
+    SphPush.glsl
+    Screen.glsl)

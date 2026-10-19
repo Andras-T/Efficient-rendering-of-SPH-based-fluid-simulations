@@ -60,14 +60,34 @@ layout(scalar, buffer_reference, buffer_reference_align = 16) readonly buffer Pa
   GpuSimParams p;
 };
 
+const uint DebugViewFinal = 0;
+const uint DebugViewParticles = 1;
+const uint DebugViewDensity = 2;
+const uint DebugViewVelocity = 3;
+const uint DebugViewCell = 4;
+const uint DebugViewRawDepth = 5;
+const uint DebugViewSmoothDepth = 6;
+const uint DebugViewThickness = 7;
+const uint DebugViewNormals = 8;
+
 layout(scalar, buffer_reference, buffer_reference_align = 16) readonly buffer FrameBuffer {
   mat4 view;
   mat4 projection;
+  mat4 inverseView;
+  mat4 inverseProjection;
   vec3 lightDirection;
   float radius;
   ParticleBuffer particles;
   uint count;
-  uint pad;
+  uint debugView;
+  vec3 absorption;
+  float ior;
+  vec3 domainMin;
+  float restDensity;
+  vec3 domainMax;
+  float invCellSize;
+  uvec3 gridSize;
+  float exposure;
 };
 
 #endif

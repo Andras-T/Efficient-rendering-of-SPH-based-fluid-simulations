@@ -14,5 +14,6 @@
 # Runtime output
 *.png
 !/docs/**/*.png
+!/tests/goldens/*.png
 *.rdc
 imgui.ini

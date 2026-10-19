@@ -81,6 +81,27 @@ if(SPH_BUILD_TESTS)
   FetchContent_MakeAvailable(googletest)
 endif()
 
+# Outdoor HDRI from Poly Haven (CC0). Cached next to the other pinned archives.
+set(SPH_HDRI_URL
+  "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/kloofendal_48d_partly_cloudy_puresky_2k.hdr")
+set(SPH_HDRI_SHA256 "5244534e9cf5b606f2ff513aa00ddb161b0a4826ffd88a0d3bd03ac29247d198")
+set(SPH_HDRI_FILE "${SPH_DEPS_CACHE}/kloofendal_48d_partly_cloudy_puresky_2k.hdr")
+set(_sph_hdri_ready FALSE)
+if(EXISTS "${SPH_HDRI_FILE}")
+  file(SHA256 "${SPH_HDRI_FILE}" _sph_hdri_hash)
+  if(_sph_hdri_hash STREQUAL SPH_HDRI_SHA256)
+    set(_sph_hdri_ready TRUE)
+  endif()
+endif()
+if(NOT _sph_hdri_ready)
+  message(STATUS "Downloading Poly Haven HDRI")
+  file(DOWNLOAD "${SPH_HDRI_URL}" "${SPH_HDRI_FILE}"
+    EXPECTED_HASH SHA256=${SPH_HDRI_SHA256}
+    SHOW_PROGRESS
+    TLS_VERIFY ON)
+endif()
+file(TO_CMAKE_PATH "${SPH_HDRI_FILE}" SPH_HDRI_PATH)
+
 # glslang is built from the pinned source so every platform compiles shaders the same way.
 set(SPH_GLSLANG "" CACHE FILEPATH "glslang executable to use instead of building the pinned one")
 if(SPH_GLSLANG)

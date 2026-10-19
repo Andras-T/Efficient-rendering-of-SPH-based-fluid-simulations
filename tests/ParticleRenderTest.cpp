@@ -1,6 +1,7 @@
 #include "app/Headless.hpp"
 #include "gpu/Context.hpp"
 #include "render/Camera.hpp"
+#include "render/DebugView.hpp"
 #include "sim/Scene.hpp"
 
 #include <gtest/gtest.h>
@@ -38,8 +39,9 @@ TEST(ParticleRenderTest, SphereImpostorShadesTheCenter) {
   camera.setYawPitch(0.0F, 0.0F);
   camera.setDistance(0.55F);
 
-  const auto rgba =
-      RenderOffscreen(context, {.extent = Extent, .scene = &scene, .camera = &camera});
+  const auto rgba = RenderOffscreen(
+      context,
+      {.extent = Extent, .scene = &scene, .camera = &camera, .view = render::DebugView::Particles});
   ASSERT_EQ(rgba.size(), std::size_t{Extent.width} * Extent.height * 4);
 
   const Pixel center = PixelAt(rgba, Extent, Extent.width / 2, Extent.height / 2);

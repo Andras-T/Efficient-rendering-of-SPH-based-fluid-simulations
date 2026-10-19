@@ -3,7 +3,10 @@
 #include "gpu/Timestamps.hpp"
 #include "gpu/Vulkan.hpp"
 #include "render/Camera.hpp"
+#include "render/DebugView.hpp"
 #include "sim/Scene.hpp"
+
+#include <glm/vec3.hpp>
 
 #include <cstdint>
 #include <span>
@@ -23,6 +26,9 @@ struct HudState {
   std::uint32_t substeps = 0;
   float restDensity = 0.0F;
   float viscosity = 0.0F;
+  render::DebugView view = render::DebugView::Final;
+  float exposure = 0.85F;
+  glm::vec3 absorption{2.45F, 0.42F, 0.12F};
 };
 
 void ApplyCameraInput(render::Camera& camera);

@@ -82,6 +82,7 @@ std::vector<std::uint8_t> RenderOffscreen(const gpu::Context& context,
   solver.upload(simulated.particles, simulated.params);
 
   render::Renderer renderer(context, CaptureFormat);
+  renderer.settings().view = request.view;
   renderer.resize(extent);
   const render::RenderTarget renderTarget{target.handle(), target.view(), extent};
   gpu::GpuProfiler profiler(context, 1);
@@ -153,7 +154,8 @@ int RunHeadless(const Options& options) {
                                                 .frames = options.frames,
                                                 .sequenceDirectory = options.sequenceDirectory,
                                                 .preset = options.scene,
-                                                .simulate = true});
+                                                .simulate = true,
+                                                .view = options.view});
   const std::chrono::duration<double, std::milli> elapsed =
       std::chrono::steady_clock::now() - start;
   LogInfo("Rendered {} frame(s) of '{}' at {}x{} in {:.1f} ms", options.frames,

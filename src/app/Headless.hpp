@@ -3,6 +3,7 @@
 #include "core/Options.hpp"
 #include "gpu/Vulkan.hpp"
 #include "render/Camera.hpp"
+#include "render/DebugView.hpp"
 #include "sim/Scene.hpp"
 
 #include <cstdint>
@@ -23,6 +24,7 @@ struct OffscreenRequest {
   const sim::Scene* scene = nullptr;
   const render::Camera* camera = nullptr;
   bool simulate = false;
+  render::DebugView view = render::DebugView::Final;
 };
 
 // Renders offscreen and returns the last frame as tightly packed sRGB RGBA8.
