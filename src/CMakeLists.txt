@@ -4,6 +4,7 @@ add_library(sph_engine STATIC
   app/ImGuiLayer.cpp
   app/Window.cpp
   app/Windowed.cpp
+  core/Capture.cpp
   core/Log.cpp
   core/Options.cpp
   gpu/Buffer.cpp
@@ -13,9 +14,12 @@ add_library(sph_engine STATIC
   gpu/Image.cpp
   gpu/Pipeline.cpp
   gpu/Swapchain.cpp
+  gpu/Timestamps.cpp
   gpu/Vulkan.cpp
   render/BackgroundPass.cpp
-  render/Renderer.cpp)
+  render/Camera.cpp
+  render/Renderer.cpp
+  ui/Hud.cpp)
 target_include_directories(sph_engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(sph_engine PUBLIC
   VK_NO_PROTOTYPES
