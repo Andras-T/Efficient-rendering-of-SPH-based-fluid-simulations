@@ -20,6 +20,22 @@ constexpr glm::vec3 WorldUp{0.0F, 1.0F, 0.0F};
 
 float ClampPitch(float pitch) { return std::clamp(pitch, -PitchLimit, PitchLimit); }
 
+struct Basis {
+  glm::vec3 forward;
+  glm::vec3 right;
+  glm::vec3 up;
+};
+
+Basis CameraBasis(glm::vec3 forward) {
+  glm::vec3 right = glm::cross(forward, WorldUp);
+  if (glm::dot(right, right) < 1.0e-8F) {
+    right = glm::cross(forward, glm::vec3{0.0F, 0.0F, 1.0F});
+  }
+  right = glm::normalize(right);
+  const glm::vec3 up = glm::normalize(glm::cross(right, forward));
+  return {forward, right, up};
+}
+
 }  // namespace
 
 void Camera::setDistance(float distance) {
@@ -61,15 +77,9 @@ void Camera::dolly(float delta) {
 }
 
 void Camera::pan(glm::vec2 localDelta) {
-  const glm::vec3 direction = forward();
-  glm::vec3 right = glm::cross(direction, WorldUp);
-  if (glm::dot(right, right) < 1.0e-8F) {
-    right = glm::cross(direction, glm::vec3{0.0F, 0.0F, 1.0F});
-  }
-  right = glm::normalize(right);
-  const glm::vec3 up = glm::normalize(glm::cross(right, direction));
+  const Basis basis = CameraBasis(forward());
   const float speed = distance_ * 0.0025F;
-  target_ += ((right * localDelta.x) + (up * localDelta.y)) * speed;
+  target_ += ((basis.right * localDelta.x) + (basis.up * localDelta.y)) * speed;
 }
 
 glm::vec3 Camera::position() const {
@@ -83,6 +93,29 @@ glm::vec3 Camera::position() const {
 }
 
 glm::vec3 Camera::forward() const { return glm::normalize(target_ - position()); }
+
+glm::vec3 Camera::worldDirection(glm::vec2 ndc) const {
+  const Basis basis = CameraBasis(forward());
+  const float focal = 1.0F / std::tan(fovY_ * 0.5F);
+  const glm::vec3 viewDir{ndc.x * aspect_ / focal, -ndc.y / focal, -1.0F};
+  return glm::normalize((basis.right * viewDir.x) + (basis.up * viewDir.y) +
+                        (basis.forward * (-viewDir.z)));
+}
+
+std::optional<glm::vec3> Camera::hitPlane(glm::vec2 ndc, glm::vec3 planePoint,
+                                          glm::vec3 planeNormal) const {
+  const glm::vec3 origin = position();
+  const glm::vec3 direction = worldDirection(ndc);
+  const float denom = glm::dot(direction, planeNormal);
+  if (std::abs(denom) < 1.0e-6F) {
+    return std::nullopt;
+  }
+  const float t = glm::dot(planePoint - origin, planeNormal) / denom;
+  if (t < nearPlane_) {
+    return std::nullopt;
+  }
+  return origin + (direction * t);
+}
 
 glm::mat4 Camera::view() const { return glm::lookAt(position(), target_, WorldUp); }
 

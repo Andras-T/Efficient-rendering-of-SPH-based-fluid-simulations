@@ -1,5 +1,6 @@
 #include "ui/Hud.hpp"
 
+#include <glm/geometric.hpp>
 #include <imgui.h>
 
 #include <numbers>
@@ -12,28 +13,62 @@ constexpr float RadiansToDegrees = 180.0F / std::numbers::pi_v<float>;
 constexpr float DegreesToRadians = std::numbers::pi_v<float> / 180.0F;
 constexpr float OrbitSensitivity = 0.005F;
 constexpr float PanInvertX = -1.0F;
+constexpr float CursorRadius = 0.22F;
+constexpr float CursorAccelScale = 400.0F;
+constexpr float CursorAccelMax = 80.0F;
 
 float Degrees(float radians) { return radians * RadiansToDegrees; }
 
 int PresetIndex(sim::ScenePreset preset) {
   switch (preset) {
-    case sim::ScenePreset::Drop:
-      return 1;
-    case sim::ScenePreset::DoubleDam:
-      return 2;
-    default:
+    case sim::ScenePreset::Empty:
       return 0;
+    case sim::ScenePreset::Drop:
+      return 2;
+    case sim::ScenePreset::DoubleDam:
+      return 3;
+    default:
+      return 1;
   }
 }
 
 sim::ScenePreset PresetFromIndex(int index) {
   switch (index) {
-    case 1:
-      return sim::ScenePreset::Drop;
+    case 0:
+      return sim::ScenePreset::Empty;
     case 2:
+      return sim::ScenePreset::Drop;
+    case 3:
       return sim::ScenePreset::DoubleDam;
     default:
       return sim::ScenePreset::DamBreak;
+  }
+}
+
+glm::vec2 MouseNdc() {
+  const ImGuiIO& io = ImGui::GetIO();
+  return {(2.0F * io.MousePos.x / io.DisplaySize.x) - 1.0F,
+          (2.0F * io.MousePos.y / io.DisplaySize.y) - 1.0F};
+}
+
+void ApplyHotkeys(HudState& state) {
+  const ImGuiIO& io = ImGui::GetIO();
+  if (io.WantCaptureKeyboard) {
+    return;
+  }
+  if (ImGui::IsKeyPressed(ImGuiKey_Space)) {
+    state.paused = !state.paused;
+  }
+  if (ImGui::IsKeyPressed(ImGuiKey_LeftBracket)) {
+    state.view = render::PrevDebugView(state.view);
+  }
+  if (ImGui::IsKeyPressed(ImGuiKey_RightBracket)) {
+    state.view = render::NextDebugView(state.view);
+  }
+  for (int i = 0; i < static_cast<int>(render::DebugViewCount); ++i) {
+    if (ImGui::IsKeyPressed(static_cast<ImGuiKey>(ImGuiKey_1 + i))) {
+      state.view = static_cast<render::DebugView>(i);
+    }
   }
 }
 
@@ -55,12 +90,40 @@ void ApplyCameraInput(render::Camera& camera) {
   }
 }
 
-bool DrawHud(HudState& state) {
+CursorForce SampleMouseStir(const render::Camera& camera, bool paused, CursorDrag& drag) {
   const ImGuiIO& io = ImGui::GetIO();
-  bool sceneChanged = false;
+  if (paused || io.WantCaptureMouse || io.DisplaySize.x <= 0.0F || io.DisplaySize.y <= 0.0F ||
+      !ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+    drag.haveHit = false;
+    return {};
+  }
+
+  const auto hit = camera.hitPlane(MouseNdc(), camera.target(), camera.forward());
+  if (!hit.has_value()) {
+    drag.haveHit = false;
+    return {};
+  }
+
+  glm::vec3 force{0.0F};
+  if (drag.haveHit) {
+    force = (*hit - drag.lastHit) * CursorAccelScale;
+    const float magnitude = glm::length(force);
+    if (magnitude > CursorAccelMax) {
+      force *= CursorAccelMax / magnitude;
+    }
+  }
+  drag.lastHit = *hit;
+  drag.haveHit = true;
+  return {.position = *hit, .force = force, .radius = CursorRadius};
+}
+
+HudResult DrawHud(HudState& state) {
+  ApplyHotkeys(state);
+  const ImGuiIO& io = ImGui::GetIO();
+  HudResult result;
 
   ImGui::SetNextWindowPos({12.0F, 12.0F}, ImGuiCond_FirstUseEver);
-  ImGui::Begin("Frame", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+  ImGui::Begin("Simulation", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
   ImGui::Text("%.*s", static_cast<int>(state.deviceName.size()), state.deviceName.data());
   ImGui::Text("%ux%u", state.extent.width, state.extent.height);
   ImGui::Text("%.1f FPS (%.2f ms)", static_cast<double>(io.Framerate),
@@ -69,7 +132,20 @@ bool DrawHud(HudState& state) {
   ImGui::Checkbox("Pause", &state.paused);
   ImGui::Text("dt %.4f x %u", static_cast<double>(state.timeStep), state.substeps);
   ImGui::Text("rest density %.1f", static_cast<double>(state.restDensity));
-  ImGui::Text("viscosity %.2f", static_cast<double>(state.viscosity));
+  ImGui::SliderFloat("Viscosity", &state.viscosity, 0.0F, 2.0F, "%.2f");
+  int scene = PresetIndex(state.preset);
+  if (ImGui::Combo("Scene", &scene, "Empty\0Dam break\0Drop\0Double dam\0")) {
+    state.preset = PresetFromIndex(scene);
+    result.sceneChanged = true;
+  }
+  if (ImGui::Button("Reset")) {
+    result.resetScene = true;
+  }
+  ImGui::TextUnformatted("Space pauses, LMB drag stirs");
+  ImGui::End();
+
+  ImGui::SetNextWindowPos({12.0F, 280.0F}, ImGuiCond_FirstUseEver);
+  ImGui::Begin("Stage", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
   int view = static_cast<int>(state.view);
   if (ImGui::Combo(
           "View", &view,
@@ -78,16 +154,12 @@ bool DrawHud(HudState& state) {
   }
   ImGui::SliderFloat("Exposure", &state.exposure, 0.05F, 4.0F, "%.2f");
   ImGui::SliderFloat3("Absorption", &state.absorption.x, 0.0F, 8.0F, "%.2f");
-  int scene = PresetIndex(state.preset);
-  if (ImGui::Combo("Scene", &scene, "Dam break\0Drop\0Double dam\0")) {
-    state.preset = PresetFromIndex(scene);
-    sceneChanged = true;
-  }
+  ImGui::TextUnformatted("[ ] or 1-9 to cycle views");
   ImGui::End();
 
   if (state.camera != nullptr) {
     render::Camera& camera = *state.camera;
-    ImGui::SetNextWindowPos({12.0F, 240.0F}, ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos({12.0F, 500.0F}, ImGuiCond_FirstUseEver);
     ImGui::Begin("Camera", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     float yaw = Degrees(camera.yaw());
     float pitch = Degrees(camera.pitch());
@@ -117,7 +189,9 @@ bool DrawHud(HudState& state) {
     ImGui::End();
   }
 
-  ImGui::SetNextWindowPos({12.0F, 530.0F}, ImGuiCond_FirstUseEver);
+  const float gpuX =
+      state.extent.width > 12 ? static_cast<float>(state.extent.width) - 12.0F : 12.0F;
+  ImGui::SetNextWindowPos({gpuX, 12.0F}, ImGuiCond_FirstUseEver, {1.0F, 0.0F});
   ImGui::Begin("GPU", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
   if (state.timings.empty()) {
     ImGui::TextUnformatted("No timestamp queries this frame");
@@ -133,7 +207,7 @@ bool DrawHud(HudState& state) {
     }
   }
   ImGui::End();
-  return sceneChanged;
+  return result;
 }
 
 }  // namespace sph::ui

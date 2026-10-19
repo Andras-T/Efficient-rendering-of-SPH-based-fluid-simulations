@@ -84,6 +84,7 @@ int RunWindowed(const Options& options) {
   camera.frame(scene.params.domainMin, scene.params.domainMax);
   sim::ScenePreset preset = options.scene;
   bool paused = false;
+  ui::CursorDrag cursorDrag;
 
   std::array<FrameResources, FramesInFlight> frames{};
   for (auto& frame : frames) {
@@ -156,18 +157,24 @@ int RunWindowed(const Options& options) {
         .exposure = renderer.settings().exposure,
         .absorption = renderer.settings().absorption,
     };
-    if (ui::DrawHud(hud)) {
+    const ui::HudResult hudResult = ui::DrawHud(hud);
+    if (hudResult.sceneChanged || hudResult.resetScene) {
       preset = hud.preset;
       scene = sim::BuildScene(preset);
       sim::CalibrateRestDensity(scene.particles, scene.params);
       solver.upload(scene.particles, scene.params);
+      cursorDrag = {};
       camera.frame(scene.params.domainMin, scene.params.domainMax);
       camera.setAspect(swapchain.extent());
+    } else if (hud.viscosity != solver.params().viscosity) {
+      solver.setViscosity(hud.viscosity);
     }
     paused = hud.paused;
     renderer.settings().view = hud.view;
     renderer.settings().exposure = hud.exposure;
     renderer.settings().absorption = hud.absorption;
+    const ui::CursorForce cursor = ui::SampleMouseStir(camera, paused, cursorDrag);
+    solver.setCursor(cursor.position, cursor.force, cursor.radius);
     imgui.endFrame();
 
     const VkCommandBuffer commandBuffer = frame.commandBuffer;

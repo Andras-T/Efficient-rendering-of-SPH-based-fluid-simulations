@@ -49,3 +49,6 @@ sph_set_warnings(sph_engine)
 add_executable(sph-fluid main.cpp)
 target_link_libraries(sph-fluid PRIVATE sph_engine)
 sph_set_warnings(sph-fluid)
+
+include(GNUInstallDirs)
+install(TARGETS sph-fluid RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

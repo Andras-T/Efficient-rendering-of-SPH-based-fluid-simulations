@@ -54,7 +54,8 @@ gpu::Unique<VkPipeline> MakeCompute(VkDevice device, VkPipelineLayout layout,
 }
 
 GpuSimParams MakeGpuParams(const SimParams& params, const Grid& grid, std::uint32_t particleCount,
-                           float mass) {
+                           float mass, glm::vec3 cursorPosition, glm::vec3 cursorForce,
+                           float cursorRadius) {
   const float kernelRadius = params.supportRadius();
   return GpuSimParams{
       .domainMin = params.domainMin,
@@ -74,6 +75,9 @@ GpuSimParams MakeGpuParams(const SimParams& params, const Grid& grid, std::uint3
       .gridSize = grid.size,
       .particleCount = particleCount,
       .cellCount = grid.cellCount,
+      .cursorRadius = cursorRadius,
+      .cursorPosition = cursorPosition,
+      .cursorForce = cursorForce,
   };
 }
 
@@ -145,11 +149,28 @@ void SphSolver::writeParams(std::uint32_t particleCount, std::uint32_t cellCount
   const Grid grid = MakeGrid(paramsHost_);
   const float mass =
       particleCount == 0 ? paramsHost_.mass() : particles_.mapped<Particle>().front().mass;
-  GpuSimParams gpu = MakeGpuParams(paramsHost_, grid, particleCount, mass);
+  GpuSimParams gpu = MakeGpuParams(paramsHost_, grid, particleCount, mass, cursorPosition_,
+                                   cursorForce_, cursorRadius_);
   gpu.cellCount = cellCount;
   gpu.particleCount = particleCount;
   params_.mapped<GpuSimParams>().front() = gpu;
   params_.flush();
+}
+
+void SphSolver::setCursor(glm::vec3 position, glm::vec3 force, float radius) {
+  cursorPosition_ = position;
+  cursorForce_ = force;
+  cursorRadius_ = radius;
+  if (params_.handle() != VK_NULL_HANDLE) {
+    writeParams(count_, cellCount_);
+  }
+}
+
+void SphSolver::setViscosity(float viscosity) {
+  paramsHost_.viscosity = viscosity;
+  if (params_.handle() != VK_NULL_HANDLE) {
+    writeParams(count_, cellCount_);
+  }
 }
 
 void SphSolver::push(VkCommandBuffer commandBuffer) const {

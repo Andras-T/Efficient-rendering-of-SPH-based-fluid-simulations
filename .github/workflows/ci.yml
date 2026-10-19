@@ -59,6 +59,14 @@ jobs:
         with:
           name: capture-${{ matrix.compiler }}-${{ matrix.preset }}
           path: capture.png
+      - name: Install
+        if: matrix.preset == 'release'
+        run: cmake --install build/${{ matrix.preset }} --prefix dist
+      - uses: actions/upload-artifact@v4
+        if: matrix.preset == 'release'
+        with:
+          name: sph-fluid-linux
+          path: dist/bin/sph-fluid
 
   tidy:
     runs-on: ubuntu-24.04
@@ -79,7 +87,12 @@ jobs:
         run: run-clang-tidy-18 -p build/debug -quiet -warnings-as-errors='*' "$PWD/(src|tests)/"
 
   windows:
+    name: windows-${{ matrix.preset }}
     runs-on: windows-2025
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [debug, release]
     steps:
       - uses: actions/checkout@v5
       - uses: ilammy/msvc-dev-cmd@v1
@@ -89,9 +102,17 @@ jobs:
           path: .deps
           key: deps-windows-${{ hashFiles('cmake/Dependencies.cmake') }}
       - name: Configure
-        run: cmake --preset debug -DSPH_WARNINGS_AS_ERRORS=ON
+        run: cmake --preset ${{ matrix.preset }} -DSPH_WARNINGS_AS_ERRORS=ON
       - name: Build
-        run: cmake --build --preset debug
+        run: cmake --build --preset ${{ matrix.preset }}
       # Hosted Windows runners have no Vulkan driver, so only CPU tests run here.
       - name: Test
-        run: ctest --preset debug -L cpu
+        run: ctest --preset ${{ matrix.preset }} -L cpu
+      - name: Install
+        if: matrix.preset == 'release'
+        run: cmake --install build/${{ matrix.preset }} --prefix dist
+      - uses: actions/upload-artifact@v4
+        if: matrix.preset == 'release'
+        with:
+          name: sph-fluid-windows
+          path: dist/bin/sph-fluid.exe
