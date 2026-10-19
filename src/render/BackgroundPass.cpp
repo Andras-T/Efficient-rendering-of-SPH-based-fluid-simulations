@@ -8,7 +8,8 @@
 
 namespace sph::render {
 
-BackgroundPass::BackgroundPass(const gpu::Context& context, VkFormat colorFormat) {
+BackgroundPass::BackgroundPass(const gpu::Context& context, VkFormat colorFormat,
+                               VkFormat depthFormat) {
   const std::array pushConstants{VkPushConstantRange{
       .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
       .size = sizeof(BackgroundSettings),
@@ -22,6 +23,7 @@ BackgroundPass::BackgroundPass(const gpu::Context& context, VkFormat colorFormat
                             .fragmentSpirv = shaders::Find("Background.frag"),
                             .layout = layout_.get(),
                             .colorFormats = colorFormats,
+                            .depthFormat = depthFormat,
                         });
 }
 

@@ -35,6 +35,12 @@ TEST(OptionsTest, CaptureImpliesHeadless) {
   EXPECT_EQ(options.capturePath, "out.png");
 }
 
+TEST(OptionsTest, ParsesScenePreset) {
+  EXPECT_EQ(Parse({"--scene", "drop"}).scene, sim::ScenePreset::Drop);
+  EXPECT_EQ(Parse({"--scene", "double"}).scene, sim::ScenePreset::DoubleDam);
+  EXPECT_THROW(Parse({"--scene", "plasma"}), std::invalid_argument);
+}
+
 TEST(OptionsTest, SequenceImpliesHeadless) {
   const Options options = Parse({"--sequence", "frames", "--frames", "4"});
   EXPECT_TRUE(options.headless);

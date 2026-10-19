@@ -18,6 +18,7 @@ class Camera {
   void setNearPlane(float nearPlane);
   void setAspect(float aspect);
   void setAspect(VkExtent2D extent);
+  void frame(glm::vec3 domainMin, glm::vec3 domainMax);
   void reset();
 
   void orbit(float deltaYaw, float deltaPitch);

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "sim/Scene.hpp"
+
 #include <cstdint>
 #include <filesystem>
 #include <span>
@@ -17,6 +19,7 @@ struct Options {
   std::uint32_t frames = 0;
   std::filesystem::path capturePath;
   std::filesystem::path sequenceDirectory;
+  sim::ScenePreset scene = sim::ScenePreset::DamBreak;
 };
 
 // Throws std::invalid_argument on unknown flags or malformed values.
