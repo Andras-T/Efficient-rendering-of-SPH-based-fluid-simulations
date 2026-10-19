@@ -1,5 +1,6 @@
 #pragma once
 
+#include "render/DebugView.hpp"
 #include "sim/Scene.hpp"
 
 #include <cstdint>
@@ -20,6 +21,7 @@ struct Options {
   std::filesystem::path capturePath;
   std::filesystem::path sequenceDirectory;
   sim::ScenePreset scene = sim::ScenePreset::DamBreak;
+  render::DebugView view = render::DebugView::Final;
 };
 
 // Throws std::invalid_argument on unknown flags or malformed values.

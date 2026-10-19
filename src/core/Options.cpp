@@ -67,6 +67,8 @@ Options ParseOptions(std::span<const std::string_view> args) {
       options.headless = true;
     } else if (arg == "--scene") {
       options.scene = sim::ParseScenePreset(value());
+    } else if (arg == "--view") {
+      options.view = render::ParseDebugView(value());
     } else if (arg == "--validation") {
       options.validation = true;
     } else if (arg == "--no-validation") {
@@ -93,6 +95,7 @@ std::string_view UsageText() {
   --capture PATH     write the last frame as PNG (implies --headless)
   --sequence DIR     write every frame as DIR/0000.png (implies --headless)
   --scene NAME       empty, dam, drop, or double (default: dam)
+  --view NAME        final, particles, density, velocity, cell, depth, smooth, thickness, normals
   --validation       enable Vulkan validation layers (default in debug builds)
   --no-validation    disable Vulkan validation layers
   -h, --help         show this help

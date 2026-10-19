@@ -70,8 +70,9 @@ int RunWindowed(const Options& options) {
   const gpu::Context context({.validation = options.validation, .window = window.handle()});
   gpu::Swapchain swapchain(context, window.framebufferExtent());
   render::Renderer renderer(context, swapchain.format());
+  renderer.settings().view = options.view;
   renderer.resize(swapchain.extent());
-  ImGuiLayer imgui(context, window.handle(), swapchain.format(), render::Renderer::DepthFormat,
+  ImGuiLayer imgui(context, window.handle(), swapchain.format(), VK_FORMAT_UNDEFINED,
                    swapchain.imageCount());
   gpu::GpuProfiler profiler(context, FramesInFlight);
   sim::Scene scene = sim::BuildScene(options.scene);
@@ -151,6 +152,9 @@ int RunWindowed(const Options& options) {
         .substeps = solver.params().substeps,
         .restDensity = solver.params().restDensity,
         .viscosity = solver.params().viscosity,
+        .view = renderer.settings().view,
+        .exposure = renderer.settings().exposure,
+        .absorption = renderer.settings().absorption,
     };
     if (ui::DrawHud(hud)) {
       preset = hud.preset;
@@ -161,6 +165,9 @@ int RunWindowed(const Options& options) {
       camera.setAspect(swapchain.extent());
     }
     paused = hud.paused;
+    renderer.settings().view = hud.view;
+    renderer.settings().exposure = hud.exposure;
+    renderer.settings().absorption = hud.absorption;
     imgui.endFrame();
 
     const VkCommandBuffer commandBuffer = frame.commandBuffer;

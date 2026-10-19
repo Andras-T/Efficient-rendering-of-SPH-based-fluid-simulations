@@ -1,0 +1,86 @@
+#version 460
+#extension GL_EXT_scalar_block_layout : require
+
+layout(local_size_x = 256) in;
+
+const int kMaxRadius = 16;
+const int kTile = 256;
+
+shared float sDepth[kTile + 2 * kMaxRadius];
+
+layout(set = 0, binding = 0, r32f) uniform readonly image2D srcImage;
+layout(set = 0, binding = 1, r32f) uniform writeonly image2D dstImage;
+
+layout(push_constant, scalar) uniform Push {
+  int horizontal;
+  int radius;
+  float spatialSigma;
+  float rangeSigma;
+};
+
+ivec2 Pixel(int along, int line) {
+  return horizontal != 0 ? ivec2(along, line) : ivec2(line, along);
+}
+
+float LoadDepth(int along, int line, int limit) {
+  const int clamped = clamp(along, 0, limit - 1);
+  return imageLoad(srcImage, Pixel(clamped, line)).r;
+}
+
+void main() {
+  const ivec2 size = imageSize(srcImage);
+  const int alongLimit = horizontal != 0 ? size.x : size.y;
+  const int lineLimit = horizontal != 0 ? size.y : size.x;
+  const int line = int(gl_WorkGroupID.y);
+  if (line >= lineLimit) {
+    return;
+  }
+
+  const int radiusClamped = clamp(radius, 0, kMaxRadius);
+  const int thread = int(gl_LocalInvocationID.x);
+  const int along = int(gl_WorkGroupID.x) * kTile + thread;
+  const int local = thread + radiusClamped;
+  const bool inside = along < alongLimit;
+
+  sDepth[local] = inside ? LoadDepth(along, line, alongLimit) : 0.0;
+  if (thread < radiusClamped) {
+    sDepth[thread] = LoadDepth(along - radiusClamped, line, alongLimit);
+    sDepth[radiusClamped + kTile + thread] =
+        LoadDepth(int(gl_WorkGroupID.x) * kTile + kTile + thread, line, alongLimit);
+  }
+  barrier();
+
+  if (!inside) {
+    return;
+  }
+
+  const float center = sDepth[local];
+  if (center <= 0.0) {
+    imageStore(dstImage, Pixel(along, line), vec4(0.0));
+    return;
+  }
+
+  const float spatialDenom = 2.0 * spatialSigma * spatialSigma;
+  const float rangeDenom = 2.0 * rangeSigma * rangeSigma;
+  const float rangeLimit = 3.0 * rangeSigma;
+  float sum = 0.0;
+  float weightSum = 0.0;
+  for (int i = -radiusClamped; i <= radiusClamped; ++i) {
+    const float sampleDepth = sDepth[local + i];
+    if (sampleDepth <= 0.0) {
+      continue;
+    }
+    const float range = abs(sampleDepth - center);
+    if (range > rangeLimit) {
+      continue;
+    }
+    const float spatialW = exp(-float(i * i) / max(spatialDenom, 1e-6));
+    const float rangeW = exp(-(range * range) / max(rangeDenom, 1e-8));
+    const float weight = spatialW * rangeW;
+    sum += sampleDepth * weight;
+    weightSum += weight;
+  }
+
+  const float filtered = weightSum > 0.0 ? sum / weightSum : center;
+  imageStore(dstImage, Pixel(along, line), vec4(filtered, 0.0, 0.0, 1.0));
+}

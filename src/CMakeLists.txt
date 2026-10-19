@@ -18,8 +18,13 @@ add_library(sph_engine STATIC
   gpu/Vulkan.cpp
   render/BackgroundPass.cpp
   render/Camera.cpp
+  render/DebugView.cpp
+  render/FluidPass.cpp
+  render/Hdri.cpp
   render/ParticlePass.cpp
   render/Renderer.cpp
+  render/SkyPass.cpp
+  render/TonemapPass.cpp
   sim/CpuSolver.cpp
   sim/GpuParticles.cpp
   sim/Grid.cpp
@@ -35,6 +40,7 @@ target_compile_definitions(sph_engine PUBLIC
   GLFW_INCLUDE_NONE
   GLM_FORCE_DEPTH_ZERO_TO_ONE
   GLM_FORCE_RADIANS)
+target_compile_definitions(sph_engine PRIVATE "SPH_HDRI_PATH=\"${SPH_HDRI_PATH}\"")
 target_link_libraries(sph_engine
   PUBLIC volk::volk vk-bootstrap::vk-bootstrap GPUOpen::VulkanMemoryAllocator glm::glm glfw
   PRIVATE imgui stb sph_shaders)

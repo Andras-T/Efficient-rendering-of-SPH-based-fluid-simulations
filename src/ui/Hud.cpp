@@ -70,6 +70,14 @@ bool DrawHud(HudState& state) {
   ImGui::Text("dt %.4f x %u", static_cast<double>(state.timeStep), state.substeps);
   ImGui::Text("rest density %.1f", static_cast<double>(state.restDensity));
   ImGui::Text("viscosity %.2f", static_cast<double>(state.viscosity));
+  int view = static_cast<int>(state.view);
+  if (ImGui::Combo(
+          "View", &view,
+          "Final\0Particles\0Density\0Velocity\0Cell\0Depth\0Smooth\0Thickness\0Normals\0")) {
+    state.view = static_cast<render::DebugView>(view);
+  }
+  ImGui::SliderFloat("Exposure", &state.exposure, 0.05F, 4.0F, "%.2f");
+  ImGui::SliderFloat3("Absorption", &state.absorption.x, 0.0F, 8.0F, "%.2f");
   int scene = PresetIndex(state.preset);
   if (ImGui::Combo("Scene", &scene, "Dam break\0Drop\0Double dam\0")) {
     state.preset = PresetFromIndex(scene);

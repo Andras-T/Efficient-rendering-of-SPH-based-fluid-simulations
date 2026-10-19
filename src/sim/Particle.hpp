@@ -6,6 +6,7 @@
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 
+#include <cstddef>
 #include <cstdint>
 
 namespace sph::sim {
@@ -57,13 +58,27 @@ static_assert(sizeof(GpuSimParams) == 112);
 struct FrameUniforms {
   glm::mat4 view{1.0F};
   glm::mat4 projection{1.0F};
+  glm::mat4 inverseView{1.0F};
+  glm::mat4 inverseProjection{1.0F};
   glm::vec3 lightDirection{0.35F, 0.85F, 0.40F};
   float radius = 0.02F;
   VkDeviceAddress particles = 0;
   std::uint32_t count = 0;
-  std::uint32_t pad = 0;
+  std::uint32_t debugView = 0;
+  glm::vec3 absorption{2.45F, 0.42F, 0.12F};
+  float ior = 1.333F;
+  glm::vec3 domainMin{0.0F};
+  float restDensity = 1000.0F;
+  glm::vec3 domainMax{1.0F};
+  float invCellSize = 1.0F;
+  glm::uvec3 gridSize{1, 1, 1};
+  float exposure = 0.85F;
 };
 
-static_assert(sizeof(FrameUniforms) == 160);
+static_assert(offsetof(FrameUniforms, inverseView) == 128);
+static_assert(offsetof(FrameUniforms, particles) == 272);
+static_assert(offsetof(FrameUniforms, absorption) == 288);
+static_assert(offsetof(FrameUniforms, exposure) == 348);
+static_assert(sizeof(FrameUniforms) == 352);
 
 }  // namespace sph::sim
