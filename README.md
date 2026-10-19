@@ -2,7 +2,9 @@
 
 Real-time fluid simulation on the GPU: smoothed particle hydrodynamics in Vulkan compute shaders, rendered as a screen-space fluid surface.
 
-> Work in progress. WCSPH plus screen-space fluid rendering (narrow-range smoothing, Beer–Lambert, Fresnel, Poly Haven HDRI).
+![Dam break](docs/showcase.gif)
+
+WCSPH (Tait EOS, poly6 / spiky / viscosity Laplacian) on a uniform grid, then screen-space fluid rendering: eye-depth impostors, additive thickness, narrow-range smoothing, Schlick Fresnel, Beer–Lambert absorption, and a Poly Haven HDRI.
 
 ## Build
 
@@ -13,13 +15,14 @@ cmake --preset release
 cmake --build --preset release
 ctest --preset release
 build/release/bin/sph-fluid                          # window
-build/release/bin/sph-fluid --scene drop             # dam, drop, or double
+build/release/bin/sph-fluid --scene drop             # empty, dam, drop, or double
 build/release/bin/sph-fluid --view depth             # stage explorer
 build/release/bin/sph-fluid --capture out.png        # last frame
 build/release/bin/sph-fluid --sequence frames --frames 12
+cmake --install build/release --prefix dist          # dist/bin/sph-fluid
 ```
 
-In the window: right-drag orbits, middle-drag pans, scroll zooms. Pause, scene presets, the stage explorer (final, particles, density, velocity, cell, depth, smooth, thickness, normals), and GPU timings are in the overlay.
+In the window: left-drag stirs the fluid, right-drag orbits, middle-drag pans, scroll zooms. Space pauses. `[` `]` and 1–9 step through the stage explorer. The overlay has scene presets, a viscosity slider, Reset, exposure, and GPU timings.
 
 On Linux without a GPU, install Mesa's lavapipe (`mesa-vulkan-drivers`).
 

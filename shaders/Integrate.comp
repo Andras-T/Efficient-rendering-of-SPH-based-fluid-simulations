@@ -21,7 +21,16 @@ void main() {
     return;
   }
 
-  const vec3 acceleration = particle.force / particle.density + p.gravity;
+  vec3 acceleration = particle.force / particle.density + p.gravity;
+  if (p.cursorRadius > 0.0) {
+    const vec3 toParticle = particle.position - p.cursorPosition;
+    const float dist2 = dot(toParticle, toParticle);
+    const float radius2 = p.cursorRadius * p.cursorRadius;
+    if (dist2 < radius2) {
+      const float falloff = 1.0 - dist2 / radius2;
+      acceleration += p.cursorForce * (falloff * falloff);
+    }
+  }
   particle.velocity += acceleration * p.dt;
   particle.position += particle.velocity * p.dt;
 

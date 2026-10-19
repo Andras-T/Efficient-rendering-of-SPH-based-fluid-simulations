@@ -39,9 +39,9 @@ struct GpuSimParams {
   uvec3 gridSize;
   uint particleCount;
   uint cellCount;
-  uint pad0;
-  uint pad1;
-  uint pad2;
+  float cursorRadius;
+  vec3 cursorPosition;
+  vec3 cursorForce;
 };
 
 layout(scalar, buffer_reference, buffer_reference_align = 16) readonly buffer ParticleBuffer {

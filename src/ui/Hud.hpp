@@ -31,9 +31,28 @@ struct HudState {
   glm::vec3 absorption{2.45F, 0.42F, 0.12F};
 };
 
+struct HudResult {
+  bool sceneChanged = false;
+  bool resetScene = false;
+};
+
+struct CursorDrag {
+  bool haveHit = false;
+  glm::vec3 lastHit{0.0F};
+};
+
+struct CursorForce {
+  glm::vec3 position{0.0F};
+  glm::vec3 force{0.0F};
+  float radius = 0.0F;
+};
+
 void ApplyCameraInput(render::Camera& camera);
 
-// Returns true when the selected scene preset changes.
-bool DrawHud(HudState& state);
+// Left-drag stirs fluid on the plane through the camera target.
+[[nodiscard]] CursorForce SampleMouseStir(const render::Camera& camera, bool paused,
+                                          CursorDrag& drag);
+
+HudResult DrawHud(HudState& state);
 
 }  // namespace sph::ui

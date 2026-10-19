@@ -142,6 +142,40 @@ TEST(GpuSphTest, OneStepMatchesCpuReference) {
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 
+float MeanVelocityX(const std::vector<sim::Particle>& particles) {
+  double sum = 0.0;
+  std::uint32_t count = 0;
+  for (const sim::Particle& particle : particles) {
+    if (particle.flags != sim::ParticleFlagFluid) {
+      continue;
+    }
+    sum += static_cast<double>(particle.velocity.x);
+    ++count;
+  }
+  return count == 0 ? 0.0F : static_cast<float>(sum / static_cast<double>(count));
+}
+
+TEST(GpuSphTest, CursorForcePushesNearbyFluid) {
+  const gpu::Context context({.validation = true});
+  const sim::Scene scene = MakeCloud();
+
+  sim::SphSolver baseline(context);
+  baseline.upload(scene.particles, scene.params);
+  baseline.step(1);
+  std::vector<sim::Particle> without = scene.particles;
+  baseline.download(without);
+
+  sim::SphSolver stirred(context);
+  stirred.upload(scene.particles, scene.params);
+  stirred.setCursor(scene.particles.front().position, {40.0F, 0.0F, 0.0F}, 0.5F);
+  stirred.step(1);
+  std::vector<sim::Particle> withForce = scene.particles;
+  stirred.download(withForce);
+
+  EXPECT_GT(MeanVelocityX(withForce), MeanVelocityX(without) + 0.01F);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
 TEST(GpuSphTest, SettledTankStaysNearRestDensity) {
   const gpu::Context context({.validation = true});
   sim::Scene scene = MakeTank();

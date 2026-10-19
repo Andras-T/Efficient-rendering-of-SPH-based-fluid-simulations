@@ -48,12 +48,12 @@ struct GpuSimParams {
   glm::uvec3 gridSize{1, 1, 1};
   std::uint32_t particleCount = 0;
   std::uint32_t cellCount = 0;
-  std::uint32_t pad0 = 0;
-  std::uint32_t pad1 = 0;
-  std::uint32_t pad2 = 0;
+  float cursorRadius = 0.0F;
+  glm::vec3 cursorPosition{0.0F};
+  glm::vec3 cursorForce{0.0F};
 };
 
-static_assert(sizeof(GpuSimParams) == 112);
+static_assert(sizeof(GpuSimParams) == 128);
 
 struct FrameUniforms {
   glm::mat4 view{1.0F};

@@ -17,8 +17,12 @@ enum class DebugView : std::uint8_t {
   Normals = 8,
 };
 
+constexpr auto DebugViewCount = static_cast<std::uint8_t>(DebugView::Normals) + 1;
+
 [[nodiscard]] const char* DebugViewName(DebugView view);
 [[nodiscard]] DebugView ParseDebugView(std::string_view name);
+[[nodiscard]] DebugView NextDebugView(DebugView view);
+[[nodiscard]] DebugView PrevDebugView(DebugView view);
 [[nodiscard]] bool IsParticleView(DebugView view);
 [[nodiscard]] bool NeedsFluidPasses(DebugView view);
 

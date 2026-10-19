@@ -28,6 +28,14 @@ TEST(DebugViewTest, ParsesStageNames) {
       std::invalid_argument);
 }
 
+TEST(DebugViewTest, CyclesThroughEveryStage) {
+  EXPECT_EQ(render::NextDebugView(render::DebugView::Final), render::DebugView::Particles);
+  EXPECT_EQ(render::NextDebugView(render::DebugView::Normals), render::DebugView::Final);
+  EXPECT_EQ(render::PrevDebugView(render::DebugView::Final), render::DebugView::Normals);
+  EXPECT_EQ(render::PrevDebugView(render::DebugView::Particles), render::DebugView::Final);
+  EXPECT_EQ(render::DebugViewCount, 9);
+}
+
 TEST(DebugViewTest, ClassifiesPasses) {
   EXPECT_TRUE(render::IsParticleView(render::DebugView::Density));
   EXPECT_FALSE(render::NeedsFluidPasses(render::DebugView::Particles));

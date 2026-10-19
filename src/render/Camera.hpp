@@ -6,6 +6,8 @@
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 
+#include <optional>
+
 namespace sph::render {
 
 // Orbit camera: yaw/pitch around a target, reverse-Z Vulkan projection.
@@ -34,6 +36,10 @@ class Camera {
   [[nodiscard]] float nearPlane() const { return nearPlane_; }
   [[nodiscard]] glm::vec3 position() const;
   [[nodiscard]] glm::vec3 forward() const;
+  // `ndc` is Vulkan clip XY in [-1, 1] (y down).
+  [[nodiscard]] glm::vec3 worldDirection(glm::vec2 ndc) const;
+  [[nodiscard]] std::optional<glm::vec3> hitPlane(glm::vec2 ndc, glm::vec3 planePoint,
+                                                  glm::vec3 planeNormal) const;
   [[nodiscard]] glm::mat4 view() const;
   [[nodiscard]] glm::mat4 projection() const;
   [[nodiscard]] glm::mat4 viewProjection() const { return projection() * view(); }
