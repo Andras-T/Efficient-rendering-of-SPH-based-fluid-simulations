@@ -1,45 +1,18 @@
-# Prerequisites
-*.d
+# Build trees and dependency download cache
+/build/
+/out/
+/.deps/
 
-# Compiled Object files
-*.slo
-*.lo
-*.o
-!res/app.o
-*.obj
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
-
-# Exclude the build files and directories
-out/build/x64-Debug/*
-
-# Include 'out/build/x64-Debug/shaders/*.spv'
-!out/build/x64-Debug/shaders/
-
-desktop.ini
+# Tooling
+/.cache/
+/compile_commands.json
 .vs/
-.vshistory/
+.vscode/
+.idea/
+*.user
+
+# Runtime output
+*.png
+!/docs/**/*.png
 *.rdc
-*.patch
+imgui.ini

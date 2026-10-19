@@ -1,0 +1,33 @@
+---
+description: Build, test, dependency, and git workflow
+alwaysApply: true
+---
+
+# Workflow
+
+## Build and test
+
+```bash
+cmake --preset debug          # or release; CC/CXX pick the compiler
+cmake --build --preset debug
+ctest --preset debug          # -L cpu or -L gpu to filter
+build/debug/bin/sph-fluid --capture out.png --frames 3   # headless, works on lavapipe
+```
+
+- No GPU in cloud VMs: GPU tests and headless runs use Mesa lavapipe. Unset `DISPLAY` if a stray X server confuses `vulkaninfo`.
+- Debug builds enable validation layers; tests fail on any validation error. Keep it that way.
+- New behavior gets a test: pure logic in `sph_cpu_tests`, anything touching Vulkan in `sph_gpu_tests`.
+- Before committing: `clang-format` on touched files and `run-clang-tidy -p build/debug -quiet "$PWD/(src|tests)/"` with no findings.
+
+## Dependencies
+
+- All third-party code comes from `cmake/Dependencies.cmake` via `sph_declare(name url sha256)`: release archives pinned by SHA-256, cached in `.deps/`.
+- To bump one: download the archive, `sha256sum` it, update URL and hash together.
+- Shaders are GLSL in `shaders/` (one stage per file, shared code in `.glsl` includes), listed in `shaders/CMakeLists.txt`, compiled by the pinned glslang to SPIR-V and embedded; load with `shaders::Find("Name.stage")`.
+
+## Git
+
+- Small commits, one logical change each; short imperative subject (`Add neighbor grid`), body only if needed.
+- No trailers, co-author lines, or tool mentions in commits, PRs, or code.
+- CI (`.github/workflows/ci.yml`) must be green: format, Linux GCC/Clang build and tests on lavapipe, clang-tidy, Windows build plus CPU tests.
+- Never commit build output, captures, or downloaded archives (see `.gitignore`).
