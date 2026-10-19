@@ -42,7 +42,7 @@ TEST(ComputeTest, ShaderUpdatesBufferThroughDeviceAddress) {
   }};
   const auto layout = gpu::CreatePipelineLayout(context.device(), pushConstants);
   const auto pipeline = gpu::CreateComputePipeline(
-      context.device(), {.spirv = shaders::Find("ComputeSmoke"), .layout = layout.get()});
+      context.device(), {.spirv = shaders::Find("ComputeSmoke.comp"), .layout = layout.get()});
 
   gpu::ImmediateSubmit(context, [&](VkCommandBuffer commandBuffer) {
     const SmokeConstants constants{buffer.address(), Count};

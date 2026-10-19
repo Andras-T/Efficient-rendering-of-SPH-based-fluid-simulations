@@ -6,7 +6,7 @@ Real-time fluid simulation on the GPU: smoothed particle hydrodynamics in Vulkan
 
 ## Build
 
-Needs CMake 3.25+, Ninja, a C++20 compiler, and a Vulkan 1.3 driver at runtime. Dependencies and the Slang compiler are downloaded by CMake; no Vulkan SDK required.
+Needs CMake 3.25+, Ninja, a C++20 compiler, and a Vulkan 1.3 driver at runtime. Dependencies, including the glslang shader compiler, are fetched and built by CMake; no Vulkan SDK required.
 
 ```bash
 cmake --preset release

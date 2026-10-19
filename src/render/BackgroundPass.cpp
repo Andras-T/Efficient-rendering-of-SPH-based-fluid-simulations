@@ -16,12 +16,13 @@ BackgroundPass::BackgroundPass(const gpu::Context& context, VkFormat colorFormat
   layout_ = gpu::CreatePipelineLayout(context.device(), pushConstants);
 
   const std::array colorFormats{colorFormat};
-  pipeline_ =
-      gpu::CreateGraphicsPipeline(context.device(), {
-                                                        .spirv = shaders::Find("Background"),
-                                                        .layout = layout_.get(),
-                                                        .colorFormats = colorFormats,
-                                                    });
+  pipeline_ = gpu::CreateGraphicsPipeline(
+      context.device(), {
+                            .vertexSpirv = shaders::Find("FullscreenTriangle.vert"),
+                            .fragmentSpirv = shaders::Find("Background.frag"),
+                            .layout = layout_.get(),
+                            .colorFormats = colorFormats,
+                        });
 }
 
 void BackgroundPass::record(VkCommandBuffer commandBuffer,

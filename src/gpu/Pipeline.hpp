@@ -12,9 +12,8 @@ Unique<VkPipelineLayout> CreatePipelineLayout(
     std::span<const VkDescriptorSetLayout> setLayouts = {});
 
 struct GraphicsPipelineDesc {
-  std::span<const std::uint32_t> spirv;
-  const char* vertexEntry = "vsMain";
-  const char* fragmentEntry = "fsMain";
+  std::span<const std::uint32_t> vertexSpirv;
+  std::span<const std::uint32_t> fragmentSpirv;
   VkPipelineLayout layout = VK_NULL_HANDLE;
   std::span<const VkFormat> colorFormats;
   VkFormat depthFormat = VK_FORMAT_UNDEFINED;
@@ -29,7 +28,6 @@ Unique<VkPipeline> CreateGraphicsPipeline(VkDevice device, const GraphicsPipelin
 
 struct ComputePipelineDesc {
   std::span<const std::uint32_t> spirv;
-  const char* entry = "csMain";
   VkPipelineLayout layout = VK_NULL_HANDLE;
 };
 

@@ -20,19 +20,20 @@ Unique<VkPipelineLayout> CreatePipelineLayout(VkDevice device,
 }
 
 Unique<VkPipeline> CreateGraphicsPipeline(VkDevice device, const GraphicsPipelineDesc& desc) {
-  const auto module = CreateShaderModule(device, desc.spirv);
+  const auto vertexModule = CreateShaderModule(device, desc.vertexSpirv);
+  const auto fragmentModule = CreateShaderModule(device, desc.fragmentSpirv);
   const std::array stages{
       VkPipelineShaderStageCreateInfo{
           .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
           .stage = VK_SHADER_STAGE_VERTEX_BIT,
-          .module = module.get(),
-          .pName = desc.vertexEntry,
+          .module = vertexModule.get(),
+          .pName = "main",
       },
       VkPipelineShaderStageCreateInfo{
           .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
           .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-          .module = module.get(),
-          .pName = desc.fragmentEntry,
+          .module = fragmentModule.get(),
+          .pName = "main",
       },
   };
 
@@ -123,7 +124,7 @@ Unique<VkPipeline> CreateComputePipeline(VkDevice device, const ComputePipelineD
               .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
               .stage = VK_SHADER_STAGE_COMPUTE_BIT,
               .module = module.get(),
-              .pName = desc.entry,
+              .pName = "main",
           },
       .layout = desc.layout,
   };

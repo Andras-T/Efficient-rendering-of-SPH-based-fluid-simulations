@@ -6,7 +6,7 @@
 
 namespace sph::shaders {
 
-// SPIR-V of the module compiled from `<name>.slang`; empty if there is none.
+// SPIR-V compiled from `shaders/<name>` (e.g. "Background.frag"); empty if there is none.
 std::span<const std::uint32_t> Find(std::string_view name);
 
 }  // namespace sph::shaders

@@ -81,22 +81,21 @@ if(SPH_BUILD_TESTS)
   FetchContent_MakeAvailable(googletest)
 endif()
 
-# Slang is a host tool: use SPH_SLANGC if given, otherwise the pinned release for this host.
-set(SPH_SLANGC "" CACHE FILEPATH "slangc to use instead of the pinned release")
-if(SPH_SLANGC)
-  set(SPH_SLANGC_EXE ${SPH_SLANGC})
+# glslang is built from the pinned source so every platform compiles shaders the same way.
+set(SPH_GLSLANG "" CACHE FILEPATH "glslang executable to use instead of building the pinned one")
+if(SPH_GLSLANG)
+  set(SPH_GLSLANG_EXE ${SPH_GLSLANG})
 else()
-  set(slangRelease ${github}/shader-slang/slang/releases/download/v2026.20)
-  if(CMAKE_HOST_WIN32)
-    sph_declare(slang ${slangRelease}/slang-2026.20-windows-x86_64.zip
-      e6dd32bbddf1720ebb4e679d55e9635ce792865a5bd84f3d2cd9af28647c0174)
-  elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
-    sph_declare(slang ${slangRelease}/slang-2026.20-linux-x86_64-glibc-2.28.tar.gz
-      84ebd777968caceea26b21bfd014341078be6047be6c5a963a69f984f896cebd)
-  else()
-    message(FATAL_ERROR "No pinned Slang release for this host; set SPH_SLANGC")
-  endif()
-  FetchContent_MakeAvailable(slang)
-  find_program(SPH_SLANGC_EXE slangc PATHS ${slang_SOURCE_DIR}/bin NO_DEFAULT_PATH REQUIRED)
+  sph_declare(glslang
+    ${github}/KhronosGroup/glslang/archive/refs/tags/16.6.0.tar.gz
+    9c09b901149c729df745057dafa815278aaa101b84d2b6e14f16a42de52f97f2)
+  set(ENABLE_OPT OFF)
+  set(ENABLE_HLSL OFF)
+  set(ENABLE_GLSLANG_JS OFF)
+  set(GLSLANG_TESTS OFF)
+  set(GLSLANG_ENABLE_INSTALL OFF)
+  set(BUILD_EXTERNAL OFF)
+  FetchContent_MakeAvailable(glslang)
+  set(SPH_GLSLANG_EXE $<TARGET_FILE:glslang-standalone>)
+  set(SPH_GLSLANG_TARGET glslang-standalone)
 endif()
-message(STATUS "slangc: ${SPH_SLANGC_EXE}")

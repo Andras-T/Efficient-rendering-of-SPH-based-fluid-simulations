@@ -1,5 +1,5 @@
 ---
-description: C++ and Slang coding style
+description: C++ and GLSL coding style
 globs: src/**,tests/**,shaders/**
 alwaysApply: true
 ---
@@ -12,11 +12,11 @@ alwaysApply: true
   - camelCase: methods, members, locals, parameters (`recordFrame`, `imageCount`).
   - Private/protected members: camelCase with a trailing underscore (`device_`).
   - Namespaces: short lower-case and only where they add meaning (`sph`, `sph::gpu`, `sph::render`).
-  - Files: PascalCase named after their main type or function (`gpu/Context.hpp`), Slang modules too (`Background.slang`).
+  - Files: PascalCase named after their main type or function (`gpu/Context.hpp`), shaders too, with the stage as extension (`Background.frag`, `Density.comp`).
 - Formatting: `.clang-format` (Google base, 100 columns). Run `clang-format -i` on touched files.
 - Comments only where the code cannot speak for itself: invariants, Vulkan sync reasoning, non-obvious math. No narration, no change logs.
 - Vulkan objects are owned by RAII types (`gpu::Unique`, `gpu::Buffer`, `gpu::Image`); declare members so destruction order is correct, nothing outlives `gpu::Context`.
 - Errors: throw (`gpu::Check` for `VkResult`); catch only in `main` or where recovery is real.
 - Vulkan 1.3 core only: dynamic rendering, synchronization2, buffer device addresses for shader data.
-- Structs shared with shaders: keep C++ and Slang layouts identical and `static_assert` the size.
+- Structs shared with shaders: use `scalar` block layout in GLSL, keep C++ and GLSL layouts identical, and `static_assert` the size.
 - Third-party headers are SYSTEM includes; our code builds warning-free with `SPH_WARNINGS_AS_ERRORS=ON` on GCC, Clang, and MSVC.

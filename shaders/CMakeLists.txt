@@ -1,3 +1,4 @@
 sph_add_shader_library(sph_shaders SOURCES
-  Background.slang
-  ComputeSmoke.slang)
+  FullscreenTriangle.vert
+  Background.frag
+  ComputeSmoke.comp)
