@@ -24,7 +24,7 @@ struct NeighborGrid {
 void BuildNeighbors(std::span<Particle> particles, NeighborGrid& neighbors,
                     const SimParams& params) {
   neighbors.grid = MakeGrid(params);
-  const std::uint32_t n = static_cast<std::uint32_t>(particles.size());
+  const auto n = static_cast<std::uint32_t>(particles.size());
   const std::uint32_t cells = neighbors.grid.cellCount;
   neighbors.cellOf.resize(n);
   neighbors.counts.assign(cells, 0);
@@ -50,7 +50,7 @@ void BuildNeighbors(std::span<Particle> particles, NeighborGrid& neighbors,
 
 template <typename Fn>
 void ForNeighbors(std::uint32_t index, std::span<const Particle> particles,
-                  const NeighborGrid& neighbors, Fn&& fn) {
+                  const NeighborGrid& neighbors, const Fn& fn) {
   const glm::ivec3 center = CellCoords(particles[index].position, neighbors.grid);
   for (int z = -1; z <= 1; ++z) {
     for (int y = -1; y <= 1; ++y) {
@@ -174,11 +174,41 @@ float MeanFluidDensity(std::span<const Particle> particles) {
   return count == 0 ? 0.0F : static_cast<float>(sum / static_cast<double>(count));
 }
 
+float MeanInteriorDensity(std::span<const Particle> particles, const SimParams& params) {
+  const float margin = params.supportRadius();
+  double sum = 0.0;
+  std::uint32_t count = 0;
+  for (const Particle& particle : particles) {
+    if (particle.flags != ParticleFlagFluid) {
+      continue;
+    }
+    bool interior = true;
+    for (int axis = 0; axis < 3; ++axis) {
+      if (particle.position[axis] < params.domainMin[axis] + margin ||
+          particle.position[axis] > params.domainMax[axis] - margin) {
+        interior = false;
+      }
+    }
+    if (!interior) {
+      continue;
+    }
+    sum += static_cast<double>(particle.density);
+    ++count;
+  }
+  return count == 0 ? 0.0F : static_cast<float>(sum / static_cast<double>(count));
+}
+
 void CalibrateRestDensity(std::span<Particle> particles, SimParams& params) {
   ComputeDensityAndPressure(particles, params);
-  const float mean = MeanFluidDensity(particles);
-  if (mean > KernelEpsilon) {
-    params.restDensity = mean;
+  float packed = 0.0F;
+  for (const Particle& particle : particles) {
+    if (particle.flags != ParticleFlagFluid) {
+      continue;
+    }
+    packed = std::max(packed, particle.density);
+  }
+  if (packed > KernelEpsilon) {
+    params.restDensity = packed;
   }
 }
 

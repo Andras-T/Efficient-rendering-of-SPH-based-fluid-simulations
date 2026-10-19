@@ -79,7 +79,7 @@ bool DrawHud(HudState& state) {
 
   if (state.camera != nullptr) {
     render::Camera& camera = *state.camera;
-    ImGui::SetNextWindowPos({12.0F, 150.0F}, ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos({12.0F, 240.0F}, ImGuiCond_FirstUseEver);
     ImGui::Begin("Camera", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     float yaw = Degrees(camera.yaw());
     float pitch = Degrees(camera.pitch());
@@ -109,7 +109,7 @@ bool DrawHud(HudState& state) {
     ImGui::End();
   }
 
-  ImGui::SetNextWindowPos({12.0F, 440.0F}, ImGuiCond_FirstUseEver);
+  ImGui::SetNextWindowPos({12.0F, 530.0F}, ImGuiCond_FirstUseEver);
   ImGui::Begin("GPU", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
   if (state.timings.empty()) {
     ImGui::TextUnformatted("No timestamp queries this frame");

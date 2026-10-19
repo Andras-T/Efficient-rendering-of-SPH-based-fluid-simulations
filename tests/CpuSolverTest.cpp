@@ -14,7 +14,7 @@ Scene MakeTank() {
   SimParams params;
   params.particleSpacing = 0.08F;
   params.domainMin = {0.0F, 0.0F, 0.0F};
-  params.domainMax = {0.40F, 0.32F, 0.40F};
+  params.domainMax = {0.64F, 0.64F, 0.64F};
   params.timeStep = 0.0008F;
   params.substeps = 4;
   params.speedOfSound = 32.0F;
@@ -22,13 +22,12 @@ Scene MakeTank() {
 
   Scene scene;
   scene.params = params;
-  const int nx = 5;
-  const int ny = 4;
-  const int nz = 5;
-  scene.particles.reserve(static_cast<std::size_t>(nx * ny * nz));
-  for (int z = 0; z < nz; ++z) {
-    for (int y = 0; y < ny; ++y) {
-      for (int x = 0; x < nx; ++x) {
+  constexpr int Extent = 8;
+  scene.particles.reserve(static_cast<std::size_t>(Extent) * static_cast<std::size_t>(Extent) *
+                          static_cast<std::size_t>(Extent));
+  for (int z = 0; z < Extent; ++z) {
+    for (int y = 0; y < Extent; ++y) {
+      for (int x = 0; x < Extent; ++x) {
         Particle particle;
         particle.position = {
             (static_cast<float>(x) + 0.5F) * params.particleSpacing,
@@ -65,7 +64,9 @@ TEST(CpuSolverTest, ParticlesStayInTheBox) {
 TEST(CpuSolverTest, SettledTankStaysNearRestDensity) {
   Scene scene = MakeTank();
   StepCpu(scene.particles, scene.params, 80);
-  const float mean = MeanFluidDensity(scene.particles);
+  ComputeDensityAndPressure(scene.particles, scene.params);
+  const float mean = MeanInteriorDensity(scene.particles, scene.params);
+  ASSERT_GT(mean, 0.0F);
   EXPECT_NEAR(mean, scene.params.restDensity, 0.01F * scene.params.restDensity);
 }
 

@@ -21,4 +21,7 @@ void CalibrateRestDensity(std::span<Particle> particles, SimParams& params);
 
 [[nodiscard]] float MeanFluidDensity(std::span<const Particle> particles);
 
+[[nodiscard]] float MeanInteriorDensity(std::span<const Particle> particles,
+                                        const SimParams& params);
+
 }  // namespace sph::sim

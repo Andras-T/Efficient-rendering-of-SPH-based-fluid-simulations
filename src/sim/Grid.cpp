@@ -51,7 +51,7 @@ void ExclusiveScan(std::span<const std::uint32_t> counts, std::span<std::uint32_
 void CountingSort(std::span<const std::uint32_t> cellOfParticle,
                   std::span<const std::uint32_t> offsets, std::span<std::uint32_t> fill,
                   std::span<std::uint32_t> dest) {
-  const std::uint32_t n = static_cast<std::uint32_t>(cellOfParticle.size());
+  const auto n = static_cast<std::uint32_t>(cellOfParticle.size());
   for (std::uint32_t i = 0; i < static_cast<std::uint32_t>(offsets.size()) &&
                             i < static_cast<std::uint32_t>(fill.size());
        ++i) {

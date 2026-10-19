@@ -5,10 +5,11 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numbers>
 
 namespace sph::sim {
 
-constexpr float Pi = 3.14159265358979323846F;
+constexpr float Pi = std::numbers::pi_v<float>;
 constexpr float KernelEpsilon = 1.0e-8F;
 
 inline float Poly6(float distanceSquared, float kernelRadius) {

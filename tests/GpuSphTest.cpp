@@ -48,7 +48,7 @@ sim::Scene MakeTank() {
   sim::SimParams params;
   params.particleSpacing = 0.08F;
   params.domainMin = {0.0F, 0.0F, 0.0F};
-  params.domainMax = {0.40F, 0.32F, 0.40F};
+  params.domainMax = {0.64F, 0.64F, 0.64F};
   params.timeStep = 0.0008F;
   params.substeps = 4;
   params.speedOfSound = 32.0F;
@@ -56,12 +56,10 @@ sim::Scene MakeTank() {
 
   sim::Scene scene;
   scene.params = params;
-  const int nx = 5;
-  const int ny = 4;
-  const int nz = 5;
-  for (int z = 0; z < nz; ++z) {
-    for (int y = 0; y < ny; ++y) {
-      for (int x = 0; x < nx; ++x) {
+  constexpr int Extent = 8;
+  for (int z = 0; z < Extent; ++z) {
+    for (int y = 0; y < Extent; ++y) {
+      for (int x = 0; x < Extent; ++x) {
         sim::Particle particle;
         particle.position = {
             (static_cast<float>(x) + 0.5F) * params.particleSpacing,
@@ -151,7 +149,9 @@ TEST(GpuSphTest, SettledTankStaysNearRestDensity) {
   solver.upload(scene.particles, scene.params);
   solver.step(scene.params.substeps * 20);
   solver.download(scene.particles);
-  const float mean = sim::MeanFluidDensity(scene.particles);
+  sim::ComputeDensityAndPressure(scene.particles, scene.params);
+  const float mean = sim::MeanInteriorDensity(scene.particles, scene.params);
+  ASSERT_GT(mean, 0.0F);
   EXPECT_NEAR(mean, scene.params.restDensity, 0.01F * scene.params.restDensity);
   for (const sim::Particle& particle : scene.particles) {
     EXPECT_TRUE(std::isfinite(particle.position.x));

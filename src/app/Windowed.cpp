@@ -71,7 +71,8 @@ int RunWindowed(const Options& options) {
   gpu::Swapchain swapchain(context, window.framebufferExtent());
   render::Renderer renderer(context, swapchain.format());
   renderer.resize(swapchain.extent());
-  ImGuiLayer imgui(context, window.handle(), swapchain.format(), swapchain.imageCount());
+  ImGuiLayer imgui(context, window.handle(), swapchain.format(), render::Renderer::DepthFormat,
+                   swapchain.imageCount());
   gpu::GpuProfiler profiler(context, FramesInFlight);
   sim::Scene scene = sim::BuildScene(options.scene);
   sim::CalibrateRestDensity(scene.particles, scene.params);
