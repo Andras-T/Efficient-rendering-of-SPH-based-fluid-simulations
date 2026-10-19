@@ -28,21 +28,21 @@ FoamPass::FoamPass(const gpu::Context& context, VkFormat colorFormat, VkFormat d
   layout_ = gpu::CreatePipelineLayout(context.device(), pushConstants);
 
   const std::array colorFormats{colorFormat};
-  pipeline_ = gpu::CreateGraphicsPipeline(context.device(),
-                                          {
-                                              .vertexSpirv = shaders::Find("Foam.vert"),
-                                              .fragmentSpirv = shaders::Find("Foam.frag"),
-                                              .layout = layout_.get(),
-                                              .colorFormats = colorFormats,
-                                              .depthFormat = depthFormat,
-                                              .depthTest = true,
-                                              .depthWrite = false,
-                                              .additiveBlend = true,
-                                          });
+  pipeline_ =
+      gpu::CreateGraphicsPipeline(context.device(), {
+                                                        .vertexSpirv = shaders::Find("Foam.vert"),
+                                                        .fragmentSpirv = shaders::Find("Foam.frag"),
+                                                        .layout = layout_.get(),
+                                                        .colorFormats = colorFormats,
+                                                        .depthFormat = depthFormat,
+                                                        .depthTest = true,
+                                                        .depthWrite = false,
+                                                        .additiveBlend = true,
+                                                    });
 }
 
-void FoamPass::record(VkCommandBuffer commandBuffer, VkDeviceAddress uniforms,
-                      VkDeviceAddress foam, std::uint32_t foamCapacity, float foamRadius) const {
+void FoamPass::record(VkCommandBuffer commandBuffer, VkDeviceAddress uniforms, VkDeviceAddress foam,
+                      std::uint32_t foamCapacity, float foamRadius) const {
   if (foamCapacity == 0 || foam == 0) {
     return;
   }
