@@ -75,6 +75,8 @@ std::vector<std::uint8_t> RenderWindOffscreen(const gpu::Context& context,
   const render::Camera& camera = request.camera == nullptr ? ownedCamera : *request.camera;
   render::Renderer renderer(context, CaptureFormat);
   renderer.settings().view = request.view;
+  renderer.settings().windCar = request.windCar;
+  renderer.settings().windTracers = request.windTracers;
   renderer.resize(extent);
   const render::RenderTarget renderTarget{target.handle(), target.view(), extent};
   if (!request.sequenceDirectory.empty()) {

@@ -74,7 +74,18 @@ TEST(OptionsTest, GuideStartsTheFluidWalkthrough) {
   const Options options = Parse({"--guide"});
   EXPECT_TRUE(options.guide);
   EXPECT_EQ(options.simulation, SimulationKind::Fluid);
-  EXPECT_EQ(Parse({"--sim", "wind", "--guide"}).simulation, SimulationKind::Fluid);
+}
+
+TEST(OptionsTest, GuideWithWindStartsTheWindWalkthrough) {
+  const Options options = Parse({"--sim", "wind", "--guide"});
+  EXPECT_TRUE(options.guide);
+  EXPECT_EQ(options.simulation, SimulationKind::WindTunnel);
+  EXPECT_EQ(Parse({"--guide", "--sim", "wind"}).simulation, SimulationKind::WindTunnel);
+}
+
+TEST(OptionsTest, GuideDoesNotStartForSmoke) {
+  EXPECT_FALSE(Parse({"--sim", "smoke", "--guide"}).guide);
+  EXPECT_EQ(Parse({"--sim", "smoke", "--guide"}).simulation, SimulationKind::Smoke);
 }
 
 TEST(OptionsTest, RejectsUnknownSimulations) {

@@ -6,6 +6,7 @@
 #include "render/DebugView.hpp"
 #include "sim/Scene.hpp"
 #include "ui/FluidGuide.hpp"
+#include "ui/WindGuide.hpp"
 
 #include <gtest/gtest.h>
 
@@ -292,6 +293,36 @@ TEST(HeadlessRenderTest, WindVelocityViewDiffersFromFinal) {
     changed += finalView[i] != velocity[i] ? 1 : 0;
   }
   EXPECT_GT(changed, static_cast<int>(finalView.size() / 40));
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
+TEST(HeadlessRenderTest, WindGuideStepsIsolateTheStage) {
+  const gpu::Context context({.validation = true});
+  constexpr VkExtent2D Extent{80, 48};
+  const ui::WindGuideStep& tunnel = ui::WindGuideAt(0);
+  const ui::WindGuideStep& car = ui::WindGuideAt(1);
+  const auto empty = RenderOffscreen(context, {.extent = Extent,
+                                               .frames = 16,
+                                               .simulate = true,
+                                               .view = tunnel.view,
+                                               .simulation = SimulationKind::WindTunnel,
+                                               .windCar = tunnel.showCar,
+                                               .windTracers = tunnel.showTracers});
+  const auto body = RenderOffscreen(context, {.extent = Extent,
+                                              .frames = 16,
+                                              .simulate = true,
+                                              .view = car.view,
+                                              .simulation = SimulationKind::WindTunnel,
+                                              .windCar = car.showCar,
+                                              .windTracers = car.showTracers});
+  ASSERT_EQ(empty.size(), body.size());
+  int changed = 0;
+  for (std::size_t i = 0; i < empty.size(); ++i) {
+    changed += empty[i] != body[i] ? 1 : 0;
+  }
+  EXPECT_FALSE(tunnel.showCar);
+  EXPECT_TRUE(car.showCar);
+  EXPECT_GT(changed, static_cast<int>(empty.size() / 40));
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 

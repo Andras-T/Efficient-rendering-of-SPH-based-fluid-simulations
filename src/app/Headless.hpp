@@ -39,6 +39,8 @@ struct OffscreenRequest {
   sim::SolverMethod solver = sim::SolverMethod::Wcsph;
   sim::TankShape tankShape = sim::TankShape::Box;
   SimulationKind simulation = SimulationKind::Fluid;
+  bool windCar = true;
+  bool windTracers = true;
 };
 
 // Renders offscreen and returns the last frame as tightly packed sRGB RGBA8.
