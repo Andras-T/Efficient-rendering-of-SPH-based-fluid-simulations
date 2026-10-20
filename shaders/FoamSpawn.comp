@@ -30,12 +30,11 @@ void main() {
 
   const float speed = length(self.velocity);
   const float missing = max(0.0, (p.restDensity - self.density) / max(p.restDensity, 1.0));
-  const bool crest = missing > 0.20 && speed > 1.05;
-  const bool splash = speed > 2.40;
-  if (!crest && !splash) {
+  const bool crest = missing > 0.22 && speed > 1.25 && self.density < 0.88 * p.restDensity;
+  if (!crest) {
     return;
   }
-  if ((Hash(i * 17u + pc.foamSeed) & 31u) != 0u) {
+  if ((Hash(i * 17u + pc.foamSeed) % 21u) != 0u) {
     return;
   }
 
@@ -46,10 +45,10 @@ void main() {
   for (uint probe = 0; probe < 4u; ++probe) {
     const uint slot = (h + probe * 17u) % p.foamCapacity;
     if (atomicCompSwap(pc.foam.particles[slot].alive, 0u, 1u) == 0u) {
-      const float life = mix(0.08, 0.28, float((h >> 4u) & 255u) / 255.0);
-      vec3 velocity = self.velocity * 0.55 + jitter * 0.08;
-      velocity.y = min(velocity.y, 0.55);
-      pc.foam.particles[slot].position = self.position + jitter * (p.kernelRadius * 0.12);
+      const float life = mix(0.22, 0.55, float((h >> 4u) & 255u) / 255.0);
+      vec3 velocity = self.velocity * 0.28 + jitter * 0.025;
+      velocity.y = min(velocity.y, 0.18);
+      pc.foam.particles[slot].position = self.position + jitter * (p.kernelRadius * 0.10);
       pc.foam.particles[slot].velocity = velocity;
       pc.foam.particles[slot].life = life;
       return;

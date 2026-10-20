@@ -37,7 +37,7 @@ FoamPass::FoamPass(const gpu::Context& context, VkFormat colorFormat, VkFormat d
                                                         .depthFormat = depthFormat,
                                                         .depthTest = true,
                                                         .depthWrite = false,
-                                                        .additiveBlend = true,
+                                                        .alphaBlend = true,
                                                     });
 }
 

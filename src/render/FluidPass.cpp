@@ -14,8 +14,8 @@ namespace sph::render {
 namespace {
 
 constexpr std::int32_t SmoothRadius = 32;
-constexpr float SpatialSigma = 20.0F;
-constexpr float RangeSigma = 0.32F;
+constexpr float SpatialSigma = 22.0F;
+constexpr float RangeSigma = 0.36F;
 constexpr std::uint32_t SmoothPasses = 3;
 constexpr std::uint32_t SmoothTile = 256;
 
@@ -165,6 +165,7 @@ FluidPass::FluidPass(const gpu::Context& context, VkFormat hdrFormat, VkFormat d
                             .fragmentSpirv = shaders::Find("Composite.frag"),
                             .layout = compositePipelineLayout_.get(),
                             .colorFormats = hdrColor,
+                            .alphaBlend = true,
                         });
 }
 
