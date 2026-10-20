@@ -55,6 +55,66 @@ void LimitSpeed(inout vec3 velocity, GpuSimParams p) {
   }
 }
 
+void CollideAabb(inout vec3 position, inout vec3 velocity, vec3 boxMin, vec3 boxMax, float radius,
+                 float restitution) {
+  const vec3 lo = boxMin - vec3(radius);
+  const vec3 hi = boxMax + vec3(radius);
+  if (any(lessThanEqual(position, lo)) || any(greaterThanEqual(position, hi))) {
+    return;
+  }
+  const vec3 dLo = position - lo;
+  const vec3 dHi = hi - position;
+  int axis = 0;
+  float push = dLo.x;
+  float dir = -1.0;
+  if (dHi.x < push) {
+    push = dHi.x;
+    dir = 1.0;
+  }
+  if (dLo.y < push) {
+    axis = 1;
+    push = dLo.y;
+    dir = -1.0;
+  }
+  if (dHi.y < push) {
+    axis = 1;
+    push = dHi.y;
+    dir = 1.0;
+  }
+  if (dLo.z < push) {
+    axis = 2;
+    push = dLo.z;
+    dir = -1.0;
+  }
+  if (dHi.z < push) {
+    axis = 2;
+    push = dHi.z;
+    dir = 1.0;
+  }
+  position[axis] += dir * push;
+  if (velocity[axis] * dir < 0.0) {
+    velocity[axis] *= -restitution;
+  }
+}
+
+void CollidePaddle(inout vec3 position, inout vec3 velocity, GpuSimParams p) {
+  if (p.cursorRadius <= 0.0) {
+    return;
+  }
+  const vec3 delta = position - p.cursorPosition;
+  const float dist = length(delta);
+  const float minDist = p.cursorRadius + p.collisionRadius * 0.25;
+  if (dist >= minDist || dist <= KernelEpsilon) {
+    return;
+  }
+  const vec3 normal = delta / dist;
+  position = p.cursorPosition + normal * minDist;
+  const float into = dot(velocity, normal);
+  if (into < 0.0) {
+    velocity -= (1.0 + p.restitution) * into * normal;
+  }
+}
+
 void CollideBox(inout vec3 position, inout vec3 velocity, GpuSimParams p) {
   const vec3 minBound = p.domainMin + vec3(p.collisionRadius);
   const vec3 maxBound = p.domainMax - vec3(p.collisionRadius);
@@ -76,6 +136,10 @@ void CollideBox(inout vec3 position, inout vec3 velocity, GpuSimParams p) {
       }
     }
   }
+  CollidePaddle(position, velocity, p);
+  if (p.blockEnabled > 0.5) {
+    CollideAabb(position, velocity, p.blockMin, p.blockMax, p.collisionRadius, p.restitution);
+  }
   LimitSpeed(velocity, p);
 }
 
@@ -90,6 +154,10 @@ vec3 NonPressureAccel(Particle particle, GpuSimParams p) {
       const float falloff = 1.0 - dist2 / radius2;
       const float weight = falloff * falloff;
       acceleration += p.cursorForce * weight;
+      if (p.cursorPush != 0.0) {
+        const float dist = sqrt(max(dist2, KernelEpsilon));
+        acceleration += (toParticle / dist) * p.cursorPush * weight;
+      }
       if (p.cursorSwirl != 0.0) {
         const vec3 tangent = cross(vec3(0.0, 1.0, 0.0), toParticle);
         const float tangentLength = length(tangent);

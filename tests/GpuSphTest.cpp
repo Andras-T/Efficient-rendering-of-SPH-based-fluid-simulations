@@ -203,6 +203,32 @@ TEST(GpuSphTest, CursorSwirlSpinsNearbyFluid) {
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 
+TEST(GpuSphTest, PaddleSphereDisplacesFluid) {
+  const gpu::Context context({.validation = true});
+  const sim::Scene scene = MakeCloud();
+  const glm::vec3 center = scene.particles.front().position;
+
+  sim::SphSolver baseline(context);
+  baseline.upload(scene.particles, scene.params);
+  baseline.step(1);
+  std::vector<sim::Particle> without = scene.particles;
+  baseline.download(without);
+
+  sim::SphSolver shoved(context);
+  shoved.upload(scene.particles, scene.params);
+  shoved.setCursor(center, {0.0F, 0.0F, 0.0F}, 0.18F, 0.0F, 300.0F);
+  shoved.step(1);
+  std::vector<sim::Particle> withPaddle = scene.particles;
+  shoved.download(withPaddle);
+
+  float maxSep = 0.0F;
+  for (std::size_t i = 0; i < withPaddle.size(); ++i) {
+    maxSep = std::max(maxSep, glm::length(withPaddle[i].position - without[i].position));
+  }
+  EXPECT_GT(maxSep, 0.005F);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
 TEST(GpuSphTest, DfsphOneStepMatchesCpuReference) {
   const gpu::Context context({.validation = true});
   sim::Scene scene = MakeCloud();

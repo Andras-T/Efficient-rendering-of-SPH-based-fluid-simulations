@@ -13,9 +13,10 @@
 namespace sph::render {
 namespace {
 
-constexpr std::int32_t SmoothRadius = 16;
-constexpr float SpatialSigma = 8.0F;
-constexpr float RangeSigma = 0.14F;
+constexpr std::int32_t SmoothRadius = 24;
+constexpr float SpatialSigma = 16.0F;
+constexpr float RangeSigma = 0.28F;
+constexpr std::uint32_t SmoothPasses = 2;
 constexpr std::uint32_t SmoothTile = 256;
 
 struct SmoothPush {
@@ -102,10 +103,10 @@ FluidPass::FluidPass(const gpu::Context& context, VkFormat hdrFormat, VkFormat d
   compositeLayout_ = gpu::CreateDescriptorSetLayout(context.device(), compositeBindings);
 
   const std::array poolSizes{
-      VkDescriptorPoolSize{.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = 4},
+      VkDescriptorPoolSize{.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = 6},
       VkDescriptorPoolSize{.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 4},
   };
-  pool_ = gpu::CreateDescriptorPool(context.device(), 4, poolSizes);
+  pool_ = gpu::CreateDescriptorPool(context.device(), 5, poolSizes);
 
   const std::array particlePush{VkPushConstantRange{
       .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -193,6 +194,7 @@ void FluidPass::updateDescriptors() {
   horizontalSet_ =
       gpu::AllocateDescriptorSet(context_->device(), pool_.get(), storageLayout_.get());
   verticalSet_ = gpu::AllocateDescriptorSet(context_->device(), pool_.get(), storageLayout_.get());
+  refineSet_ = gpu::AllocateDescriptorSet(context_->device(), pool_.get(), storageLayout_.get());
   compositeSet_ =
       gpu::AllocateDescriptorSet(context_->device(), pool_.get(), compositeLayout_.get());
 
@@ -200,6 +202,8 @@ void FluidPass::updateDescriptors() {
   gpu::WriteStorageImage(context_->device(), horizontalSet_, 1, smoothTemp_.view());
   gpu::WriteStorageImage(context_->device(), verticalSet_, 0, smoothTemp_.view());
   gpu::WriteStorageImage(context_->device(), verticalSet_, 1, smoothDepth_.view());
+  gpu::WriteStorageImage(context_->device(), refineSet_, 0, smoothDepth_.view());
+  gpu::WriteStorageImage(context_->device(), refineSet_, 1, smoothTemp_.view());
 
   gpu::WriteCombinedImage(context_->device(), compositeSet_, 0, hdriView_, hdriSampler_);
   gpu::WriteCombinedImage(context_->device(), compositeSet_, 1, rawDepth_.view(), sampler_.get());
@@ -342,23 +346,33 @@ void FluidPass::recordSmooth(VkCommandBuffer commandBuffer) const {
 
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, smoothPipeline_.get());
 
-  SmoothPush horizontal{.horizontal = 1};
-  vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, smoothLayout_.get(), 0, 1,
-                          &horizontalSet_, 0, nullptr);
-  vkCmdPushConstants(commandBuffer, smoothLayout_.get(), VK_SHADER_STAGE_COMPUTE_BIT, 0,
-                     sizeof(horizontal), &horizontal);
-  vkCmdDispatch(commandBuffer, groups(extent.width), extent.height, 1);
+  const auto blur = [&](VkDescriptorSet horizontalSet) {
+    SmoothPush horizontal{.horizontal = 1};
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, smoothLayout_.get(), 0,
+                            1, &horizontalSet, 0, nullptr);
+    vkCmdPushConstants(commandBuffer, smoothLayout_.get(), VK_SHADER_STAGE_COMPUTE_BIT, 0,
+                       sizeof(horizontal), &horizontal);
+    vkCmdDispatch(commandBuffer, groups(extent.width), extent.height, 1);
 
-  gpu::GlobalBarrier(commandBuffer, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                     VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                     VK_ACCESS_2_SHADER_STORAGE_READ_BIT);
+    gpu::GlobalBarrier(commandBuffer, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                       VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                       VK_ACCESS_2_SHADER_STORAGE_READ_BIT);
 
-  SmoothPush vertical{.horizontal = 0};
-  vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, smoothLayout_.get(), 0, 1,
-                          &verticalSet_, 0, nullptr);
-  vkCmdPushConstants(commandBuffer, smoothLayout_.get(), VK_SHADER_STAGE_COMPUTE_BIT, 0,
-                     sizeof(vertical), &vertical);
-  vkCmdDispatch(commandBuffer, groups(extent.height), extent.width, 1);
+    SmoothPush vertical{.horizontal = 0};
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, smoothLayout_.get(), 0,
+                            1, &verticalSet_, 0, nullptr);
+    vkCmdPushConstants(commandBuffer, smoothLayout_.get(), VK_SHADER_STAGE_COMPUTE_BIT, 0,
+                       sizeof(vertical), &vertical);
+    vkCmdDispatch(commandBuffer, groups(extent.height), extent.width, 1);
+
+    gpu::GlobalBarrier(commandBuffer, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                       VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                       VK_ACCESS_2_SHADER_STORAGE_READ_BIT);
+  };
+  blur(horizontalSet_);
+  for (std::uint32_t pass = 1; pass < SmoothPasses; ++pass) {
+    blur(refineSet_);
+  }
 
   gpu::TransitionImage(commandBuffer, {
                                           .image = rawDepth_.handle(),

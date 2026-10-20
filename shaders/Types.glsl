@@ -62,6 +62,10 @@ struct GpuSimParams {
   float foamDt;
   float xsph;
   float cursorSwirl;
+  float cursorPush;
+  vec3 blockMin;
+  float blockEnabled;
+  vec3 blockMax;
 };
 
 layout(scalar, buffer_reference, buffer_reference_align = 16) readonly buffer ParticleBuffer {

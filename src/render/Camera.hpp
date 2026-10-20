@@ -41,6 +41,9 @@ class Camera {
   [[nodiscard]] glm::vec3 worldDirection(glm::vec2 ndc) const;
   [[nodiscard]] std::optional<glm::vec3> hitPlane(glm::vec2 ndc, glm::vec3 planePoint,
                                                   glm::vec3 planeNormal) const;
+  // Point along the mouse ray inside `min`/`max`, biased toward the camera.
+  [[nodiscard]] std::optional<glm::vec3> hitVolume(glm::vec2 ndc, glm::vec3 min,
+                                                   glm::vec3 max) const;
   [[nodiscard]] glm::mat4 view() const;
   [[nodiscard]] glm::mat4 projection() const;
   [[nodiscard]] glm::mat4 viewProjection() const { return projection() * view(); }

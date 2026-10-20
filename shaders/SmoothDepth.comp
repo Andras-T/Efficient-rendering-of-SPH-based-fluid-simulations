@@ -3,7 +3,7 @@
 
 layout(local_size_x = 256) in;
 
-const int kMaxRadius = 16;
+const int kMaxRadius = 24;
 const int kTile = 256;
 
 shared float sDepth[kTile + 2 * kMaxRadius];

@@ -31,6 +31,8 @@ sph_add_shader_library(sph_shaders
     Foam.frag
     Tank.vert
     Tank.frag
+    Block.vert
+    Block.frag
     Paddle.vert
     Paddle.frag
   INCLUDES

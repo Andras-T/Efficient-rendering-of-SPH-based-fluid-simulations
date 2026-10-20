@@ -17,6 +17,7 @@ add_library(sph_engine STATIC
   gpu/Timestamps.cpp
   gpu/Vulkan.cpp
   render/BackgroundPass.cpp
+  render/BlockPass.cpp
   render/Camera.cpp
   render/DebugView.cpp
   render/FluidPass.cpp

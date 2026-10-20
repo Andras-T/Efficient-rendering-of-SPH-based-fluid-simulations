@@ -31,7 +31,7 @@ float SimParams::mass() const {
 
 float SimParams::supportRadius() const { return particleSpacing * 2.0F; }
 
-float SimParams::renderRadius() const { return particleSpacing * 0.72F; }
+float SimParams::renderRadius() const { return particleSpacing * 0.95F; }
 
 float SimParams::stiffness() const { return restDensity * speedOfSound * speedOfSound / eosGamma; }
 

@@ -77,9 +77,13 @@ struct GpuSimParams {
   float foamDt = 0.0F;
   float xsph = 0.0F;
   float cursorSwirl = 0.0F;
+  float cursorPush = 0.0F;
+  glm::vec3 blockMin{0.0F};
+  float blockEnabled = 0.0F;
+  glm::vec3 blockMax{0.0F};
 };
 
-static_assert(sizeof(GpuSimParams) == 152);
+static_assert(sizeof(GpuSimParams) == 184);
 
 struct FrameUniforms {
   glm::mat4 view{1.0F};

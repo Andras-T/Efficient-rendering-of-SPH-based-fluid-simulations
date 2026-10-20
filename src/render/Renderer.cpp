@@ -92,6 +92,7 @@ Renderer::Renderer(const gpu::Context& context, VkFormat colorFormat)
       fluidPass_(context, HdrFormat, DepthFormat, hdri_),
       foamPass_(context, HdrFormat, DepthFormat),
       tankPass_(context, HdrFormat, DepthFormat, hdri_),
+      blockPass_(context, HdrFormat, DepthFormat),
       paddlePass_(context, HdrFormat, DepthFormat),
       tonemapPass_(context, colorFormat),
       hdrSampler_(gpu::CreateSampler(context.device(), VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
@@ -198,10 +199,16 @@ void Renderer::record(VkCommandBuffer commandBuffer, const RenderTarget& target,
   const bool glass = settings_.walls == WallDisplay::Glass;
   const bool wallParticles = settings_.walls == WallDisplay::Particles;
   const bool showPaddle = settings_.paddleRadius > 0.0F;
+  const bool showBlock = settings_.block;
   const auto recordPaddle = [&] {
     if (showPaddle) {
       paddlePass_.record(commandBuffer, frameAddress, settings_.paddleCenter,
                          settings_.paddleRadius);
+    }
+  };
+  const auto recordBlock = [&] {
+    if (showBlock) {
+      blockPass_.record(commandBuffer, frameAddress, settings_.blockMin, settings_.blockMax);
     }
   };
 
@@ -212,6 +219,7 @@ void Renderer::record(VkCommandBuffer commandBuffer, const RenderTarget& target,
       tankPass_.recordBack(commandBuffer, frameAddress);
     }
     foamPass_.record(commandBuffer, frameAddress, foam, foamCapacity, foamRadius);
+    recordBlock();
     recordPaddle();
     if (glass) {
       tankPass_.recordFront(commandBuffer, frameAddress);
@@ -224,6 +232,7 @@ void Renderer::record(VkCommandBuffer commandBuffer, const RenderTarget& target,
       tankPass_.recordBack(commandBuffer, frameAddress);
     }
     particlePass_.record(commandBuffer, frameAddress, particleCount);
+    recordBlock();
     recordPaddle();
     if (glass) {
       tankPass_.recordFront(commandBuffer, frameAddress);
@@ -256,9 +265,10 @@ void Renderer::record(VkCommandBuffer commandBuffer, const RenderTarget& target,
       foamPass_.record(commandBuffer, frameAddress, foam, foamCapacity, foamRadius);
       vkCmdEndRendering(commandBuffer);
     }
-    if (glass || showPaddle) {
+    if (glass || showPaddle || showBlock) {
       BeginColorDepth(commandBuffer, hdr_.view(), depth_.view(), target.extent,
                       VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_LOAD_OP_LOAD);
+      recordBlock();
       recordPaddle();
       if (glass) {
         tankPass_.recordFront(commandBuffer, frameAddress);

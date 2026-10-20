@@ -30,6 +30,11 @@ struct OffscreenRequest {
   render::WallDisplay walls = render::WallDisplay::Hidden;
   glm::vec3 paddleCenter{0.0F};
   float paddleRadius = 0.0F;
+  glm::vec3 paddleForce{0.0F};
+  float paddlePush = 0.0F;
+  glm::vec3 blockMin{0.0F};
+  glm::vec3 blockMax{0.0F};
+  bool block = false;
   sim::SolverMethod solver = sim::SolverMethod::Wcsph;
 };
 

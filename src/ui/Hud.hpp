@@ -14,8 +14,6 @@
 
 namespace sph::ui {
 
-enum class MouseTool : std::uint8_t { Paddle, Orbit };
-
 struct HudState {
   std::string_view deviceName;
   VkExtent2D extent{};
@@ -31,9 +29,8 @@ struct HudState {
   sim::SolverMethod solver = sim::SolverMethod::Wcsph;
   render::DebugView view = render::DebugView::Final;
   render::WallDisplay walls = render::WallDisplay::Glass;
-  MouseTool tool = MouseTool::Paddle;
-  float paddleRadius = 0.22F;
-  float paddleSwirl = 24.0F;
+  float paddleRadius = 0.28F;
+  float paddleSwirl = 40.0F;
   float exposure = 0.85F;
   glm::vec3 absorption{2.45F, 0.42F, 0.12F};
 };
@@ -53,15 +50,16 @@ struct CursorForce {
   glm::vec3 force{0.0F};
   float radius = 0.0F;
   float swirl = 0.0F;
+  float push = 0.0F;
   bool visible = false;
+  bool stirring = false;
 };
 
-void ApplyCameraInput(render::Camera& camera, glm::vec3 domainMin, glm::vec3 domainMax,
-                      bool leftDragOrbits);
+void ApplyCameraInput(render::Camera& camera, glm::vec3 domainMin, glm::vec3 domainMax);
 
-// Paddle tool: the cursor follows the mouse on the plane through the camera target.
-// Left-drag stirs and swirls; the sphere stays visible while the tool is selected.
-[[nodiscard]] CursorForce SamplePaddle(const render::Camera& camera, bool paused, CursorDrag& drag,
+// Left-drag always stirs inside the tank. The paddle stays visible on the mouse ray.
+[[nodiscard]] CursorForce SamplePaddle(const render::Camera& camera, glm::vec3 domainMin,
+                                       glm::vec3 domainMax, bool paused, CursorDrag& drag,
                                        float radius, float swirl);
 
 HudResult DrawHud(HudState& state);

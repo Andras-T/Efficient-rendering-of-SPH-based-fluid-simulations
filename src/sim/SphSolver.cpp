@@ -58,7 +58,8 @@ gpu::Unique<VkPipeline> MakeCompute(VkDevice device, VkPipelineLayout layout,
 
 GpuSimParams MakeGpuParams(const SimParams& params, const Grid& grid, std::uint32_t particleCount,
                            float mass, glm::vec3 cursorPosition, glm::vec3 cursorForce,
-                           float cursorRadius, float cursorSwirl) {
+                           float cursorRadius, float cursorSwirl, float cursorPush,
+                           glm::vec3 blockMin, glm::vec3 blockMax, bool blockEnabled) {
   const float kernelRadius = params.supportRadius();
   return GpuSimParams{
       .domainMin = params.domainMin,
@@ -87,6 +88,10 @@ GpuSimParams MakeGpuParams(const SimParams& params, const Grid& grid, std::uint3
       .foamDt = params.timeStep * static_cast<float>(std::max(1U, params.substeps)),
       .xsph = params.xsph,
       .cursorSwirl = cursorSwirl,
+      .cursorPush = cursorPush,
+      .blockMin = blockMin,
+      .blockEnabled = blockEnabled ? 1.0F : 0.0F,
+      .blockMax = blockMax,
   };
 }
 
@@ -167,19 +172,31 @@ void SphSolver::ensureGridBuffers(std::uint32_t cellCount) {
 void SphSolver::writeParams(std::uint32_t particleCount, std::uint32_t cellCount) {
   const Grid grid = MakeGrid(paramsHost_);
   const float mass = paramsHost_.mass();
-  GpuSimParams gpu = MakeGpuParams(paramsHost_, grid, particleCount, mass, cursorPosition_,
-                                   cursorForce_, cursorRadius_, cursorSwirl_);
+  GpuSimParams gpu =
+      MakeGpuParams(paramsHost_, grid, particleCount, mass, cursorPosition_, cursorForce_,
+                    cursorRadius_, cursorSwirl_, cursorPush_, blockMin_, blockMax_, blockEnabled_);
   gpu.cellCount = cellCount;
   gpu.particleCount = particleCount;
   params_.mapped<GpuSimParams>().front() = gpu;
   params_.flush();
 }
 
-void SphSolver::setCursor(glm::vec3 position, glm::vec3 force, float radius, float swirl) {
+void SphSolver::setCursor(glm::vec3 position, glm::vec3 force, float radius, float swirl,
+                          float push) {
   cursorPosition_ = position;
   cursorForce_ = force;
   cursorRadius_ = radius;
   cursorSwirl_ = swirl;
+  cursorPush_ = push;
+  if (params_.handle() != VK_NULL_HANDLE) {
+    writeParams(count_, cellCount_);
+  }
+}
+
+void SphSolver::setBlock(glm::vec3 min, glm::vec3 max, bool enabled) {
+  blockMin_ = min;
+  blockMax_ = max;
+  blockEnabled_ = enabled;
   if (params_.handle() != VK_NULL_HANDLE) {
     writeParams(count_, cellCount_);
   }

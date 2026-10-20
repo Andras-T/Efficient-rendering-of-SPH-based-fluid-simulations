@@ -16,6 +16,7 @@
 #include "ui/Hud.hpp"
 
 #include <GLFW/glfw3.h>
+#include <glm/common.hpp>
 #include <glm/geometric.hpp>
 #include <glm/vec3.hpp>
 
@@ -88,10 +89,16 @@ int RunWindowed(const Options& options) {
   camera.frame(scene.params.domainMin, scene.params.domainMax);
   sim::ScenePreset preset = options.scene;
   bool paused = true;
-  ui::MouseTool tool = ui::MouseTool::Paddle;
-  float paddleRadius = 0.22F;
-  float paddleSwirl = 24.0F;
+  float paddleRadius = 0.28F;
+  float paddleSwirl = 40.0F;
   ui::CursorDrag cursorDrag;
+  const glm::vec3 blockHalf{0.10F, 0.16F, 0.10F};
+  glm::vec3 blockCenter{0.32F, 0.22F, 0.0F};
+  const auto placeBlock = [&] {
+    blockCenter = {0.32F, scene.params.domainMin.y + blockHalf.y + scene.params.collisionRadius(),
+                   0.0F};
+  };
+  placeBlock();
 
   std::array<FrameResources, FramesInFlight> frames{};
   for (auto& frame : frames) {
@@ -147,8 +154,7 @@ int RunWindowed(const Options& options) {
                "vkResetCommandPool");
 
     imgui.beginFrame();
-    ui::ApplyCameraInput(camera, solver.params().domainMin, solver.params().domainMax,
-                         tool == ui::MouseTool::Orbit);
+    ui::ApplyCameraInput(camera, solver.params().domainMin, solver.params().domainMax);
     ui::HudState hud{
         .deviceName = context.deviceName(),
         .extent = swapchain.extent(),
@@ -164,14 +170,12 @@ int RunWindowed(const Options& options) {
         .solver = solver.params().solver,
         .view = renderer.settings().view,
         .walls = renderer.settings().walls,
-        .tool = tool,
         .paddleRadius = paddleRadius,
         .paddleSwirl = paddleSwirl,
         .exposure = renderer.settings().exposure,
         .absorption = renderer.settings().absorption,
     };
     const ui::HudResult hudResult = ui::DrawHud(hud);
-    tool = hud.tool;
     paddleRadius = hud.paddleRadius;
     paddleSwirl = hud.paddleSwirl;
     if (hudResult.sceneChanged || hudResult.resetScene) {
@@ -182,6 +186,7 @@ int RunWindowed(const Options& options) {
       sim::CalibrateRestDensity(scene.particles, scene.params);
       solver.upload(scene.particles, scene.params);
       cursorDrag = {};
+      placeBlock();
       camera.frame(scene.params.domainMin, scene.params.domainMax);
       camera.setAspect(swapchain.extent());
       hud.paused = true;
@@ -198,18 +203,28 @@ int RunWindowed(const Options& options) {
     renderer.settings().walls = hud.walls;
     renderer.settings().exposure = hud.exposure;
     renderer.settings().absorption = hud.absorption;
-    ui::CursorForce cursor{};
-    if (tool == ui::MouseTool::Paddle) {
-      cursor = ui::SamplePaddle(camera, paused, cursorDrag, paddleRadius, paddleSwirl);
-    } else {
-      cursorDrag = {};
+    ui::CursorForce cursor =
+        ui::SamplePaddle(camera, solver.params().domainMin, solver.params().domainMax, paused,
+                         cursorDrag, paddleRadius, paddleSwirl);
+    solver.setCursor(cursor.position, cursor.stirring ? cursor.force : glm::vec3{},
+                     cursor.stirring ? cursor.radius : 0.0F, cursor.stirring ? cursor.swirl : 0.0F,
+                     cursor.stirring ? cursor.push : 0.0F);
+    if (cursor.stirring && cursorDrag.haveHit) {
+      const glm::vec3 closest =
+          glm::clamp(cursor.position, blockCenter - blockHalf, blockCenter + blockHalf);
+      if (glm::length(cursor.position - closest) < cursor.radius) {
+        blockCenter += cursor.force * (1.0F / 1800.0F);
+      }
     }
-    const bool stirring =
-        cursor.visible && !paused && (glm::length(cursor.force) > 0.0F || cursor.swirl != 0.0F);
-    solver.setCursor(cursor.position, stirring ? cursor.force : glm::vec3{},
-                     stirring ? cursor.radius : 0.0F, stirring ? cursor.swirl : 0.0F);
+    const glm::vec3 domainMin = solver.params().domainMin + blockHalf;
+    const glm::vec3 domainMax = solver.params().domainMax - blockHalf;
+    blockCenter = glm::clamp(blockCenter, domainMin, domainMax);
+    solver.setBlock(blockCenter - blockHalf, blockCenter + blockHalf, true);
     renderer.settings().paddleCenter = cursor.position;
     renderer.settings().paddleRadius = cursor.visible ? cursor.radius : 0.0F;
+    renderer.settings().blockMin = blockCenter - blockHalf;
+    renderer.settings().blockMax = blockCenter + blockHalf;
+    renderer.settings().block = true;
     imgui.endFrame();
 
     const VkCommandBuffer commandBuffer = frame.commandBuffer;
