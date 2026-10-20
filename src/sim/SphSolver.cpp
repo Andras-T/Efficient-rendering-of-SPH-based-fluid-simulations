@@ -6,6 +6,8 @@
 #include "gpu/Pipeline.hpp"
 #include "sim/Grid.hpp"
 
+#include <glm/common.hpp>
+
 #include <algorithm>
 #include <array>
 #include <cstring>
@@ -32,9 +34,10 @@ struct SphPush {
   VkDeviceAddress foam = 0;
   std::uint32_t solvePass = 0;
   std::uint32_t foamSeed = 0;
+  VkDeviceAddress sample = 0;
 };
 
-static_assert(sizeof(SphPush) == 88);
+static_assert(sizeof(SphPush) == 96);
 
 constexpr VkBufferUsageFlags StorageUsage =
     VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
@@ -127,7 +130,9 @@ SphSolver::SphSolver(const gpu::Context& context) : context_(&context) {
   apply_ = MakeCompute(device, layout, "DfsphApply.comp");
   foamSpawn_ = MakeCompute(device, layout, "FoamSpawn.comp");
   foamAdvect_ = MakeCompute(device, layout, "FoamAdvect.comp");
+  blockSample_ = MakeCompute(device, layout, "BlockSample.comp");
   params_ = MakeStorage(context, sizeof(GpuSimParams));
+  sample_ = MakeStorage(context, sizeof(std::uint32_t));
   foam_ = MakeStorage(context, static_cast<VkDeviceSize>(FoamCapacity) * sizeof(FoamParticle));
   std::memset(foam_.mapped<std::uint8_t>().data(), 0, foam_.mapped<std::uint8_t>().size());
   foam_.flush();
@@ -231,6 +236,7 @@ void SphSolver::push(VkCommandBuffer commandBuffer, std::uint32_t solvePass) con
       .foam = foam_.address(),
       .solvePass = solvePass,
       .foamSeed = foamSeed_,
+      .sample = sample_.address(),
   };
   vkCmdPushConstants(commandBuffer, layout_.get(), VK_SHADER_STAGE_COMPUTE_BIT, 0,
                      sizeof(constants), &constants);
@@ -346,6 +352,43 @@ void SphSolver::recordFoam(VkCommandBuffer commandBuffer) const {
   ComputeToCompute(commandBuffer);
 }
 
+void SphSolver::recordBlockSample(VkCommandBuffer commandBuffer) const {
+  if (sample_.handle() == VK_NULL_HANDLE) {
+    return;
+  }
+  gpu::GlobalBarrier(commandBuffer, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                     VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT, VK_PIPELINE_STAGE_2_COPY_BIT,
+                     VK_ACCESS_2_TRANSFER_WRITE_BIT);
+  vkCmdFillBuffer(commandBuffer, sample_.handle(), 0, sizeof(std::uint32_t), 0);
+  gpu::GlobalBarrier(commandBuffer, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                     VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                     VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT);
+  if (count_ == 0 || !blockEnabled_) {
+    gpu::GlobalBarrier(commandBuffer, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                       VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT, VK_PIPELINE_STAGE_2_HOST_BIT,
+                       VK_ACCESS_2_HOST_READ_BIT);
+    return;
+  }
+  dispatchParticles(commandBuffer, blockSample_.get());
+  gpu::GlobalBarrier(commandBuffer, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                     VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT, VK_PIPELINE_STAGE_2_HOST_BIT,
+                     VK_ACCESS_2_HOST_READ_BIT);
+}
+
+float SphSolver::blockWaterSurface() const {
+  if (sample_.handle() == VK_NULL_HANDLE) {
+    return paramsHost_.domainMin.y;
+  }
+  sample_.invalidate();
+  const std::uint32_t count = sample_.mapped<const std::uint32_t>().front();
+  const glm::vec2 half = 0.5F * glm::vec2(blockMax_.x - blockMin_.x, blockMax_.z - blockMin_.z);
+  const glm::vec2 reach = glm::max(half + glm::vec2(paramsHost_.supportRadius()), glm::vec2(0.28F));
+  const float area = std::max(4.0F * reach.x * reach.y, 1.0e-6F);
+  const float depth =
+      (static_cast<float>(count) * paramsHost_.mass() / paramsHost_.restDensity) / area;
+  return paramsHost_.domainMin.y + depth;
+}
+
 void SphSolver::upload(std::span<const Particle> particles, const SimParams& params) {
   paramsHost_ = params;
   count_ = static_cast<std::uint32_t>(particles.size());
@@ -359,12 +402,17 @@ void SphSolver::upload(std::span<const Particle> particles, const SimParams& par
   }
   std::memset(foam_.mapped<std::uint8_t>().data(), 0, foam_.mapped<std::uint8_t>().size());
   foam_.flush();
+  if (sample_.handle() != VK_NULL_HANDLE) {
+    sample_.mapped<std::uint32_t>().front() = 0;
+    sample_.flush();
+  }
   foamSeed_ = 1;
   writeParams(count_, cellCount_);
 }
 
 void SphSolver::record(VkCommandBuffer commandBuffer, std::uint32_t substeps) const {
   if (count_ == 0 || substeps == 0) {
+    recordBlockSample(commandBuffer);
     return;
   }
   for (std::uint32_t step = 0; step < substeps; ++step) {
@@ -372,6 +420,7 @@ void SphSolver::record(VkCommandBuffer commandBuffer, std::uint32_t substeps) co
   }
   recordFoam(commandBuffer);
   ++foamSeed_;
+  recordBlockSample(commandBuffer);
 }
 
 void SphSolver::step(std::uint32_t substeps) {

@@ -26,7 +26,7 @@ cmake --install build/release --prefix dist          # dist/bin/sph-fluid
 
 Starts paused so viscosity and other parameters can be set before Play. Scene changes and Reset pause again. Drop-in hangs a wooden block over a pool until Play.
 
-Left-drag is always the paddle: a small cyan sphere sits in the tank on the mouse ray, shoves water aside, and can slide the wooden block even while paused. Uncheck Wooden block to hide it (no draw, no collision). Right-drag orbits; Shift+left or middle-drag pans; scroll zooms; WASD/QE moves; arrows look; F frames the tank. Space play/pauses. `[` `]` cycles stages (foam is last); 1–9 pick the first nine. A never changes the view.
+Left-drag is always the paddle: a small cyan sphere sits in the tank on the mouse ray, shoves water aside, and can slide the wooden block even while paused. Uncheck Wooden block to hide it (no draw, no collision). Float (on by default) applies Archimedes buoyancy so the cube rides the water instead of sinking. Right-drag orbits; Shift+left or middle-drag pans; scroll zooms; WASD/QE moves; arrows look; F frames the tank. Space play/pauses. `[` `]` cycles stages (foam is last); 1–9 pick the first nine. A never changes the view.
 
 Walls: Hidden, Glass (default), or Particles (Akinci spheres). Tank: Cube, Cylinder, or Hexagon — closed vessels with matching collision. The overlay also has scene presets, WCSPH/DFSPH, viscosity (default 0.033), paddle size/swirl, Reset, exposure, and GPU timings. Fluid stays inside the glass; walls are slip so splash does not glue to the lid.
 

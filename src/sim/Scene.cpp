@@ -336,9 +336,39 @@ glm::vec3 WoodenBlockStart(ScenePreset preset, const SimParams& params) {
   return center;
 }
 
-void AdvanceWoodenBlock(glm::vec3& center, glm::vec3& velocity, const SimParams& params) {
+float ColumnWaterSurface(std::span<const Particle> particles, glm::vec3 min, glm::vec3 max,
+                         const SimParams& params) {
+  std::uint32_t count = 0;
+  for (const Particle& particle : particles) {
+    if (particle.flags != ParticleFlagFluid) {
+      continue;
+    }
+    if (particle.position.x < min.x || particle.position.x > max.x || particle.position.z < min.z ||
+        particle.position.z > max.z) {
+      continue;
+    }
+    ++count;
+  }
+  const float area = std::max((max.x - min.x) * (max.z - min.z), 1.0e-6F);
+  const float depth = (static_cast<float>(count) * params.mass() / params.restDensity) / area;
+  return params.domainMin.y + depth;
+}
+
+void AdvanceWoodenBlock(glm::vec3& center, glm::vec3& velocity, const SimParams& params,
+                        float waterSurfaceY, bool buoyant) {
   const float dt = params.timeStep * static_cast<float>(std::max(1U, params.substeps));
-  velocity += params.gravity * dt;
+  glm::vec3 acceleration = params.gravity;
+  float drag = 0.8F;
+  if (buoyant) {
+    const float height = 2.0F * WoodenBlockHalf.y;
+    const float bottom = center.y - WoodenBlockHalf.y;
+    const float submerged = std::clamp(waterSurfaceY - bottom, 0.0F, height);
+    const float fraction = submerged / std::max(height, 1.0e-4F);
+    acceleration.y += (params.restDensity / WoodenBlockDensity) * fraction * (-params.gravity.y);
+    drag = glm::mix(0.8F, 48.0F, fraction);
+  }
+  velocity += acceleration * dt;
+  velocity *= std::max(0.0F, 1.0F - drag * dt);
   center += velocity * dt;
   const glm::vec3 previous = center;
   ClampAabbToTank(center, WoodenBlockHalf, params);

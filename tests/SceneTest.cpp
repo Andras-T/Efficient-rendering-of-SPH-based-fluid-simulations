@@ -192,5 +192,41 @@ TEST(SceneTest, DropInBlockFallsFromTheCeiling) {
   EXPECT_GE(center.y, params.domainMin.y + WoodenBlockHalf.y);
 }
 
+TEST(SceneTest, ColumnWaterSurfaceMatchesThePool) {
+  const Scene scene = BuildScene(ScenePreset::DropIn);
+  const glm::vec3 min{-WoodenBlockHalf.x, scene.params.domainMin.y, -WoodenBlockHalf.z};
+  const glm::vec3 max{WoodenBlockHalf.x, scene.params.domainMax.y, WoodenBlockHalf.z};
+  const float surface = ColumnWaterSurface(scene.particles, min, max, scene.params);
+  EXPECT_GT(surface, scene.params.domainMin.y + 0.20F);
+  EXPECT_LT(surface, 0.55F);
+}
+
+TEST(SceneTest, BuoyantBlockRisesWhenSubmerged) {
+  const SimParams params;
+  glm::vec3 center{0.0F, params.domainMin.y + WoodenBlockHalf.y, 0.0F};
+  glm::vec3 velocity{0.0F};
+  const float startY = center.y;
+  const float water = params.domainMax.y;
+  for (int step = 0; step < 80; ++step) {
+    AdvanceWoodenBlock(center, velocity, params, water, true);
+  }
+  EXPECT_GT(center.y, startY + 0.05F);
+}
+
+TEST(SceneTest, BuoyantBlockHoldsAWaterline) {
+  const SimParams params;
+  const float water = 0.40F;
+  const float height = 2.0F * WoodenBlockHalf.y;
+  const float fraction = WoodenBlockDensity / params.restDensity;
+  const float restY = water + height * (0.5F - fraction);
+  glm::vec3 center{0.0F, restY, 0.0F};
+  glm::vec3 velocity{0.0F};
+  for (int step = 0; step < 200; ++step) {
+    AdvanceWoodenBlock(center, velocity, params, water, true);
+  }
+  EXPECT_NEAR(center.y, restY, 0.04F);
+  EXPECT_GT(center.y, params.domainMin.y + WoodenBlockHalf.y + 0.05F);
+}
+
 }  // namespace
 }  // namespace sph::sim

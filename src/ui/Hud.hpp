@@ -33,6 +33,7 @@ struct HudState {
   float paddleRadius = 0.10F;
   float paddleSwirl = 6.0F;
   bool showBlock = true;
+  bool floatBlock = true;
   float exposure = 0.85F;
   glm::vec3 absorption{2.45F, 0.42F, 0.12F};
 };

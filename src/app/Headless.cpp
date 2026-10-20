@@ -124,8 +124,9 @@ std::vector<std::uint8_t> RenderOffscreen(const gpu::Context& context,
     gpu::ImmediateSubmit(context, [&](VkCommandBuffer commandBuffer) {
       profiler.beginFrame(commandBuffer, 0);
       if (request.simulate) {
-        if (fallingBlock && frame > 0) {
-          sim::AdvanceWoodenBlock(blockCenter, blockVelocity, solver.params());
+        if (showBlock && frame > 0 && (request.buoyant || fallingBlock)) {
+          sim::AdvanceWoodenBlock(blockCenter, blockVelocity, solver.params(),
+                                  solver.blockWaterSurface(), request.buoyant);
           solver.setBlock(blockCenter - blockHalf, blockCenter + blockHalf, true);
           renderer.settings().blockMin = blockCenter - blockHalf;
           renderer.settings().blockMax = blockCenter + blockHalf;

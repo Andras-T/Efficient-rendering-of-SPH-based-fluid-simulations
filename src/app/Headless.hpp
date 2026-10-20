@@ -35,6 +35,7 @@ struct OffscreenRequest {
   glm::vec3 blockMin{0.0F};
   glm::vec3 blockMax{0.0F};
   bool block = false;
+  bool buoyant = true;
   sim::SolverMethod solver = sim::SolverMethod::Wcsph;
   sim::TankShape tankShape = sim::TankShape::Box;
 };

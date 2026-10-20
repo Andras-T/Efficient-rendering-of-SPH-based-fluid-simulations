@@ -26,8 +26,10 @@ class SphSolver {
   void setViscosity(float viscosity);
   void setSolver(SolverMethod solver);
   void record(VkCommandBuffer commandBuffer, std::uint32_t substeps) const;
+  void recordBlockSample(VkCommandBuffer commandBuffer) const;
   void step(std::uint32_t substeps);
   void download(std::span<Particle> particles) const;
+  [[nodiscard]] float blockWaterSurface() const;
 
   [[nodiscard]] VkDeviceAddress particleAddress() const { return particles_.address(); }
   [[nodiscard]] VkDeviceAddress foamAddress() const { return foam_.address(); }
@@ -77,7 +79,9 @@ class SphSolver {
   gpu::Unique<VkPipeline> apply_;
   gpu::Unique<VkPipeline> foamSpawn_;
   gpu::Unique<VkPipeline> foamAdvect_;
+  gpu::Unique<VkPipeline> blockSample_;
   gpu::Buffer params_;
+  gpu::Buffer sample_;
   gpu::Buffer particles_;
   gpu::Buffer sorted_;
   gpu::Buffer cellOf_;

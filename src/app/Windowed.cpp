@@ -95,6 +95,7 @@ int RunWindowed(const Options& options) {
   float paddleRadius = 0.10F;
   float paddleSwirl = 6.0F;
   bool showBlock = true;
+  bool floatBlock = true;
   ui::CursorDrag cursorDrag;
   const glm::vec3 blockHalf = sim::WoodenBlockHalf;
   glm::vec3 blockCenter = sim::WoodenBlockStart(preset, scene.params);
@@ -182,6 +183,7 @@ int RunWindowed(const Options& options) {
         .paddleRadius = paddleRadius,
         .paddleSwirl = paddleSwirl,
         .showBlock = showBlock,
+        .floatBlock = floatBlock,
         .exposure = renderer.settings().exposure,
         .absorption = renderer.settings().absorption,
     };
@@ -189,6 +191,7 @@ int RunWindowed(const Options& options) {
     paddleRadius = hud.paddleRadius;
     paddleSwirl = hud.paddleSwirl;
     showBlock = hud.showBlock;
+    floatBlock = hud.floatBlock;
     if (hudResult.sceneChanged || hudResult.resetScene) {
       preset = hud.preset;
       sim::SimParams next;
@@ -230,8 +233,10 @@ int RunWindowed(const Options& options) {
         blockVelocity = {};
       }
     }
-    if (!paused && showBlock && preset == sim::ScenePreset::DropIn && !cursor.grabbing) {
-      sim::AdvanceWoodenBlock(blockCenter, blockVelocity, solver.params());
+    if (!paused && showBlock && !cursor.grabbing &&
+        (floatBlock || preset == sim::ScenePreset::DropIn)) {
+      sim::AdvanceWoodenBlock(blockCenter, blockVelocity, solver.params(),
+                              solver.blockWaterSurface(), floatBlock);
     }
     sim::ClampAabbToTank(blockCenter, blockHalf, solver.params());
     solver.setBlock(blockCenter - blockHalf, blockCenter + blockHalf, showBlock);
@@ -258,6 +263,8 @@ int RunWindowed(const Options& options) {
           VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
           VK_ACCESS_2_SHADER_STORAGE_READ_BIT);
       profiler.mark(commandBuffer, "sim");
+    } else if (showBlock) {
+      solver.recordBlockSample(commandBuffer);
     }
     renderer.record(commandBuffer, {image, swapchain.view(imageIndex), swapchain.extent()}, camera,
                     solver.particleAddress(), solver.count(), solver.foamAddress(),
