@@ -12,11 +12,13 @@
 #include "render/PaddlePass.hpp"
 #include "render/ParticlePass.hpp"
 #include "render/SkyPass.hpp"
+#include "render/SmokePass.hpp"
 #include "render/TankPass.hpp"
 #include "render/TonemapPass.hpp"
 #include "render/WindTracerPass.hpp"
 #include "sim/SimParams.hpp"
 
+#include <glm/ext/vector_uint3.hpp>
 #include <glm/vec3.hpp>
 
 #include <cstdint>
@@ -67,6 +69,10 @@ class Renderer {
                   VkDeviceAddress mesh, std::uint32_t meshVertices, VkDeviceAddress tracers,
                   std::uint32_t tracerCount, glm::vec3 domainMin, glm::vec3 domainMax,
                   const OverlayCallback& overlay = {});
+  void recordSmoke(VkCommandBuffer commandBuffer, const RenderTarget& target, const Camera& camera,
+                   VkDeviceAddress scalar, VkDeviceAddress velocity, glm::uvec3 grid,
+                   glm::vec3 origin, float cellSize, glm::vec3 domainMin, glm::vec3 domainMax,
+                   const OverlayCallback& overlay = {});
 
  private:
   const gpu::Context* context_ = nullptr;
@@ -80,6 +86,7 @@ class Renderer {
   PaddlePass paddlePass_;
   CarPass carPass_;
   WindTracerPass windTracerPass_;
+  SmokePass smokePass_;
   TonemapPass tonemapPass_;
   gpu::Unique<VkSampler> hdrSampler_;
   gpu::Image hdr_;

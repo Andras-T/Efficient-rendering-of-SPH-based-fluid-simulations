@@ -1,0 +1,50 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "Smoke.glsl"
+
+layout(local_size_x = 64) in;
+
+layout(push_constant, scalar) uniform PushConstants {
+  VelocityRW velocitySrc;
+  VelocityRW velocityDst;
+  ScalarRW scalarSrc;
+  ScalarRW scalarDst;
+  PressureRW pressureSrc;
+  PressureRW pressureDst;
+  PressureRW divergence;
+  uvec3 grid;
+  uint cellCount;
+  vec3 origin;
+  float cellSize;
+  float dt;
+  float dissipation;
+  float buoyancy;
+  float vorticity;
+  vec3 emitterCenter;
+  float emitterRadius;
+  float emitterDensity;
+  float emitterTemperature;
+};
+
+void main() {
+  const uint i = gl_GlobalInvocationID.x;
+  if (i >= cellCount) {
+    return;
+  }
+  const uvec3 cell = SmokeCellCoord(i, grid);
+  if (SmokeIsWall(cell, grid)) {
+    divergence.values[i] = 0.0;
+    pressureDst.values[i] = 0.0;
+    return;
+  }
+  const ivec3 c = ivec3(cell);
+  const float dvx = SmokeFetchVelocity(velocitySrc, uvec3(c + ivec3(1, 0, 0)), grid).x -
+                    SmokeFetchVelocity(velocitySrc, uvec3(c + ivec3(-1, 0, 0)), grid).x;
+  const float dvy = SmokeFetchVelocity(velocitySrc, uvec3(c + ivec3(0, 1, 0)), grid).y -
+                    SmokeFetchVelocity(velocitySrc, uvec3(c + ivec3(0, -1, 0)), grid).y;
+  const float dvz = SmokeFetchVelocity(velocitySrc, uvec3(c + ivec3(0, 0, 1)), grid).z -
+                    SmokeFetchVelocity(velocitySrc, uvec3(c + ivec3(0, 0, -1)), grid).z;
+  divergence.values[i] = (dvx + dvy + dvz) * (0.5 / cellSize);
+  pressureDst.values[i] = 0.0;
+}

@@ -12,6 +12,7 @@
 #include "render/Renderer.hpp"
 #include "sim/CpuSolver.hpp"
 #include "sim/Scene.hpp"
+#include "sim/SmokeSolver.hpp"
 #include "sim/SphSolver.hpp"
 #include "sim/Tank.hpp"
 #include "sim/WindSolver.hpp"
@@ -89,6 +90,7 @@ int RunWindowed(const Options& options) {
   sim::SphSolver solver(context);
   solver.upload(scene.particles, scene.params);
   sim::WindSolver wind(context);
+  sim::SmokeSolver smoke(context);
   render::Camera camera;
   camera.setAspect(swapchain.extent());
   camera.frame(scene.params.domainMin, scene.params.domainMax);
@@ -97,6 +99,12 @@ int RunWindowed(const Options& options) {
     camera.setTarget({0.02F, 0.12F, 0.0F});
     camera.setYawPitch(0.95F, 0.32F);
     camera.setDistance(1.30F);
+  };
+  const auto frameSmokeCamera = [&] {
+    camera.setAspect(swapchain.extent());
+    camera.setTarget({0.0F, 0.85F, 0.0F});
+    camera.setYawPitch(0.85F, 0.22F);
+    camera.setDistance(3.35F);
   };
   sim::ScenePreset preset = options.scene;
   bool paused = true;
@@ -107,6 +115,7 @@ int RunWindowed(const Options& options) {
   bool showMenu = true;
   SimulationKind simulation = options.simulation;
   float windSpeed = 0.08F;
+  float smokeStrength = 1.0F;
   ui::CursorDrag cursorDrag;
   const glm::vec3 blockHalf = sim::WoodenBlockHalf;
   glm::vec3 blockCenter = sim::WoodenBlockStart(preset, scene.params);
@@ -174,14 +183,19 @@ int RunWindowed(const Options& options) {
                "vkResetCommandPool");
 
     imgui.beginFrame();
+    std::uint32_t hudCount = solver.count();
+    if (simulation == SimulationKind::WindTunnel) {
+      hudCount = wind.tracerCount();
+    } else if (simulation == SimulationKind::Smoke) {
+      hudCount = smoke.cellCount();
+    }
     ui::HudState hud{
         .deviceName = context.deviceName(),
         .extent = swapchain.extent(),
         .camera = &camera,
         .timings = profiler.intervals(),
         .preset = preset,
-        .particleCount =
-            simulation == SimulationKind::WindTunnel ? wind.tracerCount() : solver.count(),
+        .particleCount = hudCount,
         .paused = paused,
         .timeStep = solver.params().timeStep,
         .substeps = solver.params().substeps,
@@ -198,6 +212,7 @@ int RunWindowed(const Options& options) {
         .showMenu = showMenu,
         .simulation = simulation,
         .windSpeed = windSpeed,
+        .smokeStrength = smokeStrength,
         .exposure = renderer.settings().exposure,
         .absorption = renderer.settings().absorption,
     };
@@ -210,10 +225,14 @@ int RunWindowed(const Options& options) {
     showMenu = hud.showMenu;
     simulation = hud.simulation;
     windSpeed = hud.windSpeed;
+    smokeStrength = hud.smokeStrength;
     wind.setInletSpeed(windSpeed);
+    smoke.setEmitterStrength(smokeStrength);
     if (!showMenu) {
       if (simulation == SimulationKind::WindTunnel) {
         ui::ApplyCameraInput(camera, wind.domainMin(), wind.domainMax());
+      } else if (simulation == SimulationKind::Smoke) {
+        ui::ApplyCameraInput(camera, smoke.domainMin(), smoke.domainMax());
       } else {
         ui::ApplyCameraInput(camera, solver.params().domainMin, solver.params().domainMax);
       }
@@ -221,10 +240,17 @@ int RunWindowed(const Options& options) {
     if (leavingMenu && simulation == SimulationKind::WindTunnel) {
       frameWindCamera();
     }
+    if (leavingMenu && simulation == SimulationKind::Smoke) {
+      frameSmokeCamera();
+    }
     if (hudResult.sceneChanged || hudResult.resetScene) {
       if (simulation == SimulationKind::WindTunnel) {
         wind.reset();
         frameWindCamera();
+        hud.paused = true;
+      } else if (simulation == SimulationKind::Smoke) {
+        smoke.reset();
+        frameSmokeCamera();
         hud.paused = true;
       } else {
         preset = hud.preset;
@@ -255,7 +281,7 @@ int RunWindowed(const Options& options) {
     renderer.settings().exposure = hud.exposure;
     renderer.settings().absorption = hud.absorption;
     ui::CursorForce cursor{};
-    if (!showMenu && simulation != SimulationKind::WindTunnel) {
+    if (!showMenu && simulation == SimulationKind::Fluid) {
       cursor = ui::SamplePaddle(camera, solver.params().domainMin, solver.params().domainMax,
                                 paused, cursorDrag, paddleRadius, paddleSwirl);
     } else {
@@ -264,7 +290,7 @@ int RunWindowed(const Options& options) {
     solver.setCursor(cursor.position, cursor.stirring ? cursor.force : glm::vec3{},
                      cursor.stirring ? cursor.radius : 0.0F, cursor.stirring ? cursor.swirl : 0.0F,
                      cursor.stirring ? cursor.push : 0.0F);
-    if (!showMenu && simulation != SimulationKind::WindTunnel && showBlock && cursor.grabbing &&
+    if (!showMenu && simulation == SimulationKind::Fluid && showBlock && cursor.grabbing &&
         cursorDrag.haveHit) {
       const glm::vec3 closest =
           glm::clamp(cursor.position, blockCenter - blockHalf, blockCenter + blockHalf);
@@ -273,7 +299,7 @@ int RunWindowed(const Options& options) {
         blockVelocity = {};
       }
     }
-    if (!showMenu && simulation != SimulationKind::WindTunnel && !paused && showBlock &&
+    if (!showMenu && simulation == SimulationKind::Fluid && !paused && showBlock &&
         !cursor.grabbing && (floatBlock || preset == sim::ScenePreset::DropIn)) {
       sim::AdvanceWoodenBlock(blockCenter, blockVelocity, solver.params(),
                               solver.blockWaterSurface(), floatBlock);
@@ -304,6 +330,16 @@ int RunWindowed(const Options& options) {
                           camera, wind.meshAddress(), wind.meshVertexCount(), wind.tracerAddress(),
                           wind.tracerCount(), wind.domainMin(), wind.domainMax(),
                           [&](VkCommandBuffer overlay) { imgui.record(overlay); });
+    } else if (simulation == SimulationKind::Smoke) {
+      if (!paused && !showMenu) {
+        smoke.record(commandBuffer, 1);
+        profiler.mark(commandBuffer, "sim");
+      }
+      renderer.recordSmoke(commandBuffer, {image, swapchain.view(imageIndex), swapchain.extent()},
+                           camera, smoke.scalarAddress(), smoke.velocityAddress(),
+                           smoke.domain().grid, smoke.domain().origin, smoke.domain().cellSize,
+                           smoke.domainMin(), smoke.domainMax(),
+                           [&](VkCommandBuffer overlay) { imgui.record(overlay); });
     } else {
       if (!paused) {
         solver.record(commandBuffer, solver.params().substeps);

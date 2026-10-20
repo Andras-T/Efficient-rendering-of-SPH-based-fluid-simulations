@@ -30,6 +30,7 @@ add_library(sph_engine STATIC
   render/Renderer.cpp
   render/TankPass.cpp
   render/SkyPass.cpp
+  render/SmokePass.cpp
   render/TonemapPass.cpp
   render/WindTracerPass.cpp
   sim/Car.cpp
@@ -38,6 +39,7 @@ add_library(sph_engine STATIC
   sim/Grid.cpp
   sim/Scene.cpp
   sim/SimParams.cpp
+  sim/SmokeSolver.cpp
   sim/SphSolver.cpp
   sim/Tank.cpp
   sim/WindSolver.cpp

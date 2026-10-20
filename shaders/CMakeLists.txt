@@ -31,6 +31,13 @@ sph_add_shader_library(sph_shaders
     LbmCollide.comp
     LbmStream.comp
     WindTracers.comp
+    SmokeAdvectVel.comp
+    SmokeForces.comp
+    SmokeDivergence.comp
+    SmokeJacobi.comp
+    SmokeProject.comp
+    SmokeAdvectScalar.comp
+    SmokeVolume.frag
     Car.vert
     Car.frag
     WindGround.vert
@@ -50,4 +57,5 @@ sph_add_shader_library(sph_shaders
     Kernels.glsl
     SphPush.glsl
     Screen.glsl
-    Wind.glsl)
+    Wind.glsl
+    Smoke.glsl)

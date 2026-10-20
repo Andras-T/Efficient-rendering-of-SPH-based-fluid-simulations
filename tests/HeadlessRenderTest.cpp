@@ -8,6 +8,7 @@
 
 #include <gtest/gtest.h>
 
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <filesystem>
@@ -192,6 +193,50 @@ TEST(HeadlessRenderTest, WindTunnelCarIsVisible) {
     }
   }
   EXPECT_GT(carPixels, 40);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
+TEST(HeadlessRenderTest, SmokePlumeIsVisible) {
+  const gpu::Context context({.validation = true});
+  constexpr VkExtent2D Extent{96, 54};
+  const auto rgba = RenderOffscreen(context, {.extent = Extent,
+                                              .frames = 36,
+                                              .simulate = true,
+                                              .view = render::DebugView::Final,
+                                              .simulation = SimulationKind::Smoke});
+  ASSERT_EQ(rgba.size(), std::size_t{Extent.width} * Extent.height * 4);
+  int smokePixels = 0;
+  for (std::size_t i = 0; i + 3 < rgba.size(); i += 4) {
+    const int r = rgba[i];
+    const int g = rgba[i + 1];
+    const int b = rgba[i + 2];
+    if (r > 70 && g > 65 && b > 50 && std::abs(r - g) < 45) {
+      ++smokePixels;
+    }
+  }
+  EXPECT_GT(smokePixels, 40);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
+TEST(HeadlessRenderTest, SmokeVelocityViewDiffersFromFinal) {
+  const gpu::Context context({.validation = true});
+  constexpr VkExtent2D Extent{80, 48};
+  const auto finalView = RenderOffscreen(context, {.extent = Extent,
+                                                   .frames = 28,
+                                                   .simulate = true,
+                                                   .view = render::DebugView::Final,
+                                                   .simulation = SimulationKind::Smoke});
+  const auto velocity = RenderOffscreen(context, {.extent = Extent,
+                                                  .frames = 28,
+                                                  .simulate = true,
+                                                  .view = render::DebugView::Velocity,
+                                                  .simulation = SimulationKind::Smoke});
+  ASSERT_EQ(finalView.size(), velocity.size());
+  int changed = 0;
+  for (std::size_t i = 0; i < finalView.size(); ++i) {
+    changed += finalView[i] != velocity[i] ? 1 : 0;
+  }
+  EXPECT_GT(changed, static_cast<int>(finalView.size() / 40));
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 

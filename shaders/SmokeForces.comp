@@ -1,0 +1,80 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "Smoke.glsl"
+
+layout(local_size_x = 64) in;
+
+layout(push_constant, scalar) uniform PushConstants {
+  VelocityRW velocitySrc;
+  VelocityRW velocityDst;
+  ScalarRW scalarSrc;
+  ScalarRW scalarDst;
+  PressureRW pressureSrc;
+  PressureRW pressureDst;
+  PressureRW divergence;
+  uvec3 grid;
+  uint cellCount;
+  vec3 origin;
+  float cellSize;
+  float dt;
+  float dissipation;
+  float buoyancy;
+  float vorticity;
+  vec3 emitterCenter;
+  float emitterRadius;
+  float emitterDensity;
+  float emitterTemperature;
+};
+
+vec3 Curl(uvec3 cell) {
+  const ivec3 c = ivec3(cell);
+  const float dvzDy =
+      SmokeFetchVelocity(velocitySrc, uvec3(c + ivec3(0, 1, 0)), grid).z -
+      SmokeFetchVelocity(velocitySrc, uvec3(c + ivec3(0, -1, 0)), grid).z;
+  const float dvyDz =
+      SmokeFetchVelocity(velocitySrc, uvec3(c + ivec3(0, 0, 1)), grid).y -
+      SmokeFetchVelocity(velocitySrc, uvec3(c + ivec3(0, 0, -1)), grid).y;
+  const float dvxDz =
+      SmokeFetchVelocity(velocitySrc, uvec3(c + ivec3(0, 0, 1)), grid).x -
+      SmokeFetchVelocity(velocitySrc, uvec3(c + ivec3(0, 0, -1)), grid).x;
+  const float dvzDx =
+      SmokeFetchVelocity(velocitySrc, uvec3(c + ivec3(1, 0, 0)), grid).z -
+      SmokeFetchVelocity(velocitySrc, uvec3(c + ivec3(-1, 0, 0)), grid).z;
+  const float dvyDx =
+      SmokeFetchVelocity(velocitySrc, uvec3(c + ivec3(1, 0, 0)), grid).y -
+      SmokeFetchVelocity(velocitySrc, uvec3(c + ivec3(-1, 0, 0)), grid).y;
+  const float dvxDy =
+      SmokeFetchVelocity(velocitySrc, uvec3(c + ivec3(0, 1, 0)), grid).x -
+      SmokeFetchVelocity(velocitySrc, uvec3(c + ivec3(0, -1, 0)), grid).x;
+  const float inv = 0.5 / cellSize;
+  return vec3(dvzDy - dvyDz, dvxDz - dvzDx, dvyDx - dvxDy) * inv;
+}
+
+void main() {
+  const uint i = gl_GlobalInvocationID.x;
+  if (i >= cellCount) {
+    return;
+  }
+  const uvec3 cell = SmokeCellCoord(i, grid);
+  if (SmokeIsWall(cell, grid)) {
+    velocityDst.values[i] = vec4(0.0);
+    return;
+  }
+
+  vec3 velocity = velocitySrc.values[i].xyz;
+  const vec2 scalar = scalarSrc.values[i];
+  const vec3 omega = Curl(cell);
+  velocity += omega * (vorticity * dt);
+  velocity.y += (buoyancy * scalar.y - 0.35 * scalar.x) * dt;
+
+  const vec3 world = SmokeCellCenter(cell, origin, cellSize);
+  const float dist = length(world - emitterCenter);
+  if (dist < emitterRadius) {
+    const float w = 1.0 - dist / emitterRadius;
+    velocity.y += 1.65 * w;
+    velocity.x += 0.12 * w * sin(world.z * 18.0);
+    velocity.z += 0.12 * w * sin(world.x * 16.0);
+  }
+  velocityDst.values[i] = vec4(velocity, 0.0);
+}
