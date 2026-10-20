@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/Simulation.hpp"
 #include "gpu/Timestamps.hpp"
 #include "gpu/Vulkan.hpp"
 #include "render/Camera.hpp"
@@ -34,6 +35,8 @@ struct HudState {
   float paddleSwirl = 6.0F;
   bool showBlock = true;
   bool floatBlock = true;
+  bool showMenu = true;
+  SimulationKind simulation = SimulationKind::Fluid;
   float exposure = 0.85F;
   glm::vec3 absorption{2.45F, 0.42F, 0.12F};
 };

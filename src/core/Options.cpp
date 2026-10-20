@@ -75,6 +75,12 @@ Options ParseOptions(std::span<const std::string_view> args) {
       options.solver = sim::ParseSolverMethod(value());
     } else if (arg == "--tank") {
       options.tank = sim::ParseTankShape(value());
+    } else if (arg == "--sim") {
+      options.simulation = ParseSimulationKind(value());
+      if (!SimulationReady(options.simulation)) {
+        throw std::invalid_argument(
+            std::format("{} is coming soon", SimulationKindName(options.simulation)));
+      }
     } else if (arg == "--validation") {
       options.validation = true;
     } else if (arg == "--no-validation") {
@@ -102,6 +108,7 @@ std::string_view UsageText() {
   --sequence DIR     write every frame as DIR/0000.png (implies --headless)
   --scene NAME       empty, dam, drop, double, or dropin (default: dam)
   --tank NAME        cube, cylinder, or hexagon (default: cube)
+  --sim NAME         fluid (default); wind and smoke are coming soon
   --view NAME        final, particles, density, velocity, cell, depth, smooth, thickness, normals, foam
   --solver NAME      wcsph or dfsph (default: wcsph)
   --validation       enable Vulkan validation layers (default in debug builds)

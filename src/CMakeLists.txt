@@ -7,6 +7,7 @@ add_library(sph_engine STATIC
   core/Capture.cpp
   core/Log.cpp
   core/Options.cpp
+  core/Simulation.cpp
   gpu/Buffer.cpp
   gpu/Commands.cpp
   gpu/Context.cpp

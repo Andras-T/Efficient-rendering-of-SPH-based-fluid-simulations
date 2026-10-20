@@ -4,6 +4,7 @@
 #include <imgui.h>
 
 #include <algorithm>
+#include <array>
 #include <numbers>
 
 namespace sph::ui {
@@ -57,13 +58,64 @@ glm::vec2 MouseNdc() {
           (2.0F * io.MousePos.y / io.DisplaySize.y) - 1.0F};
 }
 
+void StartSelectedSimulation(HudState& state) {
+  TryStartSimulation(state.simulation, state.showMenu, state.paused);
+}
+
+void DrawSimulationMenu(HudState& state) {
+  const ImGuiIO& io = ImGui::GetIO();
+  ImDrawList* background = ImGui::GetBackgroundDrawList();
+  background->AddRectFilled({0.0F, 0.0F}, io.DisplaySize, IM_COL32(6, 8, 14, 188));
+
+  const ImVec2 center{io.DisplaySize.x * 0.5F, io.DisplaySize.y * 0.5F};
+  ImGui::SetNextWindowPos(center, ImGuiCond_Always, {0.5F, 0.5F});
+  ImGui::SetNextWindowSize({400.0F, 0.0F});
+  ImGui::Begin("Choose a simulation", nullptr,
+               ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse |
+                   ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize);
+  ImGui::TextUnformatted("Pick what to run");
+  ImGui::Spacing();
+
+  constexpr std::array Choices{SimulationKind::Fluid, SimulationKind::WindTunnel,
+                               SimulationKind::Smoke};
+  for (const SimulationKind kind : Choices) {
+    const bool ready = SimulationReady(kind);
+    ImGui::BeginDisabled(!ready);
+    if (ImGui::RadioButton(SimulationKindLabel(kind), state.simulation == kind) && ready) {
+      state.simulation = kind;
+    }
+    if (!ready) {
+      ImGui::SameLine();
+      ImGui::TextUnformatted("Coming soon");
+    }
+    ImGui::EndDisabled();
+  }
+
+  ImGui::Spacing();
+  const bool canPlay = SimulationReady(state.simulation);
+  ImGui::BeginDisabled(!canPlay);
+  if (ImGui::Button("Play", ImVec2(-1.0F, 36.0F)) && canPlay) {
+    StartSelectedSimulation(state);
+  }
+  ImGui::EndDisabled();
+  ImGui::TextWrapped("Space starts Fluid. Wind tunnel and Smoke plug in here later.");
+  ImGui::End();
+}
+
 void ApplyHotkeys(HudState& state) {
   const ImGuiIO& io = ImGui::GetIO();
-  if (io.WantCaptureKeyboard) {
+  if (io.WantCaptureKeyboard && !state.showMenu) {
     return;
   }
   if (ImGui::IsKeyPressed(ImGuiKey_Space)) {
-    state.paused = !state.paused;
+    if (state.showMenu) {
+      StartSelectedSimulation(state);
+    } else {
+      state.paused = !state.paused;
+    }
+  }
+  if (state.showMenu) {
+    return;
   }
   if (ImGui::IsKeyPressed(ImGuiKey_LeftBracket)) {
     state.view = render::PrevDebugView(state.view);
@@ -192,8 +244,12 @@ CursorForce SamplePaddle(const render::Camera& camera, glm::vec3 domainMin, glm:
 
 HudResult DrawHud(HudState& state) {
   ApplyHotkeys(state);
-  const ImGuiIO& io = ImGui::GetIO();
   HudResult result;
+  if (state.showMenu) {
+    DrawSimulationMenu(state);
+    return result;
+  }
+  const ImGuiIO& io = ImGui::GetIO();
 
   ImGui::SetNextWindowPos({12.0F, 12.0F}, ImGuiCond_FirstUseEver);
   ImGui::Begin("Simulation", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
@@ -214,6 +270,11 @@ HudResult DrawHud(HudState& state) {
     }
     ImGui::SameLine();
     ImGui::TextUnformatted("running");
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("Menu")) {
+    state.showMenu = true;
+    state.paused = true;
   }
   ImGui::Text("dt %.4f x %u", static_cast<double>(state.timeStep), state.substeps);
   ImGui::Text("rest density %.1f", static_cast<double>(state.restDensity));

@@ -17,6 +17,7 @@ ctest --preset release
 build/release/bin/sph-fluid                          # window
 build/release/bin/sph-fluid --scene drop             # empty, dam, drop, double, or dropin
 build/release/bin/sph-fluid --tank cylinder          # cube, cylinder, or hexagon
+build/release/bin/sph-fluid --sim fluid              # wind and smoke are coming soon
 build/release/bin/sph-fluid --view depth             # stage explorer
 build/release/bin/sph-fluid --solver dfsph           # incompressible DFSPH
 build/release/bin/sph-fluid --capture out.png        # last frame
@@ -24,7 +25,7 @@ build/release/bin/sph-fluid --sequence frames --frames 12
 cmake --install build/release --prefix dist          # dist/bin/sph-fluid
 ```
 
-Starts paused so viscosity and other parameters can be set before Play. Scene changes and Reset pause again. Drop-in hangs a wooden block over a pool until Play.
+Starts on a simulation menu: Fluid is playable; Wind tunnel and Smoke are listed as coming soon. Play (or Space) runs Fluid. Menu on the HUD returns to the picker. Scene changes and Reset pause again. Drop-in hangs a wooden block over a pool until Play.
 
 Left-drag is always the paddle: a small cyan sphere sits in the tank on the mouse ray, shoves water aside, and can slide the wooden block even while paused. Uncheck Wooden block to hide it (no draw, no collision). Float (on by default) applies Archimedes buoyancy so the cube rides the water instead of sinking. Right-drag orbits; Shift+left or middle-drag pans; scroll zooms; WASD/QE moves; arrows look; F frames the tank. Space play/pauses. `[` `]` cycles stages (foam is last); 1–9 pick the first nine. A never changes the view.
 
