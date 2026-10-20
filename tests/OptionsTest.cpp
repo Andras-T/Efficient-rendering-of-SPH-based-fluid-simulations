@@ -70,6 +70,13 @@ TEST(OptionsTest, ParsesSmokeSimulation) {
   EXPECT_EQ(Parse({"--sim", "smoke"}).simulation, SimulationKind::Smoke);
 }
 
+TEST(OptionsTest, GuideStartsTheFluidWalkthrough) {
+  const Options options = Parse({"--guide"});
+  EXPECT_TRUE(options.guide);
+  EXPECT_EQ(options.simulation, SimulationKind::Fluid);
+  EXPECT_EQ(Parse({"--sim", "wind", "--guide"}).simulation, SimulationKind::Fluid);
+}
+
 TEST(OptionsTest, RejectsUnknownSimulations) {
   EXPECT_THROW(Parse({"--sim", "plasma"}), std::invalid_argument);
 }

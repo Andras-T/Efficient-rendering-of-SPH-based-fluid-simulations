@@ -81,6 +81,9 @@ Options ParseOptions(std::span<const std::string_view> args) {
         throw std::invalid_argument(
             std::format("{} is coming soon", SimulationKindName(options.simulation)));
       }
+    } else if (arg == "--guide") {
+      options.guide = true;
+      options.simulation = SimulationKind::Fluid;
     } else if (arg == "--validation") {
       options.validation = true;
     } else if (arg == "--no-validation") {
@@ -92,6 +95,9 @@ Options ParseOptions(std::span<const std::string_view> args) {
     }
   }
 
+  if (options.guide) {
+    options.simulation = SimulationKind::Fluid;
+  }
   if (options.headless && options.frames == 0) {
     options.frames = 1;
   }
@@ -109,6 +115,7 @@ std::string_view UsageText() {
   --scene NAME       empty, dam, drop, double, or dropin (default: dam)
   --tank NAME        cube, cylinder, or hexagon (default: cube)
   --sim NAME         fluid, wind, or smoke (default: fluid)
+  --guide            start the fluid pipeline walkthrough (skips the menu)
   --view NAME        final, particles, density, velocity, cell, depth, smooth, thickness, normals, foam
   --solver NAME      wcsph or dfsph (default: wcsph)
   --validation       enable Vulkan validation layers (default in debug builds)

@@ -1,5 +1,7 @@
 #include "ui/Hud.hpp"
 
+#include "ui/FluidGuide.hpp"
+
 #include <glm/geometric.hpp>
 #include <imgui.h>
 
@@ -98,16 +100,21 @@ void DrawSimulationMenu(HudState& state) {
     StartSelectedSimulation(state);
   }
   ImGui::EndDisabled();
-  ImGui::TextWrapped("Space starts the selected sim.");
+  if (state.simulation == SimulationKind::Fluid && ImGui::Button("Guide", ImVec2(-1.0F, 36.0F))) {
+    StartSelectedSimulation(state);
+    state.showGuide = true;
+    state.guideStep = 0;
+    state.paused = false;
+  }
+  ImGui::TextWrapped("Space starts the selected sim. Fluid has a pipeline guide.");
   ImGui::End();
 }
 
 void ApplyHotkeys(HudState& state) {
   const ImGuiIO& io = ImGui::GetIO();
-  if (io.WantCaptureKeyboard && !state.showMenu) {
-    return;
-  }
-  if (ImGui::IsKeyPressed(ImGuiKey_Space)) {
+  if (ImGui::IsKeyPressed(ImGuiKey_Space) &&
+      (state.showMenu || !io.WantCaptureKeyboard ||
+       (state.showGuide && state.simulation == SimulationKind::Fluid))) {
     if (state.showMenu) {
       StartSelectedSimulation(state);
     } else {
@@ -115,6 +122,25 @@ void ApplyHotkeys(HudState& state) {
     }
   }
   if (state.showMenu) {
+    return;
+  }
+  if (state.showGuide && state.simulation == SimulationKind::Fluid) {
+    if (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter) ||
+        ImGui::IsKeyPressed(ImGuiKey_RightBracket) || ImGui::IsKeyPressed(ImGuiKey_C)) {
+      if (!ContinueFluidGuide(state.guideStep, state.showGuide) && !state.showGuide) {
+        state.view = render::DebugView::Final;
+      }
+    }
+    if (ImGui::IsKeyPressed(ImGuiKey_LeftBracket) && state.guideStep > 0) {
+      --state.guideStep;
+    }
+    if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+      state.showGuide = false;
+      state.view = render::DebugView::Final;
+    }
+    return;
+  }
+  if (io.WantCaptureKeyboard) {
     return;
   }
   if (state.simulation == SimulationKind::WindTunnel || state.simulation == SimulationKind::Smoke) {
@@ -250,6 +276,52 @@ CursorForce SamplePaddle(const render::Camera& camera, glm::vec3 domainMin, glm:
   return result;
 }
 
+namespace {
+
+void DrawFluidGuide(HudState& state) {
+  ImGui::SetNextWindowPos({12.0F, 210.0F}, ImGuiCond_Always);
+  ImGui::Begin("Fluid guide", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+  ImGui::Text("Step %u / %u", state.guideStep + 1U, FluidGuideStepCount());
+  ImGui::Spacing();
+  const ImVec4 active = ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive);
+  for (std::uint32_t i = 0; i < FluidGuideStepCount(); ++i) {
+    if (i % 2U != 0U) {
+      ImGui::SameLine();
+    }
+    const bool selected = i == state.guideStep;
+    if (selected) {
+      ImGui::PushStyleColor(ImGuiCol_Button, active);
+    }
+    if (ImGui::Button(FluidGuideAt(i).title, ImVec2(154.0F, 0.0F))) {
+      SelectFluidGuideStep(state.guideStep, state.showGuide, i);
+    }
+    if (selected) {
+      ImGui::PopStyleColor();
+    }
+  }
+  const FluidGuideStep& current = FluidGuideAt(state.guideStep);
+  state.view = current.view;
+  ImGui::Separator();
+  ImGui::TextUnformatted(current.title);
+  ImGui::TextWrapped("%s", current.text);
+  ImGui::Spacing();
+  const bool last = state.guideStep + 1U >= FluidGuideStepCount();
+  if (ImGui::Button(last ? "Finish" : "Continue", ImVec2(154.0F, 0.0F))) {
+    if (!ContinueFluidGuide(state.guideStep, state.showGuide) && !state.showGuide) {
+      state.view = render::DebugView::Final;
+    }
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("Close", ImVec2(154.0F, 0.0F))) {
+    state.showGuide = false;
+    state.view = render::DebugView::Final;
+  }
+  ImGui::TextUnformatted("Enter or ] continues. Esc closes.");
+  ImGui::End();
+}
+
+}  // namespace
+
 HudResult DrawHud(HudState& state) {
   ApplyHotkeys(state);
   HudResult result;
@@ -283,6 +355,7 @@ HudResult DrawHud(HudState& state) {
   if (ImGui::Button("Menu")) {
     state.showMenu = true;
     state.paused = true;
+    state.showGuide = false;
   }
   if (state.simulation == SimulationKind::WindTunnel) {
     ImGui::TextUnformatted("Wind tunnel  LBM D3Q19");
@@ -334,6 +407,16 @@ HudResult DrawHud(HudState& state) {
     if (ImGui::Button("Reset")) {
       result.resetScene = true;
     }
+    ImGui::SameLine();
+    if (ImGui::Button(state.showGuide ? "Exit guide" : "Guide")) {
+      state.showGuide = !state.showGuide;
+      state.guideStep = state.showGuide ? 0 : state.guideStep;
+      if (state.showGuide) {
+        state.paused = false;
+      } else {
+        state.view = render::DebugView::Final;
+      }
+    }
     ImGui::SliderFloat("Paddle size", &state.paddleRadius, 0.05F, 0.16F, "%.2f");
     ImGui::SliderFloat("Swirl", &state.paddleSwirl, 0.0F, 16.0F, "%.1f");
     ImGui::Checkbox("Wooden block", &state.showBlock);
@@ -343,31 +426,35 @@ HudResult DrawHud(HudState& state) {
     ImGui::TextUnformatted("Space play/pause. Scene changes stay paused.");
     ImGui::End();
 
-    ImGui::SetNextWindowPos({300.0F, 12.0F}, ImGuiCond_FirstUseEver);
-    ImGui::Begin("Stage", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-    int view = static_cast<int>(state.view);
-    if (ImGui::Combo(
-            "View", &view,
-            "Final\0Particles\0Density\0Velocity\0Cell\0Depth\0Smooth\0Thickness\0Normals\0"
-            "Foam\0")) {
-      state.view = static_cast<render::DebugView>(view);
+    if (state.showGuide) {
+      DrawFluidGuide(state);
+    } else {
+      ImGui::SetNextWindowPos({300.0F, 12.0F}, ImGuiCond_FirstUseEver);
+      ImGui::Begin("Stage", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+      int view = static_cast<int>(state.view);
+      if (ImGui::Combo(
+              "View", &view,
+              "Final\0Particles\0Density\0Velocity\0Cell\0Depth\0Smooth\0Thickness\0Normals\0"
+              "Foam\0")) {
+        state.view = static_cast<render::DebugView>(view);
+      }
+      int walls = static_cast<int>(state.walls);
+      if (ImGui::Combo("Walls", &walls, "Hidden\0Glass\0Particles\0")) {
+        state.walls = static_cast<render::WallDisplay>(walls);
+      }
+      int tank = static_cast<int>(state.tankShape);
+      if (ImGui::Combo("Tank", &tank, "Cube\0Cylinder\0Hexagon\0")) {
+        state.tankShape = static_cast<sim::TankShape>(tank);
+        result.sceneChanged = true;
+      }
+      ImGui::SliderFloat("Exposure", &state.exposure, 0.05F, 4.0F, "%.2f");
+      ImGui::SliderFloat3("Absorption", &state.absorption.x, 0.0F, 8.0F, "%.2f");
+      ImGui::TextUnformatted("[ ] cycles stages (foam is last). 1-9 pick the first nine.");
+      ImGui::End();
     }
-    int walls = static_cast<int>(state.walls);
-    if (ImGui::Combo("Walls", &walls, "Hidden\0Glass\0Particles\0")) {
-      state.walls = static_cast<render::WallDisplay>(walls);
-    }
-    int tank = static_cast<int>(state.tankShape);
-    if (ImGui::Combo("Tank", &tank, "Cube\0Cylinder\0Hexagon\0")) {
-      state.tankShape = static_cast<sim::TankShape>(tank);
-      result.sceneChanged = true;
-    }
-    ImGui::SliderFloat("Exposure", &state.exposure, 0.05F, 4.0F, "%.2f");
-    ImGui::SliderFloat3("Absorption", &state.absorption.x, 0.0F, 8.0F, "%.2f");
-    ImGui::TextUnformatted("[ ] cycles stages (foam is last). 1-9 pick the first nine.");
-    ImGui::End();
   }
 
-  if (state.camera != nullptr) {
+  if (state.camera != nullptr && !state.showGuide) {
     render::Camera& camera = *state.camera;
     ImGui::SetNextWindowPos({12.0F, 520.0F}, ImGuiCond_FirstUseEver);
     ImGui::Begin("Camera", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
