@@ -95,7 +95,13 @@ Unique<VkPipeline> CreateGraphicsPipeline(VkDevice device, const GraphicsPipelin
   };
   constexpr std::size_t MaxColorAttachments = 8;
   std::array<VkPipelineColorBlendAttachmentState, MaxColorAttachments> attachments{};
-  attachments.fill(desc.additiveBlend ? Additive : desc.alphaBlend ? Alpha : Opaque);
+  VkPipelineColorBlendAttachmentState blend = Opaque;
+  if (desc.additiveBlend) {
+    blend = Additive;
+  } else if (desc.alphaBlend) {
+    blend = Alpha;
+  }
+  attachments.fill(blend);
   const VkPipelineColorBlendStateCreateInfo colorBlend{
       .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
       .attachmentCount = static_cast<std::uint32_t>(desc.colorFormats.size()),
