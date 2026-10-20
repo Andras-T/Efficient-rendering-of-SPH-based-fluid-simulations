@@ -5,6 +5,7 @@
 #include "render/Camera.hpp"
 #include "render/DebugView.hpp"
 #include "sim/Scene.hpp"
+#include "ui/FluidGuide.hpp"
 
 #include <gtest/gtest.h>
 
@@ -171,6 +172,38 @@ TEST(HeadlessRenderTest, OrbitCameraChangesTheView) {
   std::filesystem::create_directories(dir);
   WritePng(dir / "m7-camera-front.png", Extent, front);
   WritePng(dir / "m7-camera-orbit.png", Extent, orbit);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
+TEST(HeadlessRenderTest, FluidGuideStepsIsolateTheStage) {
+  const gpu::Context context({.validation = true});
+  constexpr VkExtent2D Extent{96, 54};
+  const sim::Scene scene = sim::BuildScene(sim::ScenePreset::DamBreak);
+  render::Camera camera;
+  camera.setAspect(Extent);
+  camera.frame(scene.params.domainMin, scene.params.domainMax);
+  const auto particles = RenderOffscreen(context, {.extent = Extent,
+                                                   .frames = 24,
+                                                   .scene = &scene,
+                                                   .camera = &camera,
+                                                   .simulate = true,
+                                                   .view = ui::FluidGuideAt(0).view,
+                                                   .walls = render::WallDisplay::Glass});
+  const auto density = RenderOffscreen(context, {.extent = Extent,
+                                                 .frames = 24,
+                                                 .scene = &scene,
+                                                 .camera = &camera,
+                                                 .simulate = true,
+                                                 .view = ui::FluidGuideAt(2).view,
+                                                 .walls = render::WallDisplay::Glass});
+  ASSERT_EQ(particles.size(), density.size());
+  int changed = 0;
+  for (std::size_t i = 0; i < particles.size(); ++i) {
+    changed += particles[i] != density[i] ? 1 : 0;
+  }
+  EXPECT_EQ(ui::FluidGuideAt(0).view, render::DebugView::Particles);
+  EXPECT_EQ(ui::FluidGuideAt(2).view, render::DebugView::Density);
+  EXPECT_GT(changed, static_cast<int>(particles.size() / 20));
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 

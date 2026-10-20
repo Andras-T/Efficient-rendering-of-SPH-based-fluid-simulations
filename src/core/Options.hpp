@@ -26,6 +26,7 @@ struct Options {
   sim::SolverMethod solver = sim::SolverMethod::Wcsph;
   sim::TankShape tank = sim::TankShape::Box;
   SimulationKind simulation = SimulationKind::Fluid;
+  bool guide = false;
 };
 
 // Throws std::invalid_argument on unknown flags or malformed values.

@@ -36,6 +36,8 @@ struct HudState {
   bool showBlock = true;
   bool floatBlock = true;
   bool showMenu = true;
+  bool showGuide = false;
+  std::uint32_t guideStep = 0;
   SimulationKind simulation = SimulationKind::Fluid;
   float windSpeed = 0.08F;
   float smokeStrength = 1.0F;

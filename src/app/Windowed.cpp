@@ -107,12 +107,14 @@ int RunWindowed(const Options& options) {
     camera.setDistance(3.35F);
   };
   sim::ScenePreset preset = options.scene;
-  bool paused = true;
+  bool paused = !options.guide;
   float paddleRadius = 0.10F;
   float paddleSwirl = 6.0F;
   bool showBlock = true;
   bool floatBlock = true;
-  bool showMenu = true;
+  bool showMenu = !options.guide;
+  bool showGuide = options.guide;
+  std::uint32_t guideStep = 0;
   SimulationKind simulation = options.simulation;
   float windSpeed = 0.08F;
   float smokeStrength = 1.0F;
@@ -210,6 +212,8 @@ int RunWindowed(const Options& options) {
         .showBlock = showBlock,
         .floatBlock = floatBlock,
         .showMenu = showMenu,
+        .showGuide = showGuide,
+        .guideStep = guideStep,
         .simulation = simulation,
         .windSpeed = windSpeed,
         .smokeStrength = smokeStrength,
@@ -223,6 +227,8 @@ int RunWindowed(const Options& options) {
     floatBlock = hud.floatBlock;
     const bool leavingMenu = showMenu && !hud.showMenu;
     showMenu = hud.showMenu;
+    showGuide = hud.showGuide;
+    guideStep = hud.guideStep;
     simulation = hud.simulation;
     windSpeed = hud.windSpeed;
     smokeStrength = hud.smokeStrength;
