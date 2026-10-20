@@ -43,6 +43,8 @@ struct RenderSettings {
   glm::vec3 blockMin{0.0F};
   glm::vec3 blockMax{0.0F};
   bool block = false;
+  bool windCar = true;
+  bool windTracers = true;
 };
 
 using OverlayCallback = std::function<void(VkCommandBuffer)>;

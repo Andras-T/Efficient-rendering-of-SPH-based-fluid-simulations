@@ -373,9 +373,13 @@ void Renderer::recordWind(VkCommandBuffer commandBuffer, const RenderTarget& tar
   const glm::vec3 groundMin{domainMin.x, domainMin.y, domainMin.z};
   const glm::vec3 groundMax{domainMax.x, domainMin.y, domainMax.z};
   carPass_.recordGround(commandBuffer, frameAddress, groundMin, groundMax);
-  carPass_.record(commandBuffer, frameAddress, mesh, meshVertices);
-  const bool velocityView = settings_.view == DebugView::Velocity;
-  windTracerPass_.record(commandBuffer, frameAddress, tracerCount, velocityView);
+  if (settings_.windCar) {
+    carPass_.record(commandBuffer, frameAddress, mesh, meshVertices);
+  }
+  if (settings_.windTracers) {
+    const bool velocityView = settings_.view == DebugView::Velocity;
+    windTracerPass_.record(commandBuffer, frameAddress, tracerCount, velocityView);
+  }
   vkCmdEndRendering(commandBuffer);
 
   gpu::TransitionImage(commandBuffer,

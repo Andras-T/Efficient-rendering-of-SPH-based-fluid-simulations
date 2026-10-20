@@ -94,6 +94,7 @@ int RunWindowed(const Options& options) {
   render::Camera camera;
   camera.setAspect(swapchain.extent());
   camera.frame(scene.params.domainMin, scene.params.domainMax);
+  const bool startWindGuide = options.guide && options.simulation == SimulationKind::WindTunnel;
   const auto frameWindCamera = [&] {
     camera.setAspect(swapchain.extent());
     camera.setTarget({0.02F, 0.12F, 0.0F});
@@ -130,6 +131,9 @@ int RunWindowed(const Options& options) {
     }
   };
   placeBlock();
+  if (startWindGuide) {
+    frameWindCamera();
+  }
 
   std::array<FrameResources, FramesInFlight> frames{};
   for (auto& frame : frames) {
@@ -284,6 +288,8 @@ int RunWindowed(const Options& options) {
     paused = hud.paused;
     renderer.settings().view = hud.view;
     renderer.settings().walls = hud.walls;
+    renderer.settings().windCar = hud.windCar;
+    renderer.settings().windTracers = hud.windTracers;
     renderer.settings().exposure = hud.exposure;
     renderer.settings().absorption = hud.absorption;
     ui::CursorForce cursor{};

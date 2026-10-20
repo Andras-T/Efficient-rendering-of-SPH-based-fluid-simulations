@@ -1,6 +1,7 @@
 #include "ui/Hud.hpp"
 
 #include "ui/FluidGuide.hpp"
+#include "ui/WindGuide.hpp"
 
 #include <glm/geometric.hpp>
 #include <imgui.h>
@@ -100,21 +101,41 @@ void DrawSimulationMenu(HudState& state) {
     StartSelectedSimulation(state);
   }
   ImGui::EndDisabled();
-  if (state.simulation == SimulationKind::Fluid && ImGui::Button("Guide", ImVec2(-1.0F, 36.0F))) {
+  const bool hasGuide =
+      state.simulation == SimulationKind::Fluid || state.simulation == SimulationKind::WindTunnel;
+  if (hasGuide && ImGui::Button("Guide", ImVec2(-1.0F, 36.0F))) {
     StartSelectedSimulation(state);
     state.showGuide = true;
     state.guideStep = 0;
     state.paused = false;
   }
-  ImGui::TextWrapped("Space starts the selected sim. Fluid has a pipeline guide.");
+  ImGui::TextWrapped("Space starts the selected sim. Fluid and wind have pipeline guides.");
   ImGui::End();
+}
+
+[[nodiscard]] bool GuideIsOpen(const HudState& state) {
+  return state.showGuide && (state.simulation == SimulationKind::Fluid ||
+                             state.simulation == SimulationKind::WindTunnel);
+}
+
+void CloseGuide(HudState& state) {
+  state.showGuide = false;
+  state.view = render::DebugView::Final;
+  state.windCar = true;
+  state.windTracers = true;
+}
+
+[[nodiscard]] bool ContinueActiveGuide(HudState& state) {
+  if (state.simulation == SimulationKind::WindTunnel) {
+    return ContinueWindGuide(state.guideStep, state.showGuide);
+  }
+  return ContinueFluidGuide(state.guideStep, state.showGuide);
 }
 
 void ApplyHotkeys(HudState& state) {
   const ImGuiIO& io = ImGui::GetIO();
   if (ImGui::IsKeyPressed(ImGuiKey_Space) &&
-      (state.showMenu || !io.WantCaptureKeyboard ||
-       (state.showGuide && state.simulation == SimulationKind::Fluid))) {
+      (state.showMenu || !io.WantCaptureKeyboard || GuideIsOpen(state))) {
     if (state.showMenu) {
       StartSelectedSimulation(state);
     } else {
@@ -124,19 +145,18 @@ void ApplyHotkeys(HudState& state) {
   if (state.showMenu) {
     return;
   }
-  if (state.showGuide && state.simulation == SimulationKind::Fluid) {
+  if (GuideIsOpen(state)) {
     if (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter) ||
         ImGui::IsKeyPressed(ImGuiKey_RightBracket) || ImGui::IsKeyPressed(ImGuiKey_C)) {
-      if (!ContinueFluidGuide(state.guideStep, state.showGuide) && !state.showGuide) {
-        state.view = render::DebugView::Final;
+      if (!ContinueActiveGuide(state) && !state.showGuide) {
+        CloseGuide(state);
       }
     }
     if (ImGui::IsKeyPressed(ImGuiKey_LeftBracket) && state.guideStep > 0) {
       --state.guideStep;
     }
     if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
-      state.showGuide = false;
-      state.view = render::DebugView::Final;
+      CloseGuide(state);
     }
     return;
   }
@@ -308,13 +328,55 @@ void DrawFluidGuide(HudState& state) {
   const bool last = state.guideStep + 1U >= FluidGuideStepCount();
   if (ImGui::Button(last ? "Finish" : "Continue", ImVec2(154.0F, 0.0F))) {
     if (!ContinueFluidGuide(state.guideStep, state.showGuide) && !state.showGuide) {
-      state.view = render::DebugView::Final;
+      CloseGuide(state);
     }
   }
   ImGui::SameLine();
   if (ImGui::Button("Close", ImVec2(154.0F, 0.0F))) {
-    state.showGuide = false;
-    state.view = render::DebugView::Final;
+    CloseGuide(state);
+  }
+  ImGui::TextUnformatted("Enter or ] continues. Esc closes.");
+  ImGui::End();
+}
+
+void DrawWindGuide(HudState& state) {
+  ImGui::SetNextWindowPos({12.0F, 210.0F}, ImGuiCond_Always);
+  ImGui::Begin("Wind guide", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+  ImGui::Text("Step %u / %u", state.guideStep + 1U, WindGuideStepCount());
+  ImGui::Spacing();
+  const ImVec4 active = ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive);
+  for (std::uint32_t i = 0; i < WindGuideStepCount(); ++i) {
+    if (i % 2U != 0U) {
+      ImGui::SameLine();
+    }
+    const bool selected = i == state.guideStep;
+    if (selected) {
+      ImGui::PushStyleColor(ImGuiCol_Button, active);
+    }
+    if (ImGui::Button(WindGuideAt(i).title, ImVec2(154.0F, 0.0F))) {
+      SelectWindGuideStep(state.guideStep, state.showGuide, i);
+    }
+    if (selected) {
+      ImGui::PopStyleColor();
+    }
+  }
+  const WindGuideStep& current = WindGuideAt(state.guideStep);
+  state.view = current.view;
+  state.windCar = current.showCar;
+  state.windTracers = current.showTracers;
+  ImGui::Separator();
+  ImGui::TextUnformatted(current.title);
+  ImGui::TextWrapped("%s", current.text);
+  ImGui::Spacing();
+  const bool last = state.guideStep + 1U >= WindGuideStepCount();
+  if (ImGui::Button(last ? "Finish" : "Continue", ImVec2(154.0F, 0.0F))) {
+    if (!ContinueWindGuide(state.guideStep, state.showGuide) && !state.showGuide) {
+      CloseGuide(state);
+    }
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("Close", ImVec2(154.0F, 0.0F))) {
+    CloseGuide(state);
   }
   ImGui::TextUnformatted("Enter or ] continues. Esc closes.");
   ImGui::End();
@@ -363,17 +425,31 @@ HudResult DrawHud(HudState& state) {
     if (ImGui::Button("Reset")) {
       result.resetScene = true;
     }
+    ImGui::SameLine();
+    if (ImGui::Button(state.showGuide ? "Exit guide" : "Guide")) {
+      state.showGuide = !state.showGuide;
+      state.guideStep = state.showGuide ? 0 : state.guideStep;
+      if (state.showGuide) {
+        state.paused = false;
+      } else {
+        CloseGuide(state);
+      }
+    }
     ImGui::TextUnformatted("Space play/pause. [ ] toggles velocity.");
     ImGui::End();
 
-    ImGui::SetNextWindowPos({300.0F, 12.0F}, ImGuiCond_FirstUseEver);
-    ImGui::Begin("Stage", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-    int windView = state.view == render::DebugView::Velocity ? 1 : 0;
-    if (ImGui::Combo("View", &windView, "Final\0Velocity\0")) {
-      state.view = windView == 1 ? render::DebugView::Velocity : render::DebugView::Final;
+    if (state.showGuide) {
+      DrawWindGuide(state);
+    } else {
+      ImGui::SetNextWindowPos({300.0F, 12.0F}, ImGuiCond_FirstUseEver);
+      ImGui::Begin("Stage", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+      int windView = state.view == render::DebugView::Velocity ? 1 : 0;
+      if (ImGui::Combo("View", &windView, "Final\0Velocity\0")) {
+        state.view = windView == 1 ? render::DebugView::Velocity : render::DebugView::Final;
+      }
+      ImGui::SliderFloat("Exposure", &state.exposure, 0.05F, 4.0F, "%.2f");
+      ImGui::End();
     }
-    ImGui::SliderFloat("Exposure", &state.exposure, 0.05F, 4.0F, "%.2f");
-    ImGui::End();
   } else if (state.simulation == SimulationKind::Smoke) {
     ImGui::TextUnformatted("Smoke  Eulerian NS");
     ImGui::SliderFloat("Emitter", &state.smokeStrength, 0.40F, 2.00F, "%.2f");
