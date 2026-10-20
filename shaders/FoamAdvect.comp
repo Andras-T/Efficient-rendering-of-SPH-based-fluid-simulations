@@ -2,6 +2,7 @@
 #extension GL_GOOGLE_include_directive : require
 
 #include "Types.glsl"
+#include "Kernels.glsl"
 #include "SphPush.glsl"
 
 layout(local_size_x = 64) in;
@@ -36,12 +37,7 @@ void main() {
   foam.velocity += gravity * dt;
   foam.velocity *= max(0.0, 1.0 - drag * dt);
   foam.position += foam.velocity * dt;
-
-  if (foam.position.y < p.domainMin.y - 0.02 || foam.position.y > p.domainMax.y + 0.35 ||
-      any(lessThan(foam.position.xz, p.domainMin.xz - vec2(0.04))) ||
-      any(greaterThan(foam.position.xz, p.domainMax.xz + vec2(0.04)))) {
-    foam.alive = 0u;
-    foam.life = 0.0;
-  }
+  CollideDomain(foam.position, foam.velocity, p.domainMin + vec3(0.008),
+                p.domainMax - vec3(0.008), p.restitution);
   pc.foam.particles[i] = foam;
 }

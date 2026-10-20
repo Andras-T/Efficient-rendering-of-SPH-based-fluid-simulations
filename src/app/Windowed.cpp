@@ -91,6 +91,7 @@ int RunWindowed(const Options& options) {
   bool paused = true;
   float paddleRadius = 0.10F;
   float paddleSwirl = 6.0F;
+  bool showBlock = true;
   ui::CursorDrag cursorDrag;
   const glm::vec3 blockHalf{0.10F, 0.16F, 0.10F};
   glm::vec3 blockCenter{0.32F, 0.22F, 0.0F};
@@ -172,12 +173,14 @@ int RunWindowed(const Options& options) {
         .walls = renderer.settings().walls,
         .paddleRadius = paddleRadius,
         .paddleSwirl = paddleSwirl,
+        .showBlock = showBlock,
         .exposure = renderer.settings().exposure,
         .absorption = renderer.settings().absorption,
     };
     const ui::HudResult hudResult = ui::DrawHud(hud);
     paddleRadius = hud.paddleRadius;
     paddleSwirl = hud.paddleSwirl;
+    showBlock = hud.showBlock;
     if (hudResult.sceneChanged || hudResult.resetScene) {
       preset = hud.preset;
       scene = sim::BuildScene(preset);
@@ -209,7 +212,7 @@ int RunWindowed(const Options& options) {
     solver.setCursor(cursor.position, cursor.stirring ? cursor.force : glm::vec3{},
                      cursor.stirring ? cursor.radius : 0.0F, cursor.stirring ? cursor.swirl : 0.0F,
                      cursor.stirring ? cursor.push : 0.0F);
-    if (cursor.stirring && cursorDrag.haveHit) {
+    if (showBlock && cursor.grabbing && cursorDrag.haveHit) {
       const glm::vec3 closest =
           glm::clamp(cursor.position, blockCenter - blockHalf, blockCenter + blockHalf);
       if (glm::length(cursor.position - closest) < cursor.radius) {
@@ -219,12 +222,12 @@ int RunWindowed(const Options& options) {
     const glm::vec3 domainMin = solver.params().domainMin + blockHalf;
     const glm::vec3 domainMax = solver.params().domainMax - blockHalf;
     blockCenter = glm::clamp(blockCenter, domainMin, domainMax);
-    solver.setBlock(blockCenter - blockHalf, blockCenter + blockHalf, true);
+    solver.setBlock(blockCenter - blockHalf, blockCenter + blockHalf, showBlock);
     renderer.settings().paddleCenter = cursor.position;
     renderer.settings().paddleRadius = cursor.visible ? cursor.radius : 0.0F;
     renderer.settings().blockMin = blockCenter - blockHalf;
     renderer.settings().blockMax = blockCenter + blockHalf;
-    renderer.settings().block = true;
+    renderer.settings().block = showBlock;
     imgui.endFrame();
 
     const VkCommandBuffer commandBuffer = frame.commandBuffer;

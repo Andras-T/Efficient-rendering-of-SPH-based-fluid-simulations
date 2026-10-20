@@ -31,6 +31,7 @@ struct HudState {
   render::WallDisplay walls = render::WallDisplay::Glass;
   float paddleRadius = 0.10F;
   float paddleSwirl = 6.0F;
+  bool showBlock = true;
   float exposure = 0.85F;
   glm::vec3 absorption{2.45F, 0.42F, 0.12F};
 };
@@ -53,11 +54,12 @@ struct CursorForce {
   float push = 0.0F;
   bool visible = false;
   bool stirring = false;
+  bool grabbing = false;
 };
 
 void ApplyCameraInput(render::Camera& camera, glm::vec3 domainMin, glm::vec3 domainMax);
 
-// Left-drag always stirs inside the tank. The paddle stays visible on the mouse ray.
+// Left-drag grabs the block even while paused. Stirring the fluid requires Play.
 [[nodiscard]] CursorForce SamplePaddle(const render::Camera& camera, glm::vec3 domainMin,
                                        glm::vec3 domainMax, bool paused, CursorDrag& drag,
                                        float radius, float swirl);

@@ -13,10 +13,10 @@
 namespace sph::render {
 namespace {
 
-constexpr std::int32_t SmoothRadius = 24;
-constexpr float SpatialSigma = 16.0F;
-constexpr float RangeSigma = 0.28F;
-constexpr std::uint32_t SmoothPasses = 2;
+constexpr std::int32_t SmoothRadius = 32;
+constexpr float SpatialSigma = 20.0F;
+constexpr float RangeSigma = 0.32F;
+constexpr std::uint32_t SmoothPasses = 3;
 constexpr std::uint32_t SmoothTile = 256;
 
 struct SmoothPush {

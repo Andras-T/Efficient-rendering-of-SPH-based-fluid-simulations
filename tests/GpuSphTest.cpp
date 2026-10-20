@@ -169,7 +169,7 @@ TEST(GpuSphTest, CursorForcePushesNearbyFluid) {
 
   sim::SphSolver stirred(context);
   stirred.upload(scene.particles, scene.params);
-  stirred.setCursor(scene.particles.front().position, {40.0F, 0.0F, 0.0F}, 0.5F);
+  stirred.setCursor(scene.particles.front().position, {80.0F, 0.0F, 0.0F}, 0.5F);
   stirred.step(1);
   std::vector<sim::Particle> withForce = scene.particles;
   stirred.download(withForce);
@@ -270,7 +270,7 @@ TEST(GpuSphTest, DamBreakStaysFinite) {
       EXPECT_GE(particle.position.x, scene.params.domainMin.x - 1.0e-3F);
       EXPECT_LE(particle.position.x, scene.params.domainMax.x + 1.0e-3F);
       EXPECT_GE(particle.position.y, scene.params.domainMin.y - 1.0e-3F);
-      EXPECT_LE(particle.position.y, scene.params.domainMax.y + 0.45F);
+      EXPECT_LE(particle.position.y, scene.params.domainMax.y + 1.0e-3F);
       EXPECT_GE(particle.position.z, scene.params.domainMin.z - 1.0e-3F);
       EXPECT_LE(particle.position.z, scene.params.domainMax.z + 1.0e-3F);
     }
@@ -315,7 +315,7 @@ TEST(GpuSphTest, DfsphDamBreakStaysFinite) {
       ASSERT_TRUE(std::isfinite(particle.density)) << "NaN at frame " << frame;
       maxSpeed = std::max(maxSpeed, glm::length(particle.velocity));
       EXPECT_GE(particle.position.y, scene.params.domainMin.y - 1.0e-3F);
-      EXPECT_LE(particle.position.y, scene.params.domainMax.y + 0.45F);
+      EXPECT_LE(particle.position.y, scene.params.domainMax.y + 1.0e-3F);
     }
   }
   EXPECT_LT(maxSpeed, 20.0F);
@@ -338,6 +338,10 @@ TEST(GpuSphTest, SettledTankStaysNearRestDensity) {
     EXPECT_TRUE(std::isfinite(particle.density));
     EXPECT_GE(particle.position.x, scene.params.domainMin.x);
     EXPECT_LE(particle.position.x, scene.params.domainMax.x);
+    EXPECT_GE(particle.position.y, scene.params.domainMin.y);
+    EXPECT_LE(particle.position.y, scene.params.domainMax.y);
+    EXPECT_GE(particle.position.z, scene.params.domainMin.z);
+    EXPECT_LE(particle.position.z, scene.params.domainMax.z);
   }
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }

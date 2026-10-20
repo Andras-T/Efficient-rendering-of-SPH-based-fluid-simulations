@@ -166,8 +166,9 @@ CursorForce SamplePaddle(const render::Camera& camera, glm::vec3 domainMin, glm:
   }
 
   CursorForce result{.position = *hit, .radius = radius, .visible = true};
-  result.stirring = !paused && ImGui::IsMouseDown(ImGuiMouseButton_Left);
-  if (result.stirring) {
+  result.grabbing = ImGui::IsMouseDown(ImGuiMouseButton_Left);
+  result.stirring = !paused && result.grabbing;
+  if (result.grabbing) {
     if (drag.haveHit) {
       result.force = (*hit - drag.lastHit) * CursorAccelScale;
       const float magnitude = glm::length(result.force);
@@ -175,11 +176,13 @@ CursorForce SamplePaddle(const render::Camera& camera, glm::vec3 domainMin, glm:
         result.force *= CursorAccelMax / magnitude;
       }
     }
-    result.swirl = swirl;
-    result.push = CursorPush;
+    if (result.stirring) {
+      result.swirl = swirl;
+      result.push = CursorPush;
+    }
   }
   drag.lastHit = *hit;
-  drag.haveHit = result.stirring;
+  drag.haveHit = result.grabbing;
   return result;
 }
 
@@ -225,7 +228,8 @@ HudResult DrawHud(HudState& state) {
   }
   ImGui::SliderFloat("Paddle size", &state.paddleRadius, 0.05F, 0.16F, "%.2f");
   ImGui::SliderFloat("Swirl", &state.paddleSwirl, 0.0F, 16.0F, "%.1f");
-  ImGui::TextUnformatted("LMB paddle (shoves the block too), RMB orbit");
+  ImGui::Checkbox("Wooden block", &state.showBlock);
+  ImGui::TextUnformatted("LMB paddle; moves the block even while paused");
   ImGui::TextUnformatted("Space play/pause. Scene changes stay paused.");
   ImGui::End();
 

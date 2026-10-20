@@ -135,6 +135,23 @@ void CollidePaddle(inout vec3 position, inout vec3 velocity, GpuSimParams p) {
   }
 }
 
+void CollideDomain(inout vec3 position, inout vec3 velocity, vec3 minBound, vec3 maxBound,
+                   float restitution) {
+  for (int axis = 0; axis < 3; ++axis) {
+    if (position[axis] < minBound[axis]) {
+      position[axis] = minBound[axis];
+      if (velocity[axis] < 0.0) {
+        velocity[axis] *= -restitution;
+      }
+    } else if (position[axis] > maxBound[axis]) {
+      position[axis] = maxBound[axis];
+      if (velocity[axis] > 0.0) {
+        velocity[axis] *= -restitution;
+      }
+    }
+  }
+}
+
 void CollideBox(inout vec3 position, inout vec3 velocity, GpuSimParams p) {
   const vec3 minBound = p.domainMin + vec3(p.collisionRadius);
   const vec3 maxBound = p.domainMax - vec3(p.collisionRadius);
@@ -143,23 +160,11 @@ void CollideBox(inout vec3 position, inout vec3 velocity, GpuSimParams p) {
     velocity = vec3(0.0);
     return;
   }
-  for (int axis = 0; axis < 3; ++axis) {
-    if (position[axis] < minBound[axis]) {
-      position[axis] = minBound[axis];
-      if (velocity[axis] < 0.0) {
-        velocity[axis] *= -p.restitution;
-      }
-    } else if (axis != 1 && position[axis] > maxBound[axis]) {
-      position[axis] = maxBound[axis];
-      if (velocity[axis] > 0.0) {
-        velocity[axis] *= -p.restitution;
-      }
-    }
-  }
   CollidePaddle(position, velocity, p);
   if (p.blockEnabled > 0.5) {
     CollideAabb(position, velocity, p.blockMin, p.blockMax, p.collisionRadius, p.restitution);
   }
+  CollideDomain(position, velocity, minBound, maxBound, p.restitution);
   LimitSpeed(velocity, p);
 }
 

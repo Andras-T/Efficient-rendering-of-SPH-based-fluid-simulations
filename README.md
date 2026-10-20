@@ -25,9 +25,9 @@ cmake --install build/release --prefix dist          # dist/bin/sph-fluid
 
 Starts paused so viscosity and other parameters can be set before Play. Scene changes and Reset pause again.
 
-Left-drag is always the paddle: a small cyan sphere sits in the tank on the mouse ray, shoves water aside, and can slide the wooden block. Right-drag orbits; Shift+left or middle-drag pans; scroll zooms; WASD/QE moves; arrows look; F frames the tank. Space play/pauses. `[` `]` cycles stages (foam is last); 1–9 pick the first nine. A never changes the view.
+Left-drag is always the paddle: a small cyan sphere sits in the tank on the mouse ray, shoves water aside, and can slide the wooden block even while paused. Uncheck Wooden block to hide it (no draw, no collision). Right-drag orbits; Shift+left or middle-drag pans; scroll zooms; WASD/QE moves; arrows look; F frames the tank. Space play/pauses. `[` `]` cycles stages (foam is last); 1–9 pick the first nine. A never changes the view.
 
-Walls: Hidden, Glass (default aquarium tank on the realistic view), or Particles (Akinci spheres). The overlay also has scene presets, WCSPH/DFSPH, viscosity (default 0.033), paddle size/swirl, Reset, exposure, and GPU timings. The tank is open-top so fluid can splash and fall instead of sticking to a lid.
+Walls: Hidden, Glass (default closed aquarium cube on the realistic view), or Particles (Akinci spheres). The overlay also has scene presets, WCSPH/DFSPH, viscosity (default 0.033), paddle size/swirl, Reset, exposure, and GPU timings. Fluid stays inside the glass; walls are slip so splash does not glue to the lid.
 
 On Linux without a GPU, install Mesa's lavapipe (`mesa-vulkan-drivers`).
 

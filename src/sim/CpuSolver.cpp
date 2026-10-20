@@ -176,7 +176,7 @@ void CollideCpu(Particle& particle, const SimParams& params) {
       if (particle.velocity[axis] < 0.0F) {
         particle.velocity[axis] *= -params.restitution;
       }
-    } else if (axis != 1 && particle.position[axis] > hi) {
+    } else if (particle.position[axis] > hi) {
       particle.position[axis] = hi;
       if (particle.velocity[axis] > 0.0F) {
         particle.velocity[axis] *= -params.restitution;
