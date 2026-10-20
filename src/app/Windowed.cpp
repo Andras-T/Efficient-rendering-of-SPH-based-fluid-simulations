@@ -203,7 +203,7 @@ int RunWindowed(const Options& options) {
     renderer.settings().walls = hud.walls;
     renderer.settings().exposure = hud.exposure;
     renderer.settings().absorption = hud.absorption;
-    ui::CursorForce cursor =
+    const ui::CursorForce cursor =
         ui::SamplePaddle(camera, solver.params().domainMin, solver.params().domainMax, paused,
                          cursorDrag, paddleRadius, paddleSwirl);
     solver.setCursor(cursor.position, cursor.stirring ? cursor.force : glm::vec3{},

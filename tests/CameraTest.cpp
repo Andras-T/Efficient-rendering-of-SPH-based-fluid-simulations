@@ -90,7 +90,10 @@ TEST(CameraTest, CenterRayHitsVolume) {
   camera.setDistance(3.0F);
   camera.setAspect(16.0F / 9.0F);
   const auto hit = camera.hitVolume({0.0F, 0.0F}, {-0.7F, 0.0F, -0.4F}, {0.7F, 1.0F, 0.4F});
-  ASSERT_TRUE(hit.has_value());
+  if (!hit.has_value()) {
+    FAIL() << "center ray missed the tank volume";
+    return;
+  }
   EXPECT_GE(hit->x, -0.7F);
   EXPECT_LE(hit->x, 0.7F);
   EXPECT_GE(hit->y, 0.0F);
