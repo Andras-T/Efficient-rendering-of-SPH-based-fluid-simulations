@@ -14,6 +14,7 @@
 #include "sim/Scene.hpp"
 #include "sim/SphSolver.hpp"
 #include "sim/Tank.hpp"
+#include "sim/WindSolver.hpp"
 #include "ui/Hud.hpp"
 
 #include <GLFW/glfw3.h>
@@ -87,9 +88,16 @@ int RunWindowed(const Options& options) {
   sim::CalibrateRestDensity(scene.particles, scene.params);
   sim::SphSolver solver(context);
   solver.upload(scene.particles, scene.params);
+  sim::WindSolver wind(context);
   render::Camera camera;
   camera.setAspect(swapchain.extent());
   camera.frame(scene.params.domainMin, scene.params.domainMax);
+  const auto frameWindCamera = [&] {
+    camera.setAspect(swapchain.extent());
+    camera.setTarget({0.02F, 0.12F, 0.0F});
+    camera.setYawPitch(0.95F, 0.32F);
+    camera.setDistance(1.30F);
+  };
   sim::ScenePreset preset = options.scene;
   bool paused = true;
   float paddleRadius = 0.10F;
@@ -98,6 +106,7 @@ int RunWindowed(const Options& options) {
   bool floatBlock = true;
   bool showMenu = true;
   SimulationKind simulation = options.simulation;
+  float windSpeed = 0.08F;
   ui::CursorDrag cursorDrag;
   const glm::vec3 blockHalf = sim::WoodenBlockHalf;
   glm::vec3 blockCenter = sim::WoodenBlockStart(preset, scene.params);
@@ -171,7 +180,8 @@ int RunWindowed(const Options& options) {
         .camera = &camera,
         .timings = profiler.intervals(),
         .preset = preset,
-        .particleCount = solver.count(),
+        .particleCount =
+            simulation == SimulationKind::WindTunnel ? wind.tracerCount() : solver.count(),
         .paused = paused,
         .timeStep = solver.params().timeStep,
         .substeps = solver.params().substeps,
@@ -187,6 +197,7 @@ int RunWindowed(const Options& options) {
         .floatBlock = floatBlock,
         .showMenu = showMenu,
         .simulation = simulation,
+        .windSpeed = windSpeed,
         .exposure = renderer.settings().exposure,
         .absorption = renderer.settings().absorption,
     };
@@ -195,25 +206,41 @@ int RunWindowed(const Options& options) {
     paddleSwirl = hud.paddleSwirl;
     showBlock = hud.showBlock;
     floatBlock = hud.floatBlock;
+    const bool leavingMenu = showMenu && !hud.showMenu;
     showMenu = hud.showMenu;
     simulation = hud.simulation;
+    windSpeed = hud.windSpeed;
+    wind.setInletSpeed(windSpeed);
     if (!showMenu) {
-      ui::ApplyCameraInput(camera, solver.params().domainMin, solver.params().domainMax);
+      if (simulation == SimulationKind::WindTunnel) {
+        ui::ApplyCameraInput(camera, wind.domainMin(), wind.domainMax());
+      } else {
+        ui::ApplyCameraInput(camera, solver.params().domainMin, solver.params().domainMax);
+      }
+    }
+    if (leavingMenu && simulation == SimulationKind::WindTunnel) {
+      frameWindCamera();
     }
     if (hudResult.sceneChanged || hudResult.resetScene) {
-      preset = hud.preset;
-      sim::SimParams next;
-      next.solver = hud.solver;
-      next.viscosity = hud.viscosity;
-      next.tankShape = hud.tankShape;
-      scene = sim::BuildScene(preset, next);
-      sim::CalibrateRestDensity(scene.particles, scene.params);
-      solver.upload(scene.particles, scene.params);
-      cursorDrag = {};
-      placeBlock();
-      camera.frame(scene.params.domainMin, scene.params.domainMax);
-      camera.setAspect(swapchain.extent());
-      hud.paused = true;
+      if (simulation == SimulationKind::WindTunnel) {
+        wind.reset();
+        frameWindCamera();
+        hud.paused = true;
+      } else {
+        preset = hud.preset;
+        sim::SimParams next;
+        next.solver = hud.solver;
+        next.viscosity = hud.viscosity;
+        next.tankShape = hud.tankShape;
+        scene = sim::BuildScene(preset, next);
+        sim::CalibrateRestDensity(scene.particles, scene.params);
+        solver.upload(scene.particles, scene.params);
+        cursorDrag = {};
+        placeBlock();
+        camera.frame(scene.params.domainMin, scene.params.domainMax);
+        camera.setAspect(swapchain.extent());
+        hud.paused = true;
+      }
     } else {
       if (hud.viscosity != solver.params().viscosity) {
         solver.setViscosity(hud.viscosity);
@@ -228,7 +255,7 @@ int RunWindowed(const Options& options) {
     renderer.settings().exposure = hud.exposure;
     renderer.settings().absorption = hud.absorption;
     ui::CursorForce cursor{};
-    if (!showMenu) {
+    if (!showMenu && simulation != SimulationKind::WindTunnel) {
       cursor = ui::SamplePaddle(camera, solver.params().domainMin, solver.params().domainMax,
                                 paused, cursorDrag, paddleRadius, paddleSwirl);
     } else {
@@ -237,7 +264,8 @@ int RunWindowed(const Options& options) {
     solver.setCursor(cursor.position, cursor.stirring ? cursor.force : glm::vec3{},
                      cursor.stirring ? cursor.radius : 0.0F, cursor.stirring ? cursor.swirl : 0.0F,
                      cursor.stirring ? cursor.push : 0.0F);
-    if (!showMenu && showBlock && cursor.grabbing && cursorDrag.haveHit) {
+    if (!showMenu && simulation != SimulationKind::WindTunnel && showBlock && cursor.grabbing &&
+        cursorDrag.haveHit) {
       const glm::vec3 closest =
           glm::clamp(cursor.position, blockCenter - blockHalf, blockCenter + blockHalf);
       if (glm::length(cursor.position - closest) < cursor.radius) {
@@ -245,8 +273,8 @@ int RunWindowed(const Options& options) {
         blockVelocity = {};
       }
     }
-    if (!showMenu && !paused && showBlock && !cursor.grabbing &&
-        (floatBlock || preset == sim::ScenePreset::DropIn)) {
+    if (!showMenu && simulation != SimulationKind::WindTunnel && !paused && showBlock &&
+        !cursor.grabbing && (floatBlock || preset == sim::ScenePreset::DropIn)) {
       sim::AdvanceWoodenBlock(blockCenter, blockVelocity, solver.params(),
                               solver.blockWaterSurface(), floatBlock);
     }
@@ -267,21 +295,32 @@ int RunWindowed(const Options& options) {
     gpu::Check(vkBeginCommandBuffer(commandBuffer, &beginInfo), "vkBeginCommandBuffer");
     const VkImage image = swapchain.image(imageIndex);
     profiler.beginFrame(commandBuffer, flight);
-    if (!paused) {
-      solver.record(commandBuffer, solver.params().substeps);
-      gpu::GlobalBarrier(
-          commandBuffer, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-          VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
-          VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-          VK_ACCESS_2_SHADER_STORAGE_READ_BIT);
-      profiler.mark(commandBuffer, "sim");
-    } else if (showBlock) {
-      solver.recordBlockSample(commandBuffer);
+    if (simulation == SimulationKind::WindTunnel) {
+      if (!paused && !showMenu) {
+        wind.record(commandBuffer, 1);
+        profiler.mark(commandBuffer, "sim");
+      }
+      renderer.recordWind(commandBuffer, {image, swapchain.view(imageIndex), swapchain.extent()},
+                          camera, wind.meshAddress(), wind.meshVertexCount(), wind.tracerAddress(),
+                          wind.tracerCount(), wind.domainMin(), wind.domainMax(),
+                          [&](VkCommandBuffer overlay) { imgui.record(overlay); });
+    } else {
+      if (!paused) {
+        solver.record(commandBuffer, solver.params().substeps);
+        gpu::GlobalBarrier(
+            commandBuffer, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+            VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+            VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+            VK_ACCESS_2_SHADER_STORAGE_READ_BIT);
+        profiler.mark(commandBuffer, "sim");
+      } else if (showBlock) {
+        solver.recordBlockSample(commandBuffer);
+      }
+      renderer.record(commandBuffer, {image, swapchain.view(imageIndex), swapchain.extent()},
+                      camera, solver.particleAddress(), solver.count(), solver.foamAddress(),
+                      solver.foamCapacity(), solver.params(),
+                      [&](VkCommandBuffer overlay) { imgui.record(overlay); });
     }
-    renderer.record(commandBuffer, {image, swapchain.view(imageIndex), swapchain.extent()}, camera,
-                    solver.particleAddress(), solver.count(), solver.foamAddress(),
-                    solver.foamCapacity(), solver.params(),
-                    [&](VkCommandBuffer overlay) { imgui.record(overlay); });
     profiler.mark(commandBuffer, "render");
     profiler.endFrame(commandBuffer);
     gpu::TransitionImage(commandBuffer,

@@ -6,6 +6,7 @@
 #include "sim/Particle.hpp"
 #include "sim/Tank.hpp"
 
+#include <glm/common.hpp>
 #include <glm/geometric.hpp>
 #include <glm/gtc/matrix_inverse.hpp>
 
@@ -95,6 +96,8 @@ Renderer::Renderer(const gpu::Context& context, VkFormat colorFormat)
       tankPass_(context, HdrFormat, DepthFormat, hdri_),
       blockPass_(context, HdrFormat, DepthFormat),
       paddlePass_(context, HdrFormat, DepthFormat),
+      carPass_(context, HdrFormat, DepthFormat),
+      windTracerPass_(context, HdrFormat, DepthFormat),
       tonemapPass_(context, colorFormat),
       hdrSampler_(gpu::CreateSampler(context.device(), VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
                                      VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE)),
@@ -279,6 +282,100 @@ void Renderer::record(VkCommandBuffer commandBuffer, const RenderTarget& target,
       vkCmdEndRendering(commandBuffer);
     }
   }
+
+  gpu::TransitionImage(commandBuffer,
+                       {
+                           .image = hdr_.handle(),
+                           .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                           .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                           .srcStage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                           .srcAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                           .dstStage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                           .dstAccess = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
+                       });
+
+  BeginColor(commandBuffer, target.view, target.extent, VK_ATTACHMENT_LOAD_OP_DONT_CARE);
+  tonemapPass_.record(commandBuffer, frameAddress);
+  vkCmdEndRendering(commandBuffer);
+
+  if (overlay) {
+    BeginColor(commandBuffer, target.view, target.extent, VK_ATTACHMENT_LOAD_OP_LOAD);
+    overlay(commandBuffer);
+    vkCmdEndRendering(commandBuffer);
+  }
+}
+
+void Renderer::recordWind(VkCommandBuffer commandBuffer, const RenderTarget& target,
+                          const Camera& camera, VkDeviceAddress mesh, std::uint32_t meshVertices,
+                          VkDeviceAddress tracers, std::uint32_t tracerCount, glm::vec3 domainMin,
+                          glm::vec3 domainMax, const OverlayCallback& overlay) {
+  resize(target.extent);
+
+  sim::FrameUniforms uniforms;
+  uniforms.view = camera.view();
+  uniforms.projection = camera.projection();
+  uniforms.inverseView = glm::inverse(uniforms.view);
+  uniforms.inverseProjection = glm::inverse(uniforms.projection);
+  uniforms.lightDirection = glm::normalize(uniforms.lightDirection);
+  uniforms.radius = 0.018F;
+  uniforms.particles = tracers;
+  uniforms.count = tracerCount;
+  uniforms.debugView = static_cast<std::uint32_t>(settings_.view);
+  uniforms.domainMin = domainMin;
+  uniforms.domainMax = domainMax;
+  uniforms.invCellSize = 25.0F;
+  const glm::vec3 extent = domainMax - domainMin;
+  uniforms.gridSize =
+      glm::uvec3(glm::max(glm::round(extent * uniforms.invCellSize), glm::vec3(1.0F)));
+  uniforms.exposure = settings_.exposure;
+  uniforms_.mapped<sim::FrameUniforms>().front() = uniforms;
+  uniforms_.flush();
+  const VkDeviceAddress frameAddress = uniforms_.address();
+
+  gpu::TransitionImage(commandBuffer,
+                       {
+                           .image = hdr_.handle(),
+                           .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                           .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                           .srcStage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                           .dstStage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                           .dstAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                       });
+  gpu::TransitionImage(commandBuffer,
+                       {
+                           .image = depth_.handle(),
+                           .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                           .newLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+                           .srcStage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
+                                       VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
+                           .dstStage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
+                                       VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
+                           .dstAccess = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                           .aspect = VK_IMAGE_ASPECT_DEPTH_BIT,
+                       });
+  gpu::TransitionImage(commandBuffer,
+                       {
+                           .image = target.image,
+                           .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                           .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                           .srcStage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                           .dstStage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                           .dstAccess = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                       });
+
+  BeginColor(commandBuffer, hdr_.view(), target.extent, VK_ATTACHMENT_LOAD_OP_DONT_CARE);
+  skyPass_.record(commandBuffer, frameAddress);
+  vkCmdEndRendering(commandBuffer);
+
+  BeginColorDepth(commandBuffer, hdr_.view(), depth_.view(), target.extent,
+                  VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_LOAD_OP_CLEAR);
+  const glm::vec3 groundMin{domainMin.x, domainMin.y, domainMin.z};
+  const glm::vec3 groundMax{domainMax.x, domainMin.y, domainMax.z};
+  carPass_.recordGround(commandBuffer, frameAddress, groundMin, groundMax);
+  carPass_.record(commandBuffer, frameAddress, mesh, meshVertices);
+  const bool velocityView = settings_.view == DebugView::Velocity;
+  windTracerPass_.record(commandBuffer, frameAddress, tracerCount, velocityView);
+  vkCmdEndRendering(commandBuffer);
 
   gpu::TransitionImage(commandBuffer,
                        {

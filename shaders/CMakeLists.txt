@@ -28,6 +28,15 @@ sph_add_shader_library(sph_shaders
     FoamSpawn.comp
     FoamAdvect.comp
     BlockSample.comp
+    LbmCollide.comp
+    LbmStream.comp
+    WindTracers.comp
+    Car.vert
+    Car.frag
+    WindGround.vert
+    WindGround.frag
+    WindTracer.vert
+    WindTracer.frag
     Foam.vert
     Foam.frag
     Tank.vert
@@ -40,4 +49,5 @@ sph_add_shader_library(sph_shaders
     Types.glsl
     Kernels.glsl
     SphPush.glsl
-    Screen.glsl)
+    Screen.glsl
+    Wind.glsl)

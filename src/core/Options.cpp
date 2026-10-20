@@ -108,7 +108,7 @@ std::string_view UsageText() {
   --sequence DIR     write every frame as DIR/0000.png (implies --headless)
   --scene NAME       empty, dam, drop, double, or dropin (default: dam)
   --tank NAME        cube, cylinder, or hexagon (default: cube)
-  --sim NAME         fluid (default); wind and smoke are coming soon
+  --sim NAME         fluid or wind (default: fluid); smoke is coming soon
   --view NAME        final, particles, density, velocity, cell, depth, smooth, thickness, normals, foam
   --solver NAME      wcsph or dfsph (default: wcsph)
   --validation       enable Vulkan validation layers (default in debug builds)

@@ -1,0 +1,72 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "Types.glsl"
+#include "Wind.glsl"
+
+layout(local_size_x = 64) in;
+
+layout(push_constant, scalar) uniform PushConstants {
+  LbmRW src;
+  LbmRW dst;
+  OccupancyRW occupancy;
+  MacroRW macro;
+  ParticleRW tracers;
+  uvec3 grid;
+  uint cellCount;
+  float tau;
+  float inletUx;
+  uint tracerCount;
+  uint seed;
+  vec3 origin;
+  float cellSize;
+};
+
+void main() {
+  const uint i = gl_GlobalInvocationID.x;
+  if (i >= cellCount) {
+    return;
+  }
+  const uint occ = occupancy.data[i];
+  const uvec3 cell = WindCellCoord(i, grid);
+  LbmPop pop;
+  for (uint k = 0; k < 20; ++k) {
+    pop.f[k] = 0.0;
+  }
+  if (occ == WindSolid || occ == WindWall) {
+    dst.cells[i] = src.cells[i];
+    return;
+  }
+  if (occ == WindInlet) {
+    const vec3 velocity = vec3(inletUx, 0.0, 0.0);
+    for (uint k = 0; k < LbmQ; ++k) {
+      pop.f[k] = LbmFeq(k, 1.0, velocity);
+    }
+    dst.cells[i] = pop;
+    macro.values[i] = vec4(1.0, velocity);
+    return;
+  }
+
+  for (uint k = 0; k < LbmQ; ++k) {
+    const ivec3 srcCell = ivec3(cell) - kLbmE[k];
+    const bool inside = all(greaterThanEqual(srcCell, ivec3(0))) &&
+                        all(lessThan(srcCell, ivec3(grid)));
+    if (!inside) {
+      pop.f[k] = src.cells[i].f[kLbmOpp[k]];
+      continue;
+    }
+    const uint srcIndex = WindCellIndex(uvec3(srcCell), grid);
+    const uint srcOcc = occupancy.data[srcIndex];
+    if (srcOcc == WindSolid || srcOcc == WindWall) {
+      pop.f[k] = src.cells[i].f[kLbmOpp[k]];
+    } else {
+      pop.f[k] = src.cells[srcIndex].f[k];
+    }
+  }
+
+  if (occ == WindOutlet) {
+    const uvec3 left = uvec3(cell.x - 1, cell.y, cell.z);
+    pop = src.cells[WindCellIndex(left, grid)];
+  }
+  dst.cells[i] = pop;
+}

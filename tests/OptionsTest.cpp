@@ -62,8 +62,11 @@ TEST(OptionsTest, DefaultsToFluidSimulation) {
   EXPECT_EQ(Parse({"--sim", "fluid"}).simulation, SimulationKind::Fluid);
 }
 
+TEST(OptionsTest, ParsesWindSimulation) {
+  EXPECT_EQ(Parse({"--sim", "wind"}).simulation, SimulationKind::WindTunnel);
+}
+
 TEST(OptionsTest, RejectsUnreadySimulations) {
-  EXPECT_THROW(Parse({"--sim", "wind"}), std::invalid_argument);
   EXPECT_THROW(Parse({"--sim", "smoke"}), std::invalid_argument);
   EXPECT_THROW(Parse({"--sim", "plasma"}), std::invalid_argument);
 }
@@ -76,18 +79,21 @@ TEST(SimulationTest, NamesAndParseCoverUpcomingModes) {
   EXPECT_STREQ(SimulationKindLabel(SimulationKind::WindTunnel), "Wind tunnel");
   EXPECT_STREQ(SimulationKindLabel(SimulationKind::Smoke), "Smoke");
   EXPECT_TRUE(SimulationReady(SimulationKind::Fluid));
-  EXPECT_FALSE(SimulationReady(SimulationKind::WindTunnel));
+  EXPECT_TRUE(SimulationReady(SimulationKind::WindTunnel));
   EXPECT_FALSE(SimulationReady(SimulationKind::Smoke));
 }
 
 TEST(SimulationTest, TryStartOnlyRunsReadyModes) {
   bool showMenu = true;
   bool paused = true;
-  EXPECT_FALSE(TryStartSimulation(SimulationKind::WindTunnel, showMenu, paused));
-  EXPECT_TRUE(showMenu);
-  EXPECT_TRUE(paused);
   EXPECT_FALSE(TryStartSimulation(SimulationKind::Smoke, showMenu, paused));
   EXPECT_TRUE(showMenu);
+  EXPECT_TRUE(paused);
+  EXPECT_TRUE(TryStartSimulation(SimulationKind::WindTunnel, showMenu, paused));
+  EXPECT_FALSE(showMenu);
+  EXPECT_FALSE(paused);
+  showMenu = true;
+  paused = true;
   EXPECT_TRUE(TryStartSimulation(SimulationKind::Fluid, showMenu, paused));
   EXPECT_FALSE(showMenu);
   EXPECT_FALSE(paused);

@@ -37,6 +37,7 @@ struct HudState {
   bool floatBlock = true;
   bool showMenu = true;
   SimulationKind simulation = SimulationKind::Fluid;
+  float windSpeed = 0.08F;
   float exposure = 0.85F;
   glm::vec3 absorption{2.45F, 0.42F, 0.12F};
 };
