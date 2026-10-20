@@ -357,7 +357,7 @@ TEST(GpuSphTest, BlockSampleSeesThePool) {
   sim::SphSolver solver(context);
   solver.upload(scene.particles, scene.params);
   const glm::vec3 half = sim::WoodenBlockHalf;
-  glm::vec3 center{0.0F, 0.30F, 0.0F};
+  const glm::vec3 center{0.0F, 0.30F, 0.0F};
   solver.setBlock(center - half, center + half, true);
   solver.step(1);
   EXPECT_GT(solver.blockWaterSurface(), 0.18F);
