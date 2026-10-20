@@ -1,0 +1,53 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "Smoke.glsl"
+
+layout(local_size_x = 64) in;
+
+layout(push_constant, scalar) uniform PushConstants {
+  VelocityRW velocitySrc;
+  VelocityRW velocityDst;
+  ScalarRW scalarSrc;
+  ScalarRW scalarDst;
+  PressureRW pressureSrc;
+  PressureRW pressureDst;
+  PressureRW divergence;
+  uvec3 grid;
+  uint cellCount;
+  vec3 origin;
+  float cellSize;
+  float dt;
+  float dissipation;
+  float buoyancy;
+  float vorticity;
+  vec3 emitterCenter;
+  float emitterRadius;
+  float emitterDensity;
+  float emitterTemperature;
+};
+
+void main() {
+  const uint i = gl_GlobalInvocationID.x;
+  if (i >= cellCount) {
+    return;
+  }
+  const uvec3 cell = SmokeCellCoord(i, grid);
+  if (SmokeIsWall(cell, grid)) {
+    scalarDst.values[i] = vec2(0.0);
+    return;
+  }
+  const vec3 world = SmokeCellCenter(cell, origin, cellSize);
+  const vec3 velocity = velocitySrc.values[i].xyz;
+  const vec3 back = world - velocity * dt;
+  vec2 scalar = SmokeInterpScalar(scalarSrc, back, origin, cellSize, grid);
+  scalar *= dissipation;
+  const float dist = length(world - emitterCenter);
+  if (dist < emitterRadius) {
+    const float w = 1.0 - dist / emitterRadius;
+    scalar.x += emitterDensity * w;
+    scalar.y += emitterTemperature * w;
+  }
+  scalar = max(scalar, vec2(0.0));
+  scalarDst.values[i] = scalar;
+}

@@ -10,6 +10,7 @@
 #include "gpu/Timestamps.hpp"
 #include "render/Renderer.hpp"
 #include "sim/CpuSolver.hpp"
+#include "sim/SmokeSolver.hpp"
 #include "sim/SphSolver.hpp"
 #include "sim/WindSolver.hpp"
 
@@ -109,10 +110,74 @@ std::vector<std::uint8_t> RenderWindOffscreen(const gpu::Context& context,
   return lastFrame;
 }
 
+std::vector<std::uint8_t> RenderSmokeOffscreen(const gpu::Context& context,
+                                               const OffscreenRequest& request) {
+  const VkExtent2D extent = request.extent;
+  const gpu::Image target(
+      context, {
+                   .extent = extent,
+                   .format = CaptureFormat,
+                   .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+               });
+  const VkDeviceSize byteCount = VkDeviceSize{extent.width} * extent.height * BytesPerPixel;
+  const gpu::Buffer readback(context,
+                             {
+                                 .size = byteCount,
+                                 .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                 .allocationFlags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT |
+                                                    VMA_ALLOCATION_CREATE_MAPPED_BIT,
+                             });
+  sim::SmokeSolver smoke(context);
+  render::Camera ownedCamera;
+  ownedCamera.setAspect(extent);
+  ownedCamera.setTarget({0.0F, 0.85F, 0.0F});
+  ownedCamera.setYawPitch(0.85F, 0.22F);
+  ownedCamera.setDistance(3.35F);
+  const render::Camera& camera = request.camera == nullptr ? ownedCamera : *request.camera;
+  render::Renderer renderer(context, CaptureFormat);
+  renderer.settings().view = request.view;
+  renderer.resize(extent);
+  const render::RenderTarget renderTarget{target.handle(), target.view(), extent};
+  if (!request.sequenceDirectory.empty()) {
+    std::filesystem::create_directories(request.sequenceDirectory);
+  }
+  std::vector<std::uint8_t> lastFrame;
+  const std::uint32_t frameCount = std::max(request.frames, 1U);
+  for (std::uint32_t frame = 0; frame < frameCount; ++frame) {
+    const bool needPixels = !request.sequenceDirectory.empty() || (frame + 1 >= frameCount);
+    gpu::ImmediateSubmit(context, [&](VkCommandBuffer commandBuffer) {
+      if (request.simulate) {
+        smoke.record(commandBuffer, 1);
+      }
+      renderer.recordSmoke(commandBuffer, renderTarget, camera, smoke.scalarAddress(),
+                           smoke.velocityAddress(), smoke.domain().grid, smoke.domain().origin,
+                           smoke.domain().cellSize, smoke.domainMin(), smoke.domainMax());
+      if (needPixels) {
+        CopyTargetToBuffer(commandBuffer, target.handle(), readback.handle(), extent);
+      }
+    });
+    if (!needPixels) {
+      continue;
+    }
+    readback.invalidate();
+    const auto pixels = readback.mapped<const std::uint8_t>();
+    if (!request.sequenceDirectory.empty()) {
+      WritePng(SequenceFramePath(request.sequenceDirectory, frame), extent, pixels);
+    }
+    if (frame + 1 >= frameCount) {
+      lastFrame.assign(pixels.begin(), pixels.end());
+    }
+  }
+  return lastFrame;
+}
+
 std::vector<std::uint8_t> RenderOffscreen(const gpu::Context& context,
                                           const OffscreenRequest& request) {
   if (request.simulation == SimulationKind::WindTunnel) {
     return RenderWindOffscreen(context, request);
+  }
+  if (request.simulation == SimulationKind::Smoke) {
+    return RenderSmokeOffscreen(context, request);
   }
   const VkExtent2D extent = request.extent;
   const gpu::Image target(

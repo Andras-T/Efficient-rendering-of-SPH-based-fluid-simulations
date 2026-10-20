@@ -98,7 +98,7 @@ void DrawSimulationMenu(HudState& state) {
     StartSelectedSimulation(state);
   }
   ImGui::EndDisabled();
-  ImGui::TextWrapped("Space starts the selected sim. Smoke is coming soon.");
+  ImGui::TextWrapped("Space starts the selected sim.");
   ImGui::End();
 }
 
@@ -117,7 +117,7 @@ void ApplyHotkeys(HudState& state) {
   if (state.showMenu) {
     return;
   }
-  if (state.simulation == SimulationKind::WindTunnel) {
+  if (state.simulation == SimulationKind::WindTunnel || state.simulation == SimulationKind::Smoke) {
     if (ImGui::IsKeyPressed(ImGuiKey_LeftBracket) || ImGui::IsKeyPressed(ImGuiKey_RightBracket) ||
         ImGui::IsKeyPressed(ImGuiKey_2) || ImGui::IsKeyPressed(ImGuiKey_3)) {
       state.view = state.view == render::DebugView::Velocity ? render::DebugView::Final
@@ -298,6 +298,23 @@ HudResult DrawHud(HudState& state) {
     int windView = state.view == render::DebugView::Velocity ? 1 : 0;
     if (ImGui::Combo("View", &windView, "Final\0Velocity\0")) {
       state.view = windView == 1 ? render::DebugView::Velocity : render::DebugView::Final;
+    }
+    ImGui::SliderFloat("Exposure", &state.exposure, 0.05F, 4.0F, "%.2f");
+    ImGui::End();
+  } else if (state.simulation == SimulationKind::Smoke) {
+    ImGui::TextUnformatted("Smoke  Eulerian NS");
+    ImGui::SliderFloat("Emitter", &state.smokeStrength, 0.40F, 2.00F, "%.2f");
+    if (ImGui::Button("Reset")) {
+      result.resetScene = true;
+    }
+    ImGui::TextUnformatted("Space play/pause. [ ] toggles velocity.");
+    ImGui::End();
+
+    ImGui::SetNextWindowPos({300.0F, 12.0F}, ImGuiCond_FirstUseEver);
+    ImGui::Begin("Stage", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+    int smokeView = state.view == render::DebugView::Velocity ? 1 : 0;
+    if (ImGui::Combo("View", &smokeView, "Final\0Velocity\0")) {
+      state.view = smokeView == 1 ? render::DebugView::Velocity : render::DebugView::Final;
     }
     ImGui::SliderFloat("Exposure", &state.exposure, 0.05F, 4.0F, "%.2f");
     ImGui::End();
