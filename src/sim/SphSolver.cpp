@@ -92,6 +92,7 @@ GpuSimParams MakeGpuParams(const SimParams& params, const Grid& grid, std::uint3
       .blockMin = blockMin,
       .blockEnabled = blockEnabled ? 1.0F : 0.0F,
       .blockMax = blockMax,
+      .tankShape = static_cast<std::uint32_t>(params.tankShape),
   };
 }
 

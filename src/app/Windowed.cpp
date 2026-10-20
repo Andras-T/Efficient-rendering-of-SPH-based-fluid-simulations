@@ -13,6 +13,7 @@
 #include "sim/CpuSolver.hpp"
 #include "sim/Scene.hpp"
 #include "sim/SphSolver.hpp"
+#include "sim/Tank.hpp"
 #include "ui/Hud.hpp"
 
 #include <GLFW/glfw3.h>
@@ -79,8 +80,10 @@ int RunWindowed(const Options& options) {
   ImGuiLayer imgui(context, window.handle(), swapchain.format(), VK_FORMAT_UNDEFINED,
                    swapchain.imageCount());
   gpu::GpuProfiler profiler(context, FramesInFlight);
-  sim::Scene scene = sim::BuildScene(options.scene);
-  scene.params.solver = options.solver;
+  sim::SimParams startParams;
+  startParams.solver = options.solver;
+  startParams.tankShape = options.tank;
+  sim::Scene scene = sim::BuildScene(options.scene, startParams);
   sim::CalibrateRestDensity(scene.particles, scene.params);
   sim::SphSolver solver(context);
   solver.upload(scene.particles, scene.params);
@@ -173,6 +176,7 @@ int RunWindowed(const Options& options) {
         .restDensity = solver.params().restDensity,
         .viscosity = solver.params().viscosity,
         .solver = solver.params().solver,
+        .tankShape = solver.params().tankShape,
         .view = renderer.settings().view,
         .walls = renderer.settings().walls,
         .paddleRadius = paddleRadius,
@@ -187,9 +191,11 @@ int RunWindowed(const Options& options) {
     showBlock = hud.showBlock;
     if (hudResult.sceneChanged || hudResult.resetScene) {
       preset = hud.preset;
-      scene = sim::BuildScene(preset);
-      scene.params.solver = hud.solver;
-      scene.params.viscosity = hud.viscosity;
+      sim::SimParams next;
+      next.solver = hud.solver;
+      next.viscosity = hud.viscosity;
+      next.tankShape = hud.tankShape;
+      scene = sim::BuildScene(preset, next);
       sim::CalibrateRestDensity(scene.particles, scene.params);
       solver.upload(scene.particles, scene.params);
       cursorDrag = {};
@@ -227,9 +233,7 @@ int RunWindowed(const Options& options) {
     if (!paused && showBlock && preset == sim::ScenePreset::DropIn && !cursor.grabbing) {
       sim::AdvanceWoodenBlock(blockCenter, blockVelocity, solver.params());
     }
-    const glm::vec3 domainMin = solver.params().domainMin + blockHalf;
-    const glm::vec3 domainMax = solver.params().domainMax - blockHalf;
-    blockCenter = glm::clamp(blockCenter, domainMin, domainMax);
+    sim::ClampAabbToTank(blockCenter, blockHalf, solver.params());
     solver.setBlock(blockCenter - blockHalf, blockCenter + blockHalf, showBlock);
     renderer.settings().paddleCenter = cursor.position;
     renderer.settings().paddleRadius = cursor.visible ? cursor.radius : 0.0F;

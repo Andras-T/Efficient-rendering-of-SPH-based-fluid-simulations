@@ -49,6 +49,13 @@ TEST(OptionsTest, ParsesScenePreset) {
   EXPECT_THROW(Parse({"--scene", "plasma"}), std::invalid_argument);
 }
 
+TEST(OptionsTest, ParsesTankShape) {
+  EXPECT_EQ(Parse({"--tank", "cylinder"}).tank, sim::TankShape::Cylinder);
+  EXPECT_EQ(Parse({"--tank", "hexagon"}).tank, sim::TankShape::Hexagon);
+  EXPECT_EQ(Parse({"--tank", "cube"}).tank, sim::TankShape::Box);
+  EXPECT_THROW(Parse({"--tank", "torus"}), std::invalid_argument);
+}
+
 TEST(OptionsTest, SequenceImpliesHeadless) {
   const Options options = Parse({"--sequence", "frames", "--frames", "4"});
   EXPECT_TRUE(options.headless);

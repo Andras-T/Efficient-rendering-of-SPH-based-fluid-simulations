@@ -65,8 +65,11 @@ std::vector<std::uint8_t> RenderOffscreen(const gpu::Context& context,
                                                     VMA_ALLOCATION_CREATE_MAPPED_BIT,
                              });
 
+  sim::SimParams ownedParams;
+  ownedParams.solver = request.solver;
+  ownedParams.tankShape = request.tankShape;
   const sim::Scene ownedScene =
-      request.scene == nullptr ? sim::BuildScene(request.preset) : sim::Scene{};
+      request.scene == nullptr ? sim::BuildScene(request.preset, ownedParams) : sim::Scene{};
   const sim::Scene& scene = request.scene == nullptr ? ownedScene : *request.scene;
 
   render::Camera ownedCamera;
@@ -187,7 +190,8 @@ int RunHeadless(const Options& options) {
                                                 .simulate = true,
                                                 .view = options.view,
                                                 .walls = render::WallDisplay::Glass,
-                                                .solver = options.solver});
+                                                .solver = options.solver,
+                                                .tankShape = options.tank});
   const std::chrono::duration<double, std::milli> elapsed =
       std::chrono::steady_clock::now() - start;
   LogInfo("Rendered {} frame(s) of '{}' at {}x{} in {:.1f} ms", options.frames,

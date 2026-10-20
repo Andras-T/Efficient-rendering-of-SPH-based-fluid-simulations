@@ -1,5 +1,7 @@
 #include "core/Options.hpp"
 
+#include "sim/Tank.hpp"
+
 #include <charconv>
 #include <format>
 #include <stdexcept>
@@ -71,6 +73,8 @@ Options ParseOptions(std::span<const std::string_view> args) {
       options.view = render::ParseDebugView(value());
     } else if (arg == "--solver") {
       options.solver = sim::ParseSolverMethod(value());
+    } else if (arg == "--tank") {
+      options.tank = sim::ParseTankShape(value());
     } else if (arg == "--validation") {
       options.validation = true;
     } else if (arg == "--no-validation") {
@@ -97,6 +101,7 @@ std::string_view UsageText() {
   --capture PATH     write the last frame as PNG (implies --headless)
   --sequence DIR     write every frame as DIR/0000.png (implies --headless)
   --scene NAME       empty, dam, drop, double, or dropin (default: dam)
+  --tank NAME        cube, cylinder, or hexagon (default: cube)
   --view NAME        final, particles, density, velocity, cell, depth, smooth, thickness, normals, foam
   --solver NAME      wcsph or dfsph (default: wcsph)
   --validation       enable Vulkan validation layers (default in debug builds)

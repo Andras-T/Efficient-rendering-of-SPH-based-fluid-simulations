@@ -21,6 +21,7 @@ struct SimParams {
   float timeStep = 0.0005F;
   std::uint32_t substeps = 10;
   SolverMethod solver = SolverMethod::Wcsph;
+  TankShape tankShape = TankShape::Box;
   std::uint32_t densityIterations = 2;
   float xsph = 0.08F;
 

@@ -152,6 +152,78 @@ void CollideDomain(inout vec3 position, inout vec3 velocity, vec3 minBound, vec3
   }
 }
 
+vec2 TankCenterXz(GpuSimParams p) { return 0.5 * (p.domainMin.xz + p.domainMax.xz); }
+
+float TankRadius(GpuSimParams p) {
+  const vec2 extent = p.domainMax.xz - p.domainMin.xz;
+  return 0.5 * min(extent.x, extent.y);
+}
+
+void CollideCylinderXz(inout vec3 position, inout vec3 velocity, GpuSimParams p, float radius) {
+  const vec2 center = TankCenterXz(p);
+  const vec2 delta = position.xz - center;
+  const float inner = max(TankRadius(p) - radius, radius);
+  const float dist = length(delta);
+  if (dist <= inner) {
+    return;
+  }
+  const vec2 normal = dist > KernelEpsilon ? delta / dist : vec2(1.0, 0.0);
+  position.xz = center + normal * inner;
+  const float approach = dot(velocity.xz, normal);
+  if (approach > 0.0) {
+    velocity.xz -= normal * approach * (1.0 + p.restitution);
+  }
+}
+
+void CollideHexagonXz(inout vec3 position, inout vec3 velocity, GpuSimParams p, float radius) {
+  const vec2 center = TankCenterXz(p);
+  const float inner = max(TankRadius(p) * 0.86602540378 - radius, radius);
+  const vec2 n0 = vec2(1.0, 0.0);
+  const vec2 n1 = vec2(0.5, 0.86602540378);
+  const vec2 n2 = vec2(-0.5, 0.86602540378);
+  for (int pass = 0; pass < 3; ++pass) {
+    const vec2 delta = position.xz - center;
+    const float s0 = dot(delta, n0);
+    const float s1 = dot(delta, n1);
+    const float s2 = dot(delta, n2);
+    const float a0 = abs(s0);
+    const float a1 = abs(s1);
+    const float a2 = abs(s2);
+    const float mag = max(a0, max(a1, a2));
+    if (mag <= inner) {
+      return;
+    }
+    vec2 normal = n0;
+    float signedN = s0;
+    if (a1 >= a0 && a1 >= a2) {
+      normal = n1;
+      signedN = s1;
+    } else if (a2 >= a0 && a2 >= a1) {
+      normal = n2;
+      signedN = s2;
+    }
+    if (signedN < 0.0) {
+      normal = -normal;
+    }
+    position.xz -= normal * (mag - inner);
+    const float approach = dot(velocity.xz, normal);
+    if (approach > 0.0) {
+      velocity.xz -= normal * approach * (1.0 + p.restitution);
+    }
+  }
+}
+
+void CollideTankShape(inout vec3 position, inout vec3 velocity, GpuSimParams p, float radius) {
+  const vec3 minBound = p.domainMin + vec3(radius);
+  const vec3 maxBound = p.domainMax - vec3(radius);
+  CollideDomain(position, velocity, minBound, maxBound, p.restitution);
+  if (p.tankShape == TankCylinder) {
+    CollideCylinderXz(position, velocity, p, radius);
+  } else if (p.tankShape == TankHexagon) {
+    CollideHexagonXz(position, velocity, p, radius);
+  }
+}
+
 void CollideBox(inout vec3 position, inout vec3 velocity, GpuSimParams p) {
   const vec3 minBound = p.domainMin + vec3(p.collisionRadius);
   const vec3 maxBound = p.domainMax - vec3(p.collisionRadius);
@@ -164,7 +236,7 @@ void CollideBox(inout vec3 position, inout vec3 velocity, GpuSimParams p) {
   if (p.blockEnabled > 0.5) {
     CollideAabb(position, velocity, p.blockMin, p.blockMax, p.collisionRadius, p.restitution);
   }
-  CollideDomain(position, velocity, minBound, maxBound, p.restitution);
+  CollideTankShape(position, velocity, p, p.collisionRadius);
   LimitSpeed(velocity, p);
 }
 

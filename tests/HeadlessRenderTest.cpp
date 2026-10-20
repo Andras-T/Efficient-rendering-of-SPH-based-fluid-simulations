@@ -90,6 +90,36 @@ TEST(HeadlessRenderTest, GlassTankDiffersFromHiddenWalls) {
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 
+TEST(HeadlessRenderTest, CylinderGlassDiffersFromCube) {
+  const gpu::Context context({.validation = true});
+  constexpr VkExtent2D Extent{96, 54};
+  const sim::Scene cube = sim::BuildScene(sim::ScenePreset::DamBreak);
+  sim::SimParams cylinderParams;
+  cylinderParams.tankShape = sim::TankShape::Cylinder;
+  const sim::Scene cylinder = sim::BuildScene(sim::ScenePreset::DamBreak, cylinderParams);
+  render::Camera camera;
+  camera.setAspect(Extent);
+  camera.frame(cube.params.domainMin, cube.params.domainMax);
+
+  const auto cubePixels = RenderOffscreen(context, {.extent = Extent,
+                                                    .scene = &cube,
+                                                    .camera = &camera,
+                                                    .view = render::DebugView::Final,
+                                                    .walls = render::WallDisplay::Glass});
+  const auto cylinderPixels = RenderOffscreen(context, {.extent = Extent,
+                                                        .scene = &cylinder,
+                                                        .camera = &camera,
+                                                        .view = render::DebugView::Final,
+                                                        .walls = render::WallDisplay::Glass});
+  ASSERT_EQ(cubePixels.size(), cylinderPixels.size());
+  int changed = 0;
+  for (std::size_t i = 0; i < cubePixels.size(); ++i) {
+    changed += cubePixels[i] != cylinderPixels[i] ? 1 : 0;
+  }
+  EXPECT_GT(changed, static_cast<int>(cubePixels.size() / 20));
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
 TEST(HeadlessRenderTest, PaddleMarksTheCursor) {
   const gpu::Context context({.validation = true});
   constexpr VkExtent2D Extent{64, 64};

@@ -10,8 +10,6 @@
 namespace sph::render {
 namespace {
 
-constexpr std::uint32_t TankVertexCount = 36;
-
 gpu::Unique<VkDescriptorSetLayout> MakeSamplerLayout(VkDevice device) {
   const std::array bindings{VkDescriptorSetLayoutBinding{
       .binding = 0,
@@ -62,23 +60,25 @@ TankPass::TankPass(const gpu::Context& context, VkFormat colorFormat, VkFormat d
   frontPipeline_ = gpu::CreateGraphicsPipeline(context.device(), desc);
 }
 
-void TankPass::record(VkCommandBuffer commandBuffer, VkDeviceAddress uniforms,
-                      VkPipeline pipeline) const {
+void TankPass::record(VkCommandBuffer commandBuffer, VkDeviceAddress uniforms, VkPipeline pipeline,
+                      std::uint32_t vertexCount) const {
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
   vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout_.get(), 0, 1,
                           &descriptors_, 0, nullptr);
   vkCmdPushConstants(commandBuffer, layout_.get(),
                      VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(uniforms),
                      &uniforms);
-  vkCmdDraw(commandBuffer, TankVertexCount, 1, 0, 0);
+  vkCmdDraw(commandBuffer, vertexCount, 1, 0, 0);
 }
 
-void TankPass::recordBack(VkCommandBuffer commandBuffer, VkDeviceAddress uniforms) const {
-  record(commandBuffer, uniforms, backPipeline_.get());
+void TankPass::recordBack(VkCommandBuffer commandBuffer, VkDeviceAddress uniforms,
+                          std::uint32_t vertexCount) const {
+  record(commandBuffer, uniforms, backPipeline_.get(), vertexCount);
 }
 
-void TankPass::recordFront(VkCommandBuffer commandBuffer, VkDeviceAddress uniforms) const {
-  record(commandBuffer, uniforms, frontPipeline_.get());
+void TankPass::recordFront(VkCommandBuffer commandBuffer, VkDeviceAddress uniforms,
+                           std::uint32_t vertexCount) const {
+  record(commandBuffer, uniforms, frontPipeline_.get(), vertexCount);
 }
 
 }  // namespace sph::render

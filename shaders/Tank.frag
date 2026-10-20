@@ -41,11 +41,25 @@ void main() {
 
   const vec3 extent = max(frame.domainMax - frame.domainMin, vec3(1.0e-4));
   const vec3 t = (inWorld - frame.domainMin) / extent;
-  const vec3 faceDist = min(t, 1.0 - t);
-  const float nearest = min(faceDist.x, min(faceDist.y, faceDist.z));
-  const float farthest = max(faceDist.x, max(faceDist.y, faceDist.z));
-  const float mid = faceDist.x + faceDist.y + faceDist.z - nearest - farthest;
-  const float frameMask = 1.0 - smoothstep(0.010, 0.032, mid);
+  float frameMask = 0.0;
+  const float yT = t.y;
+  const float hoop = 1.0 - smoothstep(0.010, 0.032, min(yT, 1.0 - yT));
+  if (frame.tankShape == TankBox) {
+    const vec3 faceDist = min(t, 1.0 - t);
+    const float nearest = min(faceDist.x, min(faceDist.y, faceDist.z));
+    const float farthest = max(faceDist.x, max(faceDist.y, faceDist.z));
+    const float mid = faceDist.x + faceDist.y + faceDist.z - nearest - farthest;
+    frameMask = 1.0 - smoothstep(0.010, 0.032, mid);
+  } else if (frame.tankShape == TankCylinder) {
+    frameMask = hoop;
+  } else {
+    const vec2 center = 0.5 * (frame.domainMin.xz + frame.domainMax.xz);
+    const vec2 delta = inWorld.xz - center;
+    const float sector = 6.0 * (atan(delta.y, delta.x) + 3.14159265359) / 6.28318530718;
+    const float toEdge = min(fract(sector), 1.0 - fract(sector));
+    const float vert = 1.0 - smoothstep(0.04, 0.12, toEdge);
+    frameMask = max(vert, hoop);
+  }
   const vec3 light = normalize(frame.lightDirection);
   const float rim = pow(1.0 - facing, 2.0);
   const float spec = pow(max(dot(normal, normalize(light + view)), 0.0), 64.0);

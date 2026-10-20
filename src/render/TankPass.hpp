@@ -2,6 +2,8 @@
 
 #include "gpu/Handles.hpp"
 
+#include <cstdint>
+
 namespace sph {
 namespace gpu {
 class Context;
@@ -15,11 +17,14 @@ class TankPass {
   TankPass(const gpu::Context& context, VkFormat colorFormat, VkFormat depthFormat,
            const Hdri& hdri);
 
-  void recordBack(VkCommandBuffer commandBuffer, VkDeviceAddress uniforms) const;
-  void recordFront(VkCommandBuffer commandBuffer, VkDeviceAddress uniforms) const;
+  void recordBack(VkCommandBuffer commandBuffer, VkDeviceAddress uniforms,
+                  std::uint32_t vertexCount) const;
+  void recordFront(VkCommandBuffer commandBuffer, VkDeviceAddress uniforms,
+                   std::uint32_t vertexCount) const;
 
  private:
-  void record(VkCommandBuffer commandBuffer, VkDeviceAddress uniforms, VkPipeline pipeline) const;
+  void record(VkCommandBuffer commandBuffer, VkDeviceAddress uniforms, VkPipeline pipeline,
+              std::uint32_t vertexCount) const;
 
   gpu::Unique<VkDescriptorSetLayout> setLayout_;
   gpu::Unique<VkDescriptorPool> pool_;

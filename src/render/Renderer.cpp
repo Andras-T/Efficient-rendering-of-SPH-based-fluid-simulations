@@ -4,6 +4,7 @@
 #include "gpu/Context.hpp"
 #include "sim/Grid.hpp"
 #include "sim/Particle.hpp"
+#include "sim/Tank.hpp"
 
 #include <glm/geometric.hpp>
 #include <glm/gtc/matrix_inverse.hpp>
@@ -156,9 +157,11 @@ void Renderer::record(VkCommandBuffer commandBuffer, const RenderTarget& target,
   uniforms.gridSize = grid.size;
   uniforms.exposure = settings_.exposure;
   uniforms.wallDisplay = static_cast<std::uint32_t>(settings_.walls);
+  uniforms.tankShape = static_cast<std::uint32_t>(params.tankShape);
   uniforms_.mapped<sim::FrameUniforms>().front() = uniforms;
   uniforms_.flush();
   const VkDeviceAddress frameAddress = uniforms_.address();
+  const std::uint32_t tankVerts = sim::TankMeshVertexCount(params.tankShape);
 
   gpu::TransitionImage(commandBuffer,
                        {
@@ -216,33 +219,33 @@ void Renderer::record(VkCommandBuffer commandBuffer, const RenderTarget& target,
     BeginColorDepth(commandBuffer, hdr_.view(), depth_.view(), target.extent,
                     VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_LOAD_OP_CLEAR);
     if (glass) {
-      tankPass_.recordBack(commandBuffer, frameAddress);
+      tankPass_.recordBack(commandBuffer, frameAddress, tankVerts);
     }
     foamPass_.record(commandBuffer, frameAddress, foam, foamCapacity, foamRadius);
     recordBlock();
     recordPaddle();
     if (glass) {
-      tankPass_.recordFront(commandBuffer, frameAddress);
+      tankPass_.recordFront(commandBuffer, frameAddress, tankVerts);
     }
     vkCmdEndRendering(commandBuffer);
   } else if (IsParticleView(settings_.view)) {
     BeginColorDepth(commandBuffer, hdr_.view(), depth_.view(), target.extent,
                     VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_LOAD_OP_CLEAR);
     if (glass) {
-      tankPass_.recordBack(commandBuffer, frameAddress);
+      tankPass_.recordBack(commandBuffer, frameAddress, tankVerts);
     }
     particlePass_.record(commandBuffer, frameAddress, particleCount);
     recordBlock();
     recordPaddle();
     if (glass) {
-      tankPass_.recordFront(commandBuffer, frameAddress);
+      tankPass_.recordFront(commandBuffer, frameAddress, tankVerts);
     }
     vkCmdEndRendering(commandBuffer);
   } else {
     if (glass) {
       BeginColorDepth(commandBuffer, hdr_.view(), depth_.view(), target.extent,
                       VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_LOAD_OP_CLEAR);
-      tankPass_.recordBack(commandBuffer, frameAddress);
+      tankPass_.recordBack(commandBuffer, frameAddress, tankVerts);
       vkCmdEndRendering(commandBuffer);
     }
     fluidPass_.prepareTargets(commandBuffer);
@@ -271,7 +274,7 @@ void Renderer::record(VkCommandBuffer commandBuffer, const RenderTarget& target,
       recordBlock();
       recordPaddle();
       if (glass) {
-        tankPass_.recordFront(commandBuffer, frameAddress);
+        tankPass_.recordFront(commandBuffer, frameAddress, tankVerts);
       }
       vkCmdEndRendering(commandBuffer);
     }

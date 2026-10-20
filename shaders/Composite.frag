@@ -59,7 +59,22 @@ vec3 ShadeFluid(vec2 uv, float eyeDepth, vec3 normal, float thickness) {
   const vec3 worldI = normalize(mat3(frame.inverseView) * (-viewDir));
 
   const vec3 gap = min(worldP - frame.domainMin, frame.domainMax - worldP);
-  const float wall = min(gap.x, min(gap.y, gap.z));
+  float wall = min(gap.x, min(gap.y, gap.z));
+  if (frame.tankShape != TankBox) {
+    const vec2 center = 0.5 * (frame.domainMin.xz + frame.domainMax.xz);
+    const vec2 delta = worldP.xz - center;
+    const float radius = 0.5 * min(frame.domainMax.x - frame.domainMin.x,
+                                   frame.domainMax.z - frame.domainMin.z);
+    float radial = radius - length(delta);
+    if (frame.tankShape == TankHexagon) {
+      const float apothem = radius * 0.86602540378;
+      const float hx = abs(delta.x);
+      const float hb = abs(0.5 * delta.x + 0.86602540378 * delta.y);
+      const float hc = abs(-0.5 * delta.x + 0.86602540378 * delta.y);
+      radial = apothem - max(hx, max(hb, hc));
+    }
+    wall = min(radial, min(gap.y, wall));
+  }
   const float contact = 1.0 - smoothstep(0.0, frame.radius * 2.6, wall);
   worldN = normalize(mix(worldN, vec3(0.0, 1.0, 0.0), contact * 0.18));
 
