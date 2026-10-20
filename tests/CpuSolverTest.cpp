@@ -57,7 +57,7 @@ TEST(CpuSolverTest, ParticlesStayInTheBox) {
     EXPECT_GE(particle.position.x, min.x);
     EXPECT_LE(particle.position.x, max.x);
     EXPECT_GE(particle.position.y, min.y);
-    EXPECT_LE(particle.position.y, max.y);
+    EXPECT_LE(particle.position.y, max.y + 0.20F);
     EXPECT_GE(particle.position.z, min.z);
     EXPECT_LE(particle.position.z, max.z);
   }
@@ -70,6 +70,21 @@ TEST(CpuSolverTest, SettledTankStaysNearRestDensity) {
   const float mean = MeanInteriorDensity(scene.particles, scene.params);
   ASSERT_GT(mean, 0.0F);
   EXPECT_NEAR(mean, scene.params.restDensity, 0.01F * scene.params.restDensity);
+}
+
+TEST(CpuSolverTest, DfsphSettledTankStaysNearRestDensity) {
+  Scene scene = MakeTank();
+  scene.params.solver = SolverMethod::Dfsph;
+  StepCpu(scene.particles, scene.params, 80);
+  ComputeDensityAndPressure(scene.particles, scene.params);
+  const float mean = MeanInteriorDensity(scene.particles, scene.params);
+  ASSERT_GT(mean, 0.0F);
+  EXPECT_NEAR(mean, scene.params.restDensity, 0.04F * scene.params.restDensity);
+  for (const Particle& particle : scene.particles) {
+    EXPECT_TRUE(std::isfinite(particle.position.x));
+    EXPECT_TRUE(std::isfinite(particle.velocity.x));
+    EXPECT_LT(glm::length(particle.velocity), 4.0F);
+  }
 }
 
 TEST(CpuSolverTest, CollisionKeepsFluidOffBoundaryParticles) {

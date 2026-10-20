@@ -67,7 +67,7 @@ void ApplyHotkeys(HudState& state) {
   if (ImGui::IsKeyPressed(ImGuiKey_RightBracket)) {
     state.view = render::NextDebugView(state.view);
   }
-  for (int i = 0; i < static_cast<int>(render::DebugViewCount); ++i) {
+  for (int i = 0; i < render::NumericDebugViewKeys; ++i) {
     if (ImGui::IsKeyPressed(static_cast<ImGuiKey>(ImGuiKey_1 + i))) {
       state.view = static_cast<render::DebugView>(i);
     }
@@ -223,8 +223,8 @@ HudResult DrawHud(HudState& state) {
   if (ImGui::Button("Reset")) {
     result.resetScene = true;
   }
-  ImGui::SliderFloat("Paddle size", &state.paddleRadius, 0.10F, 0.55F, "%.2f");
-  ImGui::SliderFloat("Swirl", &state.paddleSwirl, 0.0F, 120.0F, "%.1f");
+  ImGui::SliderFloat("Paddle size", &state.paddleRadius, 0.05F, 0.16F, "%.2f");
+  ImGui::SliderFloat("Swirl", &state.paddleSwirl, 0.0F, 16.0F, "%.1f");
   ImGui::TextUnformatted("LMB paddle (shoves the block too), RMB orbit");
   ImGui::TextUnformatted("Space play/pause. Scene changes stay paused.");
   ImGui::End();
@@ -243,7 +243,7 @@ HudResult DrawHud(HudState& state) {
   }
   ImGui::SliderFloat("Exposure", &state.exposure, 0.05F, 4.0F, "%.2f");
   ImGui::SliderFloat3("Absorption", &state.absorption.x, 0.0F, 8.0F, "%.2f");
-  ImGui::TextUnformatted("[ ] or 1-9 to cycle views, including foam");
+  ImGui::TextUnformatted("[ ] cycles stages (foam is last). 1-9 pick the first nine.");
   ImGui::End();
 
   if (state.camera != nullptr) {

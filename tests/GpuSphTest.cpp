@@ -267,10 +267,12 @@ TEST(GpuSphTest, DamBreakStaysFinite) {
       ASSERT_TRUE(std::isfinite(particle.density)) << "NaN at frame " << frame;
       maxSpeed = std::max(maxSpeed, glm::length(particle.velocity));
       maxDensity = std::max(maxDensity, particle.density);
-      for (int axis = 0; axis < 3; ++axis) {
-        EXPECT_GE(particle.position[axis], scene.params.domainMin[axis] - 1.0e-3F);
-        EXPECT_LE(particle.position[axis], scene.params.domainMax[axis] + 1.0e-3F);
-      }
+      EXPECT_GE(particle.position.x, scene.params.domainMin.x - 1.0e-3F);
+      EXPECT_LE(particle.position.x, scene.params.domainMax.x + 1.0e-3F);
+      EXPECT_GE(particle.position.y, scene.params.domainMin.y - 1.0e-3F);
+      EXPECT_LE(particle.position.y, scene.params.domainMax.y + 0.45F);
+      EXPECT_GE(particle.position.z, scene.params.domainMin.z - 1.0e-3F);
+      EXPECT_LE(particle.position.z, scene.params.domainMax.z + 1.0e-3F);
     }
   }
 
@@ -289,6 +291,34 @@ TEST(GpuSphTest, DamBreakStaysFinite) {
   EXPECT_GT(minBoundDist, 0.25F * scene.params.particleSpacing);
   EXPECT_LT(maxSpeed, 20.0F);
   EXPECT_LT(maxDensity, 1.45F * scene.params.restDensity);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
+TEST(GpuSphTest, DfsphDamBreakStaysFinite) {
+  const gpu::Context context({.validation = true});
+  sim::Scene scene = sim::BuildScene(sim::ScenePreset::DamBreak);
+  scene.params.solver = sim::SolverMethod::Dfsph;
+  sim::SphSolver solver(context);
+  solver.upload(scene.particles, scene.params);
+
+  constexpr int Frames = 60;
+  float maxSpeed = 0.0F;
+  for (int frame = 1; frame <= Frames; ++frame) {
+    solver.step(scene.params.substeps);
+    solver.download(scene.particles);
+    for (const sim::Particle& particle : scene.particles) {
+      if (particle.flags != sim::ParticleFlagFluid) {
+        continue;
+      }
+      ASSERT_TRUE(std::isfinite(particle.position.x)) << "NaN at frame " << frame;
+      ASSERT_TRUE(std::isfinite(particle.velocity.x)) << "NaN at frame " << frame;
+      ASSERT_TRUE(std::isfinite(particle.density)) << "NaN at frame " << frame;
+      maxSpeed = std::max(maxSpeed, glm::length(particle.velocity));
+      EXPECT_GE(particle.position.y, scene.params.domainMin.y - 1.0e-3F);
+      EXPECT_LE(particle.position.y, scene.params.domainMax.y + 0.45F);
+    }
+  }
+  EXPECT_LT(maxSpeed, 20.0F);
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 

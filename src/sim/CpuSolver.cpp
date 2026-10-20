@@ -129,12 +129,16 @@ void ComputeForces(std::span<Particle> particles, const SimParams& params) {
           pressureTerm += other.pressure / (other.density * other.density);
         }
         force -= other.mass * pressureTerm * grad;
-        xsph += other.mass * (other.velocity - self.velocity) / otherDensity *
-                Poly6(glm::dot(delta, delta), h);
+        if (other.flags != ParticleFlagBoundary) {
+          xsph += other.mass * (other.velocity - self.velocity) / otherDensity *
+                  Poly6(glm::dot(delta, delta), h);
+        }
       }
-      const float lap = ViscosityLaplacian(distance, h);
-      force +=
-          params.viscosity * other.mass * ((other.velocity - self.velocity) / otherDensity) * lap;
+      if (other.flags != ParticleFlagBoundary) {
+        const float lap = ViscosityLaplacian(distance, h);
+        force +=
+            params.viscosity * other.mass * ((other.velocity - self.velocity) / otherDensity) * lap;
+      }
     });
     particles[i].force = force;
     if (!dfsph) {
@@ -172,7 +176,7 @@ void CollideCpu(Particle& particle, const SimParams& params) {
       if (particle.velocity[axis] < 0.0F) {
         particle.velocity[axis] *= -params.restitution;
       }
-    } else if (particle.position[axis] > hi) {
+    } else if (axis != 1 && particle.position[axis] > hi) {
       particle.position[axis] = hi;
       if (particle.velocity[axis] > 0.0F) {
         particle.velocity[axis] *= -params.restitution;
@@ -218,7 +222,8 @@ void ComputeAlpha(std::span<Particle> particles, const SimParams& params) {
       sumGrad += grad;
       sumNorm2 += glm::dot(grad, grad);
     });
-    particles[i].alpha = 1.0F / std::max(1.0e-6F, glm::dot(sumGrad, sumGrad) + sumNorm2);
+    particles[i].alpha =
+        DfsphAlphaFromDenom(glm::dot(sumGrad, sumGrad) + sumNorm2, params.timeStep);
   }
 }
 
@@ -243,14 +248,13 @@ void ApplyKappa(std::span<Particle> particles, const SimParams& params, bool den
       const glm::vec3 grad = SpikyGradient(particles[i].position - other.position, h);
       source += other.mass * glm::dot(particles[i].velocity - other.velocity, grad);
     });
-    constexpr float KappaMax = 2.0e4F;
     if (densityPass) {
       const float predicted = particles[i].density + dt * source;
-      particles[i].kappa = std::clamp(
-          ((predicted - params.restDensity) / (dt * dt)) * particles[i].alpha, 0.0F, KappaMax);
+      particles[i].kappa = DfsphDensityKappa(predicted, params.restDensity, dt, particles[i].alpha);
     } else {
       particles[i].divergence = source / particles[i].density;
-      particles[i].kappa = std::clamp((source / dt) * particles[i].alpha, -KappaMax, KappaMax);
+      particles[i].kappa = DfsphDivergenceKappa(source, particles[i].density, params.restDensity,
+                                                dt, particles[i].alpha);
     }
   }
   for (std::uint32_t i = 0; i < particles.size(); ++i) {
@@ -269,7 +273,7 @@ void ApplyKappa(std::span<Particle> particles, const SimParams& params, bool den
       }
       correction -= other.mass * kappaSum * grad;
     });
-    particles[i].velocity += correction * dt;
+    particles[i].velocity += correction * dt * DfsphOmega;
     LimitSpeedCpu(particles[i], params);
   }
 }

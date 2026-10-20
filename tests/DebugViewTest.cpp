@@ -36,6 +36,8 @@ TEST(DebugViewTest, CyclesThroughEveryStage) {
   EXPECT_EQ(render::PrevDebugView(render::DebugView::Final), render::DebugView::Foam);
   EXPECT_EQ(render::PrevDebugView(render::DebugView::Particles), render::DebugView::Final);
   EXPECT_EQ(render::DebugViewCount, 10);
+  EXPECT_EQ(render::NumericDebugViewKeys, 9);
+  EXPECT_LT(render::NumericDebugViewKeys, render::DebugViewCount);
 }
 
 TEST(DebugViewTest, ClassifiesPasses) {

@@ -36,6 +36,26 @@ float TaitPressure(float density, float restDensity, float stiffness, float gamm
   return max(0.0, stiffness * (pow(ratio, gamma) - 1.0));
 }
 
+const float DfsphKappaMax = 12.0;
+const float DfsphOmega = 0.35;
+
+float DfsphAlphaFromDenom(float denom, float dt) {
+  const float alpha = 1.0 / max(1.0e-6, denom);
+  const float alphaMax = 0.02 * dt * dt;
+  return min(alpha, alphaMax);
+}
+
+float DfsphDensityKappa(float predicted, float restDensity, float dt, float alpha) {
+  return clamp(((predicted - restDensity) / (dt * dt)) * alpha, 0.0, DfsphKappaMax);
+}
+
+float DfsphDivergenceKappa(float source, float density, float restDensity, float dt, float alpha) {
+  if (density < 0.85 * restDensity) {
+    return 0.0;
+  }
+  return clamp((source / dt) * alpha, -DfsphKappaMax, DfsphKappaMax);
+}
+
 ivec3 CellCoords(vec3 position, GpuSimParams p) {
   const vec3 local = (position - p.domainMin) * p.invCellSize;
   ivec3 cell = ivec3(floor(local));
@@ -48,7 +68,7 @@ uint CellIndex(ivec3 cell, GpuSimParams p) {
 }
 
 void LimitSpeed(inout vec3 velocity, GpuSimParams p) {
-  const float vmax = 0.40 * p.kernelRadius / max(p.dt, KernelEpsilon);
+  const float vmax = 0.15 * p.kernelRadius / max(p.dt, KernelEpsilon);
   const float speed = length(velocity);
   if (speed > vmax) {
     velocity *= vmax / speed;
@@ -129,7 +149,7 @@ void CollideBox(inout vec3 position, inout vec3 velocity, GpuSimParams p) {
       if (velocity[axis] < 0.0) {
         velocity[axis] *= -p.restitution;
       }
-    } else if (position[axis] > maxBound[axis]) {
+    } else if (axis != 1 && position[axis] > maxBound[axis]) {
       position[axis] = maxBound[axis];
       if (velocity[axis] > 0.0) {
         velocity[axis] *= -p.restitution;

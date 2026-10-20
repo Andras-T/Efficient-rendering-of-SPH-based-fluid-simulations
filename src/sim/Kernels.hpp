@@ -44,4 +44,25 @@ inline float TaitPressure(float density, float restDensity, float stiffness, flo
   return std::max(0.0F, stiffness * (std::pow(ratio, gamma) - 1.0F));
 }
 
+constexpr float DfsphKappaMax = 12.0F;
+constexpr float DfsphOmega = 0.35F;
+
+inline float DfsphAlphaFromDenom(float denom, float dt) {
+  const float alpha = 1.0F / std::max(1.0e-6F, denom);
+  const float alphaMax = 0.02F * dt * dt;
+  return std::min(alpha, alphaMax);
+}
+
+inline float DfsphDensityKappa(float predicted, float restDensity, float dt, float alpha) {
+  return std::clamp(((predicted - restDensity) / (dt * dt)) * alpha, 0.0F, DfsphKappaMax);
+}
+
+inline float DfsphDivergenceKappa(float source, float density, float restDensity, float dt,
+                                  float alpha) {
+  if (density < 0.85F * restDensity) {
+    return 0.0F;
+  }
+  return std::clamp((source / dt) * alpha, -DfsphKappaMax, DfsphKappaMax);
+}
+
 }  // namespace sph::sim

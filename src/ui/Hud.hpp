@@ -29,8 +29,8 @@ struct HudState {
   sim::SolverMethod solver = sim::SolverMethod::Wcsph;
   render::DebugView view = render::DebugView::Final;
   render::WallDisplay walls = render::WallDisplay::Glass;
-  float paddleRadius = 0.28F;
-  float paddleSwirl = 40.0F;
+  float paddleRadius = 0.10F;
+  float paddleSwirl = 6.0F;
   float exposure = 0.85F;
   glm::vec3 absorption{2.45F, 0.42F, 0.12F};
 };

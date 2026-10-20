@@ -33,7 +33,7 @@ BlockPass::BlockPass(const gpu::Context& context, VkFormat colorFormat, VkFormat
                                               .layout = layout_.get(),
                                               .colorFormats = colorFormats,
                                               .depthFormat = depthFormat,
-                                              .cullMode = VK_CULL_MODE_BACK_BIT,
+                                              .cullMode = VK_CULL_MODE_NONE,
                                               .depthTest = true,
                                               .depthWrite = true,
                                           });

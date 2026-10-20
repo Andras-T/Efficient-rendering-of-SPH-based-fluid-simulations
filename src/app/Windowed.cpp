@@ -89,8 +89,8 @@ int RunWindowed(const Options& options) {
   camera.frame(scene.params.domainMin, scene.params.domainMax);
   sim::ScenePreset preset = options.scene;
   bool paused = true;
-  float paddleRadius = 0.28F;
-  float paddleSwirl = 40.0F;
+  float paddleRadius = 0.10F;
+  float paddleSwirl = 6.0F;
   ui::CursorDrag cursorDrag;
   const glm::vec3 blockHalf{0.10F, 0.16F, 0.10F};
   glm::vec3 blockCenter{0.32F, 0.22F, 0.0F};

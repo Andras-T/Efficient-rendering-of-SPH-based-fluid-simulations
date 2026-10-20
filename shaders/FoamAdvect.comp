@@ -19,7 +19,7 @@ void main() {
   }
 
   const float dt = max(p.foamDt, 1.0e-5);
-  foam.life -= dt;
+  foam.life -= dt * 1.35;
   if (foam.life <= 0.0) {
     foam.alive = 0u;
     foam.life = 0.0;
@@ -27,20 +27,19 @@ void main() {
     return;
   }
 
-  float drag = 2.4;
+  float drag = 5.5;
   vec3 gravity = p.gravity;
-  if (foam.position.y < p.domainMin.y + 0.12) {
-    gravity *= 0.18;
-    drag = 7.0;
-  } else if (foam.velocity.y > 0.15) {
-    gravity *= 0.55;
+  if (foam.position.y < p.domainMin.y + 0.10) {
+    gravity *= 0.08;
+    drag = 14.0;
   }
   foam.velocity += gravity * dt;
   foam.velocity *= max(0.0, 1.0 - drag * dt);
   foam.position += foam.velocity * dt;
 
-  if (any(lessThan(foam.position, p.domainMin - vec3(0.05))) ||
-      any(greaterThan(foam.position, p.domainMax + vec3(0.05)))) {
+  if (foam.position.y < p.domainMin.y - 0.02 || foam.position.y > p.domainMax.y + 0.35 ||
+      any(lessThan(foam.position.xz, p.domainMin.xz - vec2(0.04))) ||
+      any(greaterThan(foam.position.xz, p.domainMax.xz + vec2(0.04)))) {
     foam.alive = 0u;
     foam.life = 0.0;
   }

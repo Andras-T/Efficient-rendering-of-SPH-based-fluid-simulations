@@ -37,6 +37,6 @@ float SimParams::stiffness() const { return restDensity * speedOfSound * speedOf
 
 float SimParams::collisionRadius() const { return particleSpacing * 0.95F; }
 
-float SimParams::cflSpeed() const { return 0.40F * supportRadius() / std::max(timeStep, 1.0e-8F); }
+float SimParams::cflSpeed() const { return 0.15F * supportRadius() / std::max(timeStep, 1.0e-8F); }
 
 }  // namespace sph::sim

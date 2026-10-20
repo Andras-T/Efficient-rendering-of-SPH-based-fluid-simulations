@@ -35,6 +35,9 @@ void main() {
   const vec3 hit = ray * t;
   const vec4 clip = frame.projection * vec4(hit, 1.0);
   gl_FragDepth = clip.z / clip.w;
-  const float glow = clamp(inLife, 0.0, 1.0);
-  outColor = vec4(vec3(0.92, 0.96, 1.0) * (0.18 * glow), 0.0);
+  const vec3 hitNormal = normalize(hit - center);
+  const float facing = clamp(dot(-ray, hitNormal), 0.0, 1.0);
+  const float glow = clamp(inLife * 2.2, 0.0, 1.0);
+  const vec3 foam = vec3(0.93, 0.95, 0.97) * (0.08 + 0.16 * facing) * glow;
+  outColor = vec4(foam, 0.0);
 }
