@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/Simulation.hpp"
 #include "render/DebugView.hpp"
 #include "sim/Scene.hpp"
 
@@ -24,6 +25,7 @@ struct Options {
   render::DebugView view = render::DebugView::Final;
   sim::SolverMethod solver = sim::SolverMethod::Wcsph;
   sim::TankShape tank = sim::TankShape::Box;
+  SimulationKind simulation = SimulationKind::Fluid;
 };
 
 // Throws std::invalid_argument on unknown flags or malformed values.

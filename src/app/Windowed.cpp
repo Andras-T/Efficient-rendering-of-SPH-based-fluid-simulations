@@ -96,6 +96,8 @@ int RunWindowed(const Options& options) {
   float paddleSwirl = 6.0F;
   bool showBlock = true;
   bool floatBlock = true;
+  bool showMenu = true;
+  SimulationKind simulation = options.simulation;
   ui::CursorDrag cursorDrag;
   const glm::vec3 blockHalf = sim::WoodenBlockHalf;
   glm::vec3 blockCenter = sim::WoodenBlockStart(preset, scene.params);
@@ -163,7 +165,6 @@ int RunWindowed(const Options& options) {
                "vkResetCommandPool");
 
     imgui.beginFrame();
-    ui::ApplyCameraInput(camera, solver.params().domainMin, solver.params().domainMax);
     ui::HudState hud{
         .deviceName = context.deviceName(),
         .extent = swapchain.extent(),
@@ -184,6 +185,8 @@ int RunWindowed(const Options& options) {
         .paddleSwirl = paddleSwirl,
         .showBlock = showBlock,
         .floatBlock = floatBlock,
+        .showMenu = showMenu,
+        .simulation = simulation,
         .exposure = renderer.settings().exposure,
         .absorption = renderer.settings().absorption,
     };
@@ -192,6 +195,11 @@ int RunWindowed(const Options& options) {
     paddleSwirl = hud.paddleSwirl;
     showBlock = hud.showBlock;
     floatBlock = hud.floatBlock;
+    showMenu = hud.showMenu;
+    simulation = hud.simulation;
+    if (!showMenu) {
+      ui::ApplyCameraInput(camera, solver.params().domainMin, solver.params().domainMax);
+    }
     if (hudResult.sceneChanged || hudResult.resetScene) {
       preset = hud.preset;
       sim::SimParams next;
@@ -219,13 +227,17 @@ int RunWindowed(const Options& options) {
     renderer.settings().walls = hud.walls;
     renderer.settings().exposure = hud.exposure;
     renderer.settings().absorption = hud.absorption;
-    const ui::CursorForce cursor =
-        ui::SamplePaddle(camera, solver.params().domainMin, solver.params().domainMax, paused,
-                         cursorDrag, paddleRadius, paddleSwirl);
+    ui::CursorForce cursor{};
+    if (!showMenu) {
+      cursor = ui::SamplePaddle(camera, solver.params().domainMin, solver.params().domainMax,
+                                paused, cursorDrag, paddleRadius, paddleSwirl);
+    } else {
+      cursorDrag = {};
+    }
     solver.setCursor(cursor.position, cursor.stirring ? cursor.force : glm::vec3{},
                      cursor.stirring ? cursor.radius : 0.0F, cursor.stirring ? cursor.swirl : 0.0F,
                      cursor.stirring ? cursor.push : 0.0F);
-    if (showBlock && cursor.grabbing && cursorDrag.haveHit) {
+    if (!showMenu && showBlock && cursor.grabbing && cursorDrag.haveHit) {
       const glm::vec3 closest =
           glm::clamp(cursor.position, blockCenter - blockHalf, blockCenter + blockHalf);
       if (glm::length(cursor.position - closest) < cursor.radius) {
@@ -233,7 +245,7 @@ int RunWindowed(const Options& options) {
         blockVelocity = {};
       }
     }
-    if (!paused && showBlock && !cursor.grabbing &&
+    if (!showMenu && !paused && showBlock && !cursor.grabbing &&
         (floatBlock || preset == sim::ScenePreset::DropIn)) {
       sim::AdvanceWoodenBlock(blockCenter, blockVelocity, solver.params(),
                               solver.blockWaterSurface(), floatBlock);

@@ -1,4 +1,5 @@
 #include "core/Options.hpp"
+#include "core/Simulation.hpp"
 
 #include <gtest/gtest.h>
 
@@ -54,6 +55,42 @@ TEST(OptionsTest, ParsesTankShape) {
   EXPECT_EQ(Parse({"--tank", "hexagon"}).tank, sim::TankShape::Hexagon);
   EXPECT_EQ(Parse({"--tank", "cube"}).tank, sim::TankShape::Box);
   EXPECT_THROW(Parse({"--tank", "torus"}), std::invalid_argument);
+}
+
+TEST(OptionsTest, DefaultsToFluidSimulation) {
+  EXPECT_EQ(Parse({}).simulation, SimulationKind::Fluid);
+  EXPECT_EQ(Parse({"--sim", "fluid"}).simulation, SimulationKind::Fluid);
+}
+
+TEST(OptionsTest, RejectsUnreadySimulations) {
+  EXPECT_THROW(Parse({"--sim", "wind"}), std::invalid_argument);
+  EXPECT_THROW(Parse({"--sim", "smoke"}), std::invalid_argument);
+  EXPECT_THROW(Parse({"--sim", "plasma"}), std::invalid_argument);
+}
+
+TEST(SimulationTest, NamesAndParseCoverUpcomingModes) {
+  EXPECT_EQ(ParseSimulationKind("fluid"), SimulationKind::Fluid);
+  EXPECT_EQ(ParseSimulationKind("wind"), SimulationKind::WindTunnel);
+  EXPECT_EQ(ParseSimulationKind("windtunnel"), SimulationKind::WindTunnel);
+  EXPECT_EQ(ParseSimulationKind("smoke"), SimulationKind::Smoke);
+  EXPECT_STREQ(SimulationKindLabel(SimulationKind::WindTunnel), "Wind tunnel");
+  EXPECT_STREQ(SimulationKindLabel(SimulationKind::Smoke), "Smoke");
+  EXPECT_TRUE(SimulationReady(SimulationKind::Fluid));
+  EXPECT_FALSE(SimulationReady(SimulationKind::WindTunnel));
+  EXPECT_FALSE(SimulationReady(SimulationKind::Smoke));
+}
+
+TEST(SimulationTest, TryStartOnlyRunsReadyModes) {
+  bool showMenu = true;
+  bool paused = true;
+  EXPECT_FALSE(TryStartSimulation(SimulationKind::WindTunnel, showMenu, paused));
+  EXPECT_TRUE(showMenu);
+  EXPECT_TRUE(paused);
+  EXPECT_FALSE(TryStartSimulation(SimulationKind::Smoke, showMenu, paused));
+  EXPECT_TRUE(showMenu);
+  EXPECT_TRUE(TryStartSimulation(SimulationKind::Fluid, showMenu, paused));
+  EXPECT_FALSE(showMenu);
+  EXPECT_FALSE(paused);
 }
 
 TEST(OptionsTest, SequenceImpliesHeadless) {
