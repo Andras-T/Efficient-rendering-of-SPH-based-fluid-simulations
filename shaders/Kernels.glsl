@@ -88,7 +88,15 @@ vec3 NonPressureAccel(Particle particle, GpuSimParams p) {
     const float radius2 = p.cursorRadius * p.cursorRadius;
     if (dist2 < radius2) {
       const float falloff = 1.0 - dist2 / radius2;
-      acceleration += p.cursorForce * (falloff * falloff);
+      const float weight = falloff * falloff;
+      acceleration += p.cursorForce * weight;
+      if (p.cursorSwirl != 0.0) {
+        const vec3 tangent = cross(vec3(0.0, 1.0, 0.0), toParticle);
+        const float tangentLength = length(tangent);
+        if (tangentLength > KernelEpsilon) {
+          acceleration += (tangent / tangentLength) * p.cursorSwirl * weight;
+        }
+      }
     }
   }
   return acceleration;

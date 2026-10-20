@@ -82,9 +82,20 @@ Unique<VkPipeline> CreateGraphicsPipeline(VkDevice device, const GraphicsPipelin
       .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
                         VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
   };
+  constexpr VkPipelineColorBlendAttachmentState Alpha{
+      .blendEnable = VK_TRUE,
+      .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+      .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+      .colorBlendOp = VK_BLEND_OP_ADD,
+      .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+      .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+      .alphaBlendOp = VK_BLEND_OP_ADD,
+      .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                        VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+  };
   constexpr std::size_t MaxColorAttachments = 8;
   std::array<VkPipelineColorBlendAttachmentState, MaxColorAttachments> attachments{};
-  attachments.fill(desc.additiveBlend ? Additive : Opaque);
+  attachments.fill(desc.additiveBlend ? Additive : desc.alphaBlend ? Alpha : Opaque);
   const VkPipelineColorBlendStateCreateInfo colorBlend{
       .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
       .attachmentCount = static_cast<std::uint32_t>(desc.colorFormats.size()),

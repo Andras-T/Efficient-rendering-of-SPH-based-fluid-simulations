@@ -29,6 +29,10 @@ sph_add_shader_library(sph_shaders
     FoamAdvect.comp
     Foam.vert
     Foam.frag
+    Tank.vert
+    Tank.frag
+    Paddle.vert
+    Paddle.frag
   INCLUDES
     Types.glsl
     Kernels.glsl

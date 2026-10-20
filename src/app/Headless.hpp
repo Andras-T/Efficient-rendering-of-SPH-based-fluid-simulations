@@ -6,6 +6,8 @@
 #include "render/DebugView.hpp"
 #include "sim/Scene.hpp"
 
+#include <glm/vec3.hpp>
+
 #include <cstdint>
 #include <filesystem>
 #include <vector>
@@ -25,6 +27,9 @@ struct OffscreenRequest {
   const render::Camera* camera = nullptr;
   bool simulate = false;
   render::DebugView view = render::DebugView::Final;
+  render::WallDisplay walls = render::WallDisplay::Hidden;
+  glm::vec3 paddleCenter{0.0F};
+  float paddleRadius = 0.0F;
   sim::SolverMethod solver = sim::SolverMethod::Wcsph;
 };
 

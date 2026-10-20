@@ -41,6 +41,9 @@ void main() {
   const vec4 clip = frame.projection * vec4(hit, 1.0);
   gl_FragDepth = clip.z / clip.w;
 
+  if (inFlags == ParticleFlagBoundary && frame.wallDisplay != WallParticles) {
+    discard;
+  }
   if (frame.debugView == DebugViewFinal && inFlags != ParticleFlagBoundary) {
     discard;
   }

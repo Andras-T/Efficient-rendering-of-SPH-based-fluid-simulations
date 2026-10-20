@@ -16,6 +16,8 @@
 #include "ui/Hud.hpp"
 
 #include <GLFW/glfw3.h>
+#include <glm/geometric.hpp>
+#include <glm/vec3.hpp>
 
 #include <array>
 #include <limits>
@@ -71,6 +73,7 @@ int RunWindowed(const Options& options) {
   gpu::Swapchain swapchain(context, window.framebufferExtent());
   render::Renderer renderer(context, swapchain.format());
   renderer.settings().view = options.view;
+  renderer.settings().walls = render::WallDisplay::Glass;
   renderer.resize(swapchain.extent());
   ImGuiLayer imgui(context, window.handle(), swapchain.format(), VK_FORMAT_UNDEFINED,
                    swapchain.imageCount());
@@ -84,7 +87,10 @@ int RunWindowed(const Options& options) {
   camera.setAspect(swapchain.extent());
   camera.frame(scene.params.domainMin, scene.params.domainMax);
   sim::ScenePreset preset = options.scene;
-  bool paused = false;
+  bool paused = true;
+  ui::MouseTool tool = ui::MouseTool::Paddle;
+  float paddleRadius = 0.22F;
+  float paddleSwirl = 24.0F;
   ui::CursorDrag cursorDrag;
 
   std::array<FrameResources, FramesInFlight> frames{};
@@ -141,7 +147,8 @@ int RunWindowed(const Options& options) {
                "vkResetCommandPool");
 
     imgui.beginFrame();
-    ui::ApplyCameraInput(camera, solver.params().domainMin, solver.params().domainMax);
+    ui::ApplyCameraInput(camera, solver.params().domainMin, solver.params().domainMax,
+                         tool == ui::MouseTool::Orbit);
     ui::HudState hud{
         .deviceName = context.deviceName(),
         .extent = swapchain.extent(),
@@ -156,19 +163,28 @@ int RunWindowed(const Options& options) {
         .viscosity = solver.params().viscosity,
         .solver = solver.params().solver,
         .view = renderer.settings().view,
+        .walls = renderer.settings().walls,
+        .tool = tool,
+        .paddleRadius = paddleRadius,
+        .paddleSwirl = paddleSwirl,
         .exposure = renderer.settings().exposure,
         .absorption = renderer.settings().absorption,
     };
     const ui::HudResult hudResult = ui::DrawHud(hud);
+    tool = hud.tool;
+    paddleRadius = hud.paddleRadius;
+    paddleSwirl = hud.paddleSwirl;
     if (hudResult.sceneChanged || hudResult.resetScene) {
       preset = hud.preset;
       scene = sim::BuildScene(preset);
       scene.params.solver = hud.solver;
+      scene.params.viscosity = hud.viscosity;
       sim::CalibrateRestDensity(scene.particles, scene.params);
       solver.upload(scene.particles, scene.params);
       cursorDrag = {};
       camera.frame(scene.params.domainMin, scene.params.domainMax);
       camera.setAspect(swapchain.extent());
+      hud.paused = true;
     } else {
       if (hud.viscosity != solver.params().viscosity) {
         solver.setViscosity(hud.viscosity);
@@ -179,10 +195,21 @@ int RunWindowed(const Options& options) {
     }
     paused = hud.paused;
     renderer.settings().view = hud.view;
+    renderer.settings().walls = hud.walls;
     renderer.settings().exposure = hud.exposure;
     renderer.settings().absorption = hud.absorption;
-    const ui::CursorForce cursor = ui::SampleMouseStir(camera, paused, cursorDrag);
-    solver.setCursor(cursor.position, cursor.force, cursor.radius);
+    ui::CursorForce cursor{};
+    if (tool == ui::MouseTool::Paddle) {
+      cursor = ui::SamplePaddle(camera, paused, cursorDrag, paddleRadius, paddleSwirl);
+    } else {
+      cursorDrag = {};
+    }
+    const bool stirring =
+        cursor.visible && !paused && (glm::length(cursor.force) > 0.0F || cursor.swirl != 0.0F);
+    solver.setCursor(cursor.position, stirring ? cursor.force : glm::vec3{},
+                     stirring ? cursor.radius : 0.0F, stirring ? cursor.swirl : 0.0F);
+    renderer.settings().paddleCenter = cursor.position;
+    renderer.settings().paddleRadius = cursor.visible ? cursor.radius : 0.0F;
     imgui.endFrame();
 
     const VkCommandBuffer commandBuffer = frame.commandBuffer;

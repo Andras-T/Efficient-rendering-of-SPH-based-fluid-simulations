@@ -20,6 +20,12 @@ enum class DebugView : std::uint8_t {
 
 constexpr auto DebugViewCount = static_cast<std::uint8_t>(DebugView::Foam) + 1;
 
+enum class WallDisplay : std::uint8_t {
+  Hidden = 0,
+  Glass = 1,
+  Particles = 2,
+};
+
 [[nodiscard]] const char* DebugViewName(DebugView view);
 [[nodiscard]] DebugView ParseDebugView(std::string_view name);
 [[nodiscard]] DebugView NextDebugView(DebugView view);

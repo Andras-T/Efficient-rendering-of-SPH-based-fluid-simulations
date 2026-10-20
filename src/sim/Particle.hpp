@@ -76,9 +76,10 @@ struct GpuSimParams {
   std::uint32_t foamCapacity = FoamCapacity;
   float foamDt = 0.0F;
   float xsph = 0.0F;
+  float cursorSwirl = 0.0F;
 };
 
-static_assert(sizeof(GpuSimParams) == 148);
+static_assert(sizeof(GpuSimParams) == 152);
 
 struct FrameUniforms {
   glm::mat4 view{1.0F};
@@ -98,13 +99,15 @@ struct FrameUniforms {
   float invCellSize = 1.0F;
   glm::uvec3 gridSize{1, 1, 1};
   float exposure = 0.85F;
+  std::uint32_t wallDisplay = 0;
 };
 
 static_assert(offsetof(FrameUniforms, inverseView) == 128);
 static_assert(offsetof(FrameUniforms, particles) == 272);
 static_assert(offsetof(FrameUniforms, absorption) == 288);
 static_assert(offsetof(FrameUniforms, exposure) == 348);
-static_assert(sizeof(FrameUniforms) == 352);
+static_assert(offsetof(FrameUniforms, wallDisplay) == 352);
+static_assert(sizeof(FrameUniforms) == 360);
 
 [[nodiscard]] const char* SolverMethodName(SolverMethod method);
 [[nodiscard]] SolverMethod ParseSolverMethod(std::string_view name);

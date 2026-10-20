@@ -3,6 +3,7 @@
 #include "core/Capture.hpp"
 #include "gpu/Context.hpp"
 #include "render/Camera.hpp"
+#include "render/DebugView.hpp"
 #include "sim/Scene.hpp"
 
 #include <gtest/gtest.h>
@@ -60,6 +61,57 @@ TEST(HeadlessRenderTest, SequenceWritesEveryFrame) {
   }
   EXPECT_EQ(context.validationErrorCount(), 0U);
   std::filesystem::remove_all(directory);
+}
+
+TEST(HeadlessRenderTest, GlassTankDiffersFromHiddenWalls) {
+  const gpu::Context context({.validation = true});
+  constexpr VkExtent2D Extent{96, 54};
+  const sim::Scene scene = sim::BuildScene(sim::ScenePreset::DamBreak);
+  render::Camera camera;
+  camera.setAspect(Extent);
+  camera.frame(scene.params.domainMin, scene.params.domainMax);
+
+  const auto hidden = RenderOffscreen(context, {.extent = Extent,
+                                                .scene = &scene,
+                                                .camera = &camera,
+                                                .view = render::DebugView::Final,
+                                                .walls = render::WallDisplay::Hidden});
+  const auto glass = RenderOffscreen(context, {.extent = Extent,
+                                               .scene = &scene,
+                                               .camera = &camera,
+                                               .view = render::DebugView::Final,
+                                               .walls = render::WallDisplay::Glass});
+  ASSERT_EQ(hidden.size(), glass.size());
+  int changed = 0;
+  for (std::size_t i = 0; i < hidden.size(); ++i) {
+    changed += hidden[i] != glass[i] ? 1 : 0;
+  }
+  EXPECT_GT(changed, static_cast<int>(hidden.size() / 20));
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
+TEST(HeadlessRenderTest, PaddleMarksTheCursor) {
+  const gpu::Context context({.validation = true});
+  constexpr VkExtent2D Extent{64, 64};
+  sim::Scene scene;
+  scene.params.domainMin = {-0.4F, 0.0F, -0.4F};
+  scene.params.domainMax = {0.4F, 0.8F, 0.4F};
+  render::Camera camera;
+  camera.setAspect(Extent);
+  camera.setTarget({0.0F, 0.3F, 0.0F});
+  camera.setYawPitch(0.0F, 0.0F);
+  camera.setDistance(1.2F);
+  const auto rgba = RenderOffscreen(context, {.extent = Extent,
+                                              .scene = &scene,
+                                              .camera = &camera,
+                                              .walls = render::WallDisplay::Hidden,
+                                              .paddleCenter = {0.0F, 0.3F, 0.0F},
+                                              .paddleRadius = 0.18F});
+  ASSERT_EQ(rgba.size(), std::size_t{Extent.width} * Extent.height * 4);
+  const Pixel center = PixelAt(rgba, Extent, Extent.width / 2, Extent.height / 2);
+  EXPECT_GT(center.g, center.r + 20);
+  EXPECT_GT(center.b, center.r + 20);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 
 TEST(HeadlessRenderTest, OrbitCameraChangesTheView) {

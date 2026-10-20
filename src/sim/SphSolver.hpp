@@ -20,7 +20,7 @@ class SphSolver {
   explicit SphSolver(const gpu::Context& context);
 
   void upload(std::span<const Particle> particles, const SimParams& params);
-  void setCursor(glm::vec3 position, glm::vec3 force, float radius);
+  void setCursor(glm::vec3 position, glm::vec3 force, float radius, float swirl = 0.0F);
   void setViscosity(float viscosity);
   void setSolver(SolverMethod solver);
   void record(VkCommandBuffer commandBuffer, std::uint32_t substeps) const;
@@ -54,6 +54,7 @@ class SphSolver {
   glm::vec3 cursorPosition_{0.0F};
   glm::vec3 cursorForce_{0.0F};
   float cursorRadius_ = 0.0F;
+  float cursorSwirl_ = 0.0F;
   gpu::Unique<VkPipelineLayout> layout_;
   gpu::Unique<VkPipeline> hashCount_;
   gpu::Unique<VkPipeline> scan_;
