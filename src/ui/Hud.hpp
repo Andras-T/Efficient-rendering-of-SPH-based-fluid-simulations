@@ -43,6 +43,8 @@ struct HudState {
   float smokeStrength = 1.0F;
   bool windCar = true;
   bool windTracers = true;
+  bool smokeVolume = true;
+  float smokeClipY = 0.0F;
   float exposure = 0.85F;
   glm::vec3 absorption{2.45F, 0.42F, 0.12F};
 };

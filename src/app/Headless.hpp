@@ -41,6 +41,8 @@ struct OffscreenRequest {
   SimulationKind simulation = SimulationKind::Fluid;
   bool windCar = true;
   bool windTracers = true;
+  bool smokeVolume = true;
+  float smokeClipY = 0.0F;
 };
 
 // Renders offscreen and returns the last frame as tightly packed sRGB RGBA8.

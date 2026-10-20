@@ -417,6 +417,7 @@ void Renderer::recordSmoke(VkCommandBuffer commandBuffer, const RenderTarget& ta
   uniforms.inverseProjection = glm::inverse(uniforms.projection);
   uniforms.lightDirection = glm::normalize(uniforms.lightDirection);
   uniforms.debugView = static_cast<std::uint32_t>(settings_.view);
+  uniforms.radius = settings_.smokeClipY;
   uniforms.domainMin = domainMin;
   uniforms.domainMax = domainMax;
   uniforms.invCellSize = 1.0F / cellSize;
@@ -466,7 +467,9 @@ void Renderer::recordSmoke(VkCommandBuffer commandBuffer, const RenderTarget& ta
   const glm::vec3 groundMin{domainMin.x, domainMin.y, domainMin.z};
   const glm::vec3 groundMax{domainMax.x, domainMin.y, domainMax.z};
   carPass_.recordGround(commandBuffer, frameAddress, groundMin, groundMax);
-  smokePass_.record(commandBuffer, frameAddress, scalar, velocity, grid, origin, cellSize);
+  if (settings_.smokeVolume) {
+    smokePass_.record(commandBuffer, frameAddress, scalar, velocity, grid, origin, cellSize);
+  }
   vkCmdEndRendering(commandBuffer);
 
   gpu::TransitionImage(commandBuffer,

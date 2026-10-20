@@ -94,8 +94,7 @@ Options ParseOptions(std::span<const std::string_view> args) {
     }
   }
 
-  if (options.guide && options.simulation != SimulationKind::Fluid &&
-      options.simulation != SimulationKind::WindTunnel) {
+  if (options.guide && !SimulationReady(options.simulation)) {
     options.guide = false;
   }
   if (options.headless && options.frames == 0) {
@@ -115,7 +114,7 @@ std::string_view UsageText() {
   --scene NAME       empty, dam, drop, double, or dropin (default: dam)
   --tank NAME        cube, cylinder, or hexagon (default: cube)
   --sim NAME         fluid, wind, or smoke (default: fluid)
-  --guide            start a pipeline walkthrough (fluid, or wind with --sim wind)
+  --guide            start a pipeline walkthrough (fluid, wind, or smoke with --sim)
   --view NAME        final, particles, density, velocity, cell, depth, smooth, thickness, normals, foam
   --solver NAME      wcsph or dfsph (default: wcsph)
   --validation       enable Vulkan validation layers (default in debug builds)

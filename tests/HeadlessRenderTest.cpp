@@ -6,6 +6,7 @@
 #include "render/DebugView.hpp"
 #include "sim/Scene.hpp"
 #include "ui/FluidGuide.hpp"
+#include "ui/SmokeGuide.hpp"
 #include "ui/WindGuide.hpp"
 
 #include <gtest/gtest.h>
@@ -322,6 +323,36 @@ TEST(HeadlessRenderTest, WindGuideStepsIsolateTheStage) {
   }
   EXPECT_FALSE(tunnel.showCar);
   EXPECT_TRUE(car.showCar);
+  EXPECT_GT(changed, static_cast<int>(empty.size() / 40));
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
+TEST(HeadlessRenderTest, SmokeGuideStepsIsolateTheStage) {
+  const gpu::Context context({.validation = true});
+  constexpr VkExtent2D Extent{80, 48};
+  const ui::SmokeGuideStep& domain = ui::SmokeGuideAt(0);
+  const ui::SmokeGuideStep& finalStep = ui::SmokeGuideAt(ui::SmokeGuideStepCount() - 1U);
+  const auto empty = RenderOffscreen(context, {.extent = Extent,
+                                               .frames = 20,
+                                               .simulate = true,
+                                               .view = domain.view,
+                                               .simulation = SimulationKind::Smoke,
+                                               .smokeVolume = domain.showVolume,
+                                               .smokeClipY = domain.clipY});
+  const auto plume = RenderOffscreen(context, {.extent = Extent,
+                                               .frames = 20,
+                                               .simulate = true,
+                                               .view = finalStep.view,
+                                               .simulation = SimulationKind::Smoke,
+                                               .smokeVolume = finalStep.showVolume,
+                                               .smokeClipY = finalStep.clipY});
+  ASSERT_EQ(empty.size(), plume.size());
+  int changed = 0;
+  for (std::size_t i = 0; i < empty.size(); ++i) {
+    changed += empty[i] != plume[i] ? 1 : 0;
+  }
+  EXPECT_FALSE(domain.showVolume);
+  EXPECT_TRUE(finalStep.showVolume);
   EXPECT_GT(changed, static_cast<int>(empty.size() / 40));
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
