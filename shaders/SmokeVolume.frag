@@ -55,12 +55,19 @@ void main() {
     if (density < 0.01) {
       continue;
     }
+    if (frame.radius > 0.001 && world.y > frame.radius) {
+      continue;
+    }
     const vec3 vel = SmokeInterpVelocity(velocity, world, domainOrigin, cellSize, grid);
     float extinction = density * stepLen * 2.6;
     vec3 lightColor;
     if (frame.debugView == DebugViewVelocity) {
       lightColor = Heatmap(clamp(length(vel) / 1.15, 0.0, 1.0));
       extinction *= 0.75;
+    } else if (frame.debugView == DebugViewDensity) {
+      lightColor = vec3(0.86);
+    } else if (frame.debugView == DebugViewParticles) {
+      lightColor = mix(vec3(0.55, 0.62, 0.82), vec3(1.0, 0.45, 0.12), clamp(field.y, 0.0, 1.0));
     } else {
       const vec3 albedo = mix(vec3(0.78, 0.80, 0.84), vec3(1.0, 0.62, 0.28), clamp(field.y, 0.0, 1.0));
       const vec3 dx = vec3(cellSize, 0.0, 0.0);

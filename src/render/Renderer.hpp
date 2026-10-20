@@ -45,6 +45,8 @@ struct RenderSettings {
   bool block = false;
   bool windCar = true;
   bool windTracers = true;
+  bool smokeVolume = true;
+  float smokeClipY = 0.0F;
 };
 
 using OverlayCallback = std::function<void(VkCommandBuffer)>;

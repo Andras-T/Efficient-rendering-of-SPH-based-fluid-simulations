@@ -138,6 +138,8 @@ std::vector<std::uint8_t> RenderSmokeOffscreen(const gpu::Context& context,
   const render::Camera& camera = request.camera == nullptr ? ownedCamera : *request.camera;
   render::Renderer renderer(context, CaptureFormat);
   renderer.settings().view = request.view;
+  renderer.settings().smokeVolume = request.smokeVolume;
+  renderer.settings().smokeClipY = request.smokeClipY;
   renderer.resize(extent);
   const render::RenderTarget renderTarget{target.handle(), target.view(), extent};
   if (!request.sequenceDirectory.empty()) {
