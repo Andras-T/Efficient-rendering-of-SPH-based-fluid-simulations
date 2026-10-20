@@ -14,7 +14,7 @@ struct SimParams {
   glm::vec3 domainMin{-0.70F, 0.00F, -0.40F};
   glm::vec3 domainMax{0.70F, 1.00F, 0.40F};
   glm::vec3 gravity{0.0F, -9.81F, 0.0F};
-  float viscosity = 0.02F;
+  float viscosity = 0.10F;
   float speedOfSound = 32.0F;
   float eosGamma = 7.0F;
   float restitution = 0.05F;

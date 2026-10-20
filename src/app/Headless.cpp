@@ -84,6 +84,9 @@ std::vector<std::uint8_t> RenderOffscreen(const gpu::Context& context,
 
   render::Renderer renderer(context, CaptureFormat);
   renderer.settings().view = request.view;
+  renderer.settings().walls = request.walls;
+  renderer.settings().paddleCenter = request.paddleCenter;
+  renderer.settings().paddleRadius = request.paddleRadius;
   renderer.resize(extent);
   const render::RenderTarget renderTarget{target.handle(), target.view(), extent};
   gpu::GpuProfiler profiler(context, 1);
@@ -157,6 +160,7 @@ int RunHeadless(const Options& options) {
                                                 .preset = options.scene,
                                                 .simulate = true,
                                                 .view = options.view,
+                                                .walls = render::WallDisplay::Glass,
                                                 .solver = options.solver});
   const std::chrono::duration<double, std::milli> elapsed =
       std::chrono::steady_clock::now() - start;

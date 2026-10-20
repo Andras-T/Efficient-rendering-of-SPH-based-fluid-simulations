@@ -178,6 +178,31 @@ TEST(GpuSphTest, CursorForcePushesNearbyFluid) {
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 
+TEST(GpuSphTest, CursorSwirlSpinsNearbyFluid) {
+  const gpu::Context context({.validation = true});
+  const sim::Scene scene = MakeCloud();
+  const glm::vec3 center = scene.particles.front().position;
+
+  sim::SphSolver solver(context);
+  solver.upload(scene.particles, scene.params);
+  solver.setCursor(center, {0.0F, 0.0F, 0.0F}, 0.5F, 40.0F);
+  solver.step(1);
+  std::vector<sim::Particle> spun = scene.particles;
+  solver.download(spun);
+
+  float maxTangent = 0.0F;
+  for (const sim::Particle& particle : spun) {
+    const glm::vec3 radial = particle.position - center;
+    const glm::vec3 tangent = glm::cross(glm::vec3(0.0F, 1.0F, 0.0F), radial);
+    if (glm::length(tangent) < 1.0e-6F) {
+      continue;
+    }
+    maxTangent = std::max(maxTangent, glm::dot(particle.velocity, glm::normalize(tangent)));
+  }
+  EXPECT_GT(maxTangent, 0.01F);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
 TEST(GpuSphTest, DfsphOneStepMatchesCpuReference) {
   const gpu::Context context({.validation = true});
   sim::Scene scene = MakeCloud();

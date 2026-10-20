@@ -22,6 +22,7 @@ struct GraphicsPipelineDesc {
   bool depthTest = false;
   bool depthWrite = false;
   bool additiveBlend = false;
+  bool alphaBlend = false;
 };
 
 // Dynamic rendering pipeline with dynamic viewport and scissor.

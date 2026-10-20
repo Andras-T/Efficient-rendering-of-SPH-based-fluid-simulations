@@ -22,8 +22,10 @@ add_library(sph_engine STATIC
   render/FluidPass.cpp
   render/FoamPass.cpp
   render/Hdri.cpp
+  render/PaddlePass.cpp
   render/ParticlePass.cpp
   render/Renderer.cpp
+  render/TankPass.cpp
   render/SkyPass.cpp
   render/TonemapPass.cpp
   sim/CpuSolver.cpp

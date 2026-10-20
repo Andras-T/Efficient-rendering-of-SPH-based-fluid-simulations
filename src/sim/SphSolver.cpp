@@ -58,7 +58,7 @@ gpu::Unique<VkPipeline> MakeCompute(VkDevice device, VkPipelineLayout layout,
 
 GpuSimParams MakeGpuParams(const SimParams& params, const Grid& grid, std::uint32_t particleCount,
                            float mass, glm::vec3 cursorPosition, glm::vec3 cursorForce,
-                           float cursorRadius) {
+                           float cursorRadius, float cursorSwirl) {
   const float kernelRadius = params.supportRadius();
   return GpuSimParams{
       .domainMin = params.domainMin,
@@ -86,6 +86,7 @@ GpuSimParams MakeGpuParams(const SimParams& params, const Grid& grid, std::uint3
       .foamCapacity = FoamCapacity,
       .foamDt = params.timeStep * static_cast<float>(std::max(1U, params.substeps)),
       .xsph = params.xsph,
+      .cursorSwirl = cursorSwirl,
   };
 }
 
@@ -167,17 +168,18 @@ void SphSolver::writeParams(std::uint32_t particleCount, std::uint32_t cellCount
   const Grid grid = MakeGrid(paramsHost_);
   const float mass = paramsHost_.mass();
   GpuSimParams gpu = MakeGpuParams(paramsHost_, grid, particleCount, mass, cursorPosition_,
-                                   cursorForce_, cursorRadius_);
+                                   cursorForce_, cursorRadius_, cursorSwirl_);
   gpu.cellCount = cellCount;
   gpu.particleCount = particleCount;
   params_.mapped<GpuSimParams>().front() = gpu;
   params_.flush();
 }
 
-void SphSolver::setCursor(glm::vec3 position, glm::vec3 force, float radius) {
+void SphSolver::setCursor(glm::vec3 position, glm::vec3 force, float radius, float swirl) {
   cursorPosition_ = position;
   cursorForce_ = force;
   cursorRadius_ = radius;
+  cursorSwirl_ = swirl;
   if (params_.handle() != VK_NULL_HANDLE) {
     writeParams(count_, cellCount_);
   }

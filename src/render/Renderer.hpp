@@ -7,8 +7,10 @@
 #include "render/FluidPass.hpp"
 #include "render/FoamPass.hpp"
 #include "render/Hdri.hpp"
+#include "render/PaddlePass.hpp"
 #include "render/ParticlePass.hpp"
 #include "render/SkyPass.hpp"
+#include "render/TankPass.hpp"
 #include "render/TonemapPass.hpp"
 #include "sim/SimParams.hpp"
 
@@ -27,9 +29,12 @@ struct RenderTarget {
 
 struct RenderSettings {
   DebugView view = DebugView::Final;
+  WallDisplay walls = WallDisplay::Hidden;
   glm::vec3 absorption{2.45F, 0.42F, 0.12F};
   float ior = 1.333F;
   float exposure = 0.85F;
+  glm::vec3 paddleCenter{0.0F};
+  float paddleRadius = 0.0F;
 };
 
 using OverlayCallback = std::function<void(VkCommandBuffer)>;
@@ -60,6 +65,8 @@ class Renderer {
   ParticlePass particlePass_;
   FluidPass fluidPass_;
   FoamPass foamPass_;
+  TankPass tankPass_;
+  PaddlePass paddlePass_;
   TonemapPass tonemapPass_;
   gpu::Unique<VkSampler> hdrSampler_;
   gpu::Image hdr_;

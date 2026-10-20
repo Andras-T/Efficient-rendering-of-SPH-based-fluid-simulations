@@ -23,7 +23,11 @@ build/release/bin/sph-fluid --sequence frames --frames 12
 cmake --install build/release --prefix dist          # dist/bin/sph-fluid
 ```
 
-In the window: left-drag or right-drag orbits, Shift+left or middle-drag pans, scroll zooms, WASD/QE moves, arrow keys look, F frames the tank. Ctrl+left-drag stirs the fluid. Space pauses. `[` `]` and 1–9 step through the stage explorer (including foam). The overlay has scene presets, WCSPH/DFSPH, a viscosity slider, Reset, exposure, and GPU timings.
+Starts paused so viscosity and other parameters can be set before Play. Scene changes and Reset pause again.
+
+Paddle is the default tool: a cyan sphere follows the mouse, left-drag stirs the water, and swirl spins it. Switch the tool to Orbit for left-drag camera. Right-drag always orbits; Shift+left or middle-drag pans; scroll zooms; WASD/QE moves; arrows look; F frames the tank. Space play/pauses. `[` `]` and 1–9 step through the stage explorer (including foam).
+
+Walls: Hidden, Glass (default aquarium tank on the realistic view), or Particles (Akinci spheres). The overlay also has scene presets, WCSPH/DFSPH, viscosity (default 0.1), paddle size/swirl, Reset, exposure, and GPU timings.
 
 On Linux without a GPU, install Mesa's lavapipe (`mesa-vulkan-drivers`).
 

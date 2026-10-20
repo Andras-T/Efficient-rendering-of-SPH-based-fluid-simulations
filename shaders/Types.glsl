@@ -61,6 +61,7 @@ struct GpuSimParams {
   uint foamCapacity;
   float foamDt;
   float xsph;
+  float cursorSwirl;
 };
 
 layout(scalar, buffer_reference, buffer_reference_align = 16) readonly buffer ParticleBuffer {
@@ -93,6 +94,9 @@ const uint DebugViewSmoothDepth = 6;
 const uint DebugViewThickness = 7;
 const uint DebugViewNormals = 8;
 const uint DebugViewFoam = 9;
+const uint WallHidden = 0;
+const uint WallGlass = 1;
+const uint WallParticles = 2;
 
 layout(scalar, buffer_reference, buffer_reference_align = 16) readonly buffer FrameBuffer {
   mat4 view;
@@ -112,6 +116,7 @@ layout(scalar, buffer_reference, buffer_reference_align = 16) readonly buffer Fr
   float invCellSize;
   uvec3 gridSize;
   float exposure;
+  uint wallDisplay;
 };
 
 #endif

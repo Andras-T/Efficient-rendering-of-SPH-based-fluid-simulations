@@ -66,7 +66,7 @@ void BeginColorDepth(VkCommandBuffer commandBuffer, VkImageView color, VkImageVi
       .imageView = depth,
       .imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
       .loadOp = depthLoad,
-      .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+      .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
       .clearValue = depthClear,
   };
   const VkRect2D area{.extent = extent};
@@ -91,6 +91,8 @@ Renderer::Renderer(const gpu::Context& context, VkFormat colorFormat)
       particlePass_(context, HdrFormat, DepthFormat),
       fluidPass_(context, HdrFormat, DepthFormat, hdri_),
       foamPass_(context, HdrFormat, DepthFormat),
+      tankPass_(context, HdrFormat, DepthFormat, hdri_),
+      paddlePass_(context, HdrFormat, DepthFormat),
       tonemapPass_(context, colorFormat),
       hdrSampler_(gpu::CreateSampler(context.device(), VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
                                      VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE)),
@@ -152,6 +154,7 @@ void Renderer::record(VkCommandBuffer commandBuffer, const RenderTarget& target,
   uniforms.invCellSize = 1.0F / grid.cellSize;
   uniforms.gridSize = grid.size;
   uniforms.exposure = settings_.exposure;
+  uniforms.wallDisplay = static_cast<std::uint32_t>(settings_.walls);
   uniforms_.mapped<sim::FrameUniforms>().front() = uniforms;
   uniforms_.flush();
   const VkDeviceAddress frameAddress = uniforms_.address();
@@ -192,23 +195,53 @@ void Renderer::record(VkCommandBuffer commandBuffer, const RenderTarget& target,
   vkCmdEndRendering(commandBuffer);
 
   const float foamRadius = params.renderRadius() * 0.42F;
+  const bool glass = settings_.walls == WallDisplay::Glass;
+  const bool wallParticles = settings_.walls == WallDisplay::Particles;
+  const bool showPaddle = settings_.paddleRadius > 0.0F;
+  const auto recordPaddle = [&] {
+    if (showPaddle) {
+      paddlePass_.record(commandBuffer, frameAddress, settings_.paddleCenter,
+                         settings_.paddleRadius);
+    }
+  };
+
   if (settings_.view == DebugView::Foam) {
     BeginColorDepth(commandBuffer, hdr_.view(), depth_.view(), target.extent,
                     VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_LOAD_OP_CLEAR);
+    if (glass) {
+      tankPass_.recordBack(commandBuffer, frameAddress);
+    }
     foamPass_.record(commandBuffer, frameAddress, foam, foamCapacity, foamRadius);
+    recordPaddle();
+    if (glass) {
+      tankPass_.recordFront(commandBuffer, frameAddress);
+    }
     vkCmdEndRendering(commandBuffer);
   } else if (IsParticleView(settings_.view)) {
     BeginColorDepth(commandBuffer, hdr_.view(), depth_.view(), target.extent,
                     VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_LOAD_OP_CLEAR);
+    if (glass) {
+      tankPass_.recordBack(commandBuffer, frameAddress);
+    }
     particlePass_.record(commandBuffer, frameAddress, particleCount);
+    recordPaddle();
+    if (glass) {
+      tankPass_.recordFront(commandBuffer, frameAddress);
+    }
     vkCmdEndRendering(commandBuffer);
   } else {
+    if (glass) {
+      BeginColorDepth(commandBuffer, hdr_.view(), depth_.view(), target.extent,
+                      VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_LOAD_OP_CLEAR);
+      tankPass_.recordBack(commandBuffer, frameAddress);
+      vkCmdEndRendering(commandBuffer);
+    }
     fluidPass_.prepareTargets(commandBuffer);
     fluidPass_.recordDepth(commandBuffer, frameAddress, particleCount, depth_.view(),
                            target.extent);
     fluidPass_.recordThickness(commandBuffer, frameAddress, particleCount);
     fluidPass_.recordSmooth(commandBuffer);
-    if (settings_.view == DebugView::Final) {
+    if (settings_.view == DebugView::Final && wallParticles) {
       BeginColorDepth(commandBuffer, hdr_.view(), depth_.view(), target.extent,
                       VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_LOAD_OP_LOAD);
       particlePass_.record(commandBuffer, frameAddress, particleCount);
@@ -221,6 +254,15 @@ void Renderer::record(VkCommandBuffer commandBuffer, const RenderTarget& target,
       BeginColorDepth(commandBuffer, hdr_.view(), depth_.view(), target.extent,
                       VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_LOAD_OP_LOAD);
       foamPass_.record(commandBuffer, frameAddress, foam, foamCapacity, foamRadius);
+      vkCmdEndRendering(commandBuffer);
+    }
+    if (glass || showPaddle) {
+      BeginColorDepth(commandBuffer, hdr_.view(), depth_.view(), target.extent,
+                      VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_LOAD_OP_LOAD);
+      recordPaddle();
+      if (glass) {
+        tankPass_.recordFront(commandBuffer, frameAddress);
+      }
       vkCmdEndRendering(commandBuffer);
     }
   }
