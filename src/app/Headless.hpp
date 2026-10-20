@@ -36,6 +36,7 @@ struct OffscreenRequest {
   glm::vec3 blockMax{0.0F};
   bool block = false;
   sim::SolverMethod solver = sim::SolverMethod::Wcsph;
+  sim::TankShape tankShape = sim::TankShape::Box;
 };
 
 // Renders offscreen and returns the last frame as tightly packed sRGB RGBA8.

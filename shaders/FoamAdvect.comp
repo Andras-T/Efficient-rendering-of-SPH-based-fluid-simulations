@@ -37,7 +37,6 @@ void main() {
   foam.velocity += gravity * dt;
   foam.velocity *= max(0.0, 1.0 - drag * dt);
   foam.position += foam.velocity * dt;
-  CollideDomain(foam.position, foam.velocity, p.domainMin + vec3(0.008),
-                p.domainMax - vec3(0.008), p.restitution);
+  CollideTankShape(foam.position, foam.velocity, p, 0.008);
   pc.foam.particles[i] = foam;
 }

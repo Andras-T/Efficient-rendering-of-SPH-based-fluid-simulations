@@ -2,6 +2,7 @@
 
 #include "sim/CpuSolver.hpp"
 #include "sim/Kernels.hpp"
+#include "sim/Tank.hpp"
 
 #include <glm/common.hpp>
 #include <glm/geometric.hpp>
@@ -9,6 +10,7 @@
 #include <algorithm>
 #include <cmath>
 #include <format>
+#include <numbers>
 #include <stdexcept>
 
 namespace sph::sim {
@@ -92,6 +94,125 @@ void AddBoxBoundaries(Scene& scene) {
   }
 }
 
+void AddDisk(Scene& scene, float y, glm::vec2 center, float radius) {
+  const float spacing = scene.params.particleSpacing;
+  AddParticle(scene, {center.x, y, center.y}, ParticleFlagBoundary);
+  const int rings = std::max(1, static_cast<int>(std::floor(radius / spacing)));
+  for (int ring = 1; ring <= rings; ++ring) {
+    const float r = static_cast<float>(ring) * spacing;
+    if (r > radius) {
+      break;
+    }
+    const int count =
+        std::max(6, static_cast<int>(std::round(2.0F * std::numbers::pi_v<float> * r / spacing)));
+    for (int i = 0; i < count; ++i) {
+      const float ang =
+          2.0F * std::numbers::pi_v<float> * static_cast<float>(i) / static_cast<float>(count);
+      AddParticle(scene, {center.x + r * std::cos(ang), y, center.y + r * std::sin(ang)},
+                  ParticleFlagBoundary);
+    }
+  }
+}
+
+void AddCylinderBoundaries(Scene& scene) {
+  const float spacing = scene.params.particleSpacing;
+  const glm::vec2 center = TankCenterXz(scene.params);
+  const float radius = TankRadius(scene.params);
+  const glm::vec3 min = scene.params.domainMin;
+  const glm::vec3 max = scene.params.domainMax;
+  const int ny = std::max(1, static_cast<int>(std::floor((max.y - min.y) / spacing)));
+  const int nTheta = std::max(
+      8, static_cast<int>(std::round(2.0F * std::numbers::pi_v<float> * radius / spacing)));
+  for (int y = 0; y < ny; ++y) {
+    const float py = min.y + (static_cast<float>(y) + 0.5F) * spacing;
+    if (py >= max.y) {
+      continue;
+    }
+    for (int i = 0; i < nTheta; ++i) {
+      const float ang =
+          2.0F * std::numbers::pi_v<float> * static_cast<float>(i) / static_cast<float>(nTheta);
+      AddParticle(scene, {center.x + radius * std::cos(ang), py, center.y + radius * std::sin(ang)},
+                  ParticleFlagBoundary);
+    }
+  }
+  AddDisk(scene, min.y + 0.5F * spacing, center, radius);
+  AddDisk(scene, max.y - 0.5F * spacing, center, radius);
+}
+
+glm::vec2 HexagonVertex(glm::vec2 center, float radius, int index) {
+  const float ang = std::numbers::pi_v<float> / 6.0F +
+                    std::numbers::pi_v<float> / 3.0F * static_cast<float>(index);
+  return center + radius * glm::vec2(std::cos(ang), std::sin(ang));
+}
+
+void AddHexagonBoundaries(Scene& scene) {
+  const float spacing = scene.params.particleSpacing;
+  const glm::vec2 center = TankCenterXz(scene.params);
+  const float radius = TankRadius(scene.params);
+  const glm::vec3 min = scene.params.domainMin;
+  const glm::vec3 max = scene.params.domainMax;
+  const int ny = std::max(1, static_cast<int>(std::floor((max.y - min.y) / spacing)));
+  for (int edge = 0; edge < 6; ++edge) {
+    const glm::vec2 a = HexagonVertex(center, radius, edge);
+    const glm::vec2 b = HexagonVertex(center, radius, edge + 1);
+    const int nEdge = std::max(1, static_cast<int>(std::round(glm::length(b - a) / spacing)));
+    for (int y = 0; y < ny; ++y) {
+      const float py = min.y + (static_cast<float>(y) + 0.5F) * spacing;
+      if (py >= max.y) {
+        continue;
+      }
+      for (int i = 0; i < nEdge; ++i) {
+        const float t = (static_cast<float>(i) + 0.5F) / static_cast<float>(nEdge);
+        const glm::vec2 xz = glm::mix(a, b, t);
+        AddParticle(scene, {xz.x, py, xz.y}, ParticleFlagBoundary);
+      }
+    }
+  }
+  const auto steps = [spacing](float begin, float end) {
+    return std::max(1, static_cast<int>(std::floor((end - begin) / spacing)));
+  };
+  const int nx = steps(min.x, max.x);
+  const int nz = steps(min.z, max.z);
+  for (int z = 0; z < nz; ++z) {
+    for (int x = 0; x < nx; ++x) {
+      const glm::vec2 xz{min.x + (static_cast<float>(x) + 0.5F) * spacing,
+                         min.z + (static_cast<float>(z) + 0.5F) * spacing};
+      if (HexagonNorm(xz - center) > TankApothem(scene.params) + 0.25F * spacing) {
+        continue;
+      }
+      AddParticle(scene, {xz.x, min.y + 0.5F * spacing, xz.y}, ParticleFlagBoundary);
+      AddParticle(scene, {xz.x, max.y - 0.5F * spacing, xz.y}, ParticleFlagBoundary);
+    }
+  }
+}
+
+void AddTankBoundaries(Scene& scene) {
+  switch (scene.params.tankShape) {
+    case TankShape::Cylinder:
+      AddCylinderBoundaries(scene);
+      break;
+    case TankShape::Hexagon:
+      AddHexagonBoundaries(scene);
+      break;
+    default:
+      AddBoxBoundaries(scene);
+      break;
+  }
+}
+
+void ClipFluidToTank(Scene& scene) {
+  if (scene.params.tankShape == TankShape::Box) {
+    return;
+  }
+  const float inset = scene.params.collisionRadius();
+  const auto last =
+      std::remove_if(scene.particles.begin(), scene.particles.end(), [&](const Particle& particle) {
+        return particle.flags == ParticleFlagFluid &&
+               !InsideTank(particle.position, scene.params, inset);
+      });
+  scene.particles.erase(last, scene.particles.end());
+}
+
 }  // namespace
 
 const char* ScenePresetName(ScenePreset preset) {
@@ -142,7 +263,7 @@ Scene BuildScene(ScenePreset preset, const SimParams& params) {
     case ScenePreset::Empty:
       break;
     case ScenePreset::DamBreak: {
-      AddBoxBoundaries(scene);
+      AddTankBoundaries(scene);
       glm::vec3 fluidMax = max;
       fluidMax.x = min.x + 0.42F * (max.x - min.x);
       fluidMax.y = min.y + 0.70F * (max.y - min.y);
@@ -150,7 +271,7 @@ Scene BuildScene(ScenePreset preset, const SimParams& params) {
       break;
     }
     case ScenePreset::Drop: {
-      AddBoxBoundaries(scene);
+      AddTankBoundaries(scene);
       glm::vec3 poolMax = max;
       poolMax.y = min.y + spacing * 3.0F;
       AddBlock(scene, min, poolMax, ParticleFlagFluid);
@@ -159,7 +280,7 @@ Scene BuildScene(ScenePreset preset, const SimParams& params) {
       break;
     }
     case ScenePreset::DoubleDam: {
-      AddBoxBoundaries(scene);
+      AddTankBoundaries(scene);
       glm::vec3 leftMax = max;
       leftMax.x = min.x + 0.28F * (max.x - min.x);
       leftMax.y = min.y + 0.65F * (max.y - min.y);
@@ -172,13 +293,14 @@ Scene BuildScene(ScenePreset preset, const SimParams& params) {
       break;
     }
     case ScenePreset::DropIn: {
-      AddBoxBoundaries(scene);
+      AddTankBoundaries(scene);
       glm::vec3 poolMax = max;
       poolMax.y = min.y + 0.34F * (max.y - min.y);
       AddBlock(scene, min, poolMax, ParticleFlagFluid);
       break;
     }
   }
+  ClipFluidToTank(scene);
   CalibrateRestDensity(scene.particles, scene.params);
   CalibrateBoundaryPsi(scene);
   return scene;
@@ -206,30 +328,24 @@ void CalibrateBoundaryPsi(Scene& scene) {
 
 glm::vec3 WoodenBlockStart(ScenePreset preset, const SimParams& params) {
   const float floorY = params.domainMin.y + WoodenBlockHalf.y + params.collisionRadius();
-  if (preset != ScenePreset::DropIn) {
-    return {0.32F, floorY, 0.0F};
-  }
-  const float ceiling = params.domainMax.y - WoodenBlockHalf.y - params.collisionRadius();
-  return {0.0F, ceiling, 0.0F};
+  glm::vec3 center =
+      preset == ScenePreset::DropIn
+          ? glm::vec3{0.0F, params.domainMax.y - WoodenBlockHalf.y - params.collisionRadius(), 0.0F}
+          : glm::vec3{0.32F, floorY, 0.0F};
+  ClampAabbToTank(center, WoodenBlockHalf, params);
+  return center;
 }
 
 void AdvanceWoodenBlock(glm::vec3& center, glm::vec3& velocity, const SimParams& params) {
   const float dt = params.timeStep * static_cast<float>(std::max(1U, params.substeps));
   velocity += params.gravity * dt;
   center += velocity * dt;
-  const glm::vec3 lo = params.domainMin + WoodenBlockHalf;
-  const glm::vec3 hi = params.domainMax - WoodenBlockHalf;
+  const glm::vec3 previous = center;
+  ClampAabbToTank(center, WoodenBlockHalf, params);
+  const glm::vec3 delta = center - previous;
   for (int axis = 0; axis < 3; ++axis) {
-    if (center[axis] < lo[axis]) {
-      center[axis] = lo[axis];
-      if (velocity[axis] < 0.0F) {
-        velocity[axis] *= -params.restitution;
-      }
-    } else if (center[axis] > hi[axis]) {
-      center[axis] = hi[axis];
-      if (velocity[axis] > 0.0F) {
-        velocity[axis] *= -params.restitution;
-      }
+    if (delta[axis] != 0.0F && velocity[axis] * delta[axis] < 0.0F) {
+      velocity[axis] *= -params.restitution;
     }
   }
 }

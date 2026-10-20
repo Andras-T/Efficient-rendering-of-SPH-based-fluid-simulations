@@ -35,6 +35,7 @@ add_library(sph_engine STATIC
   sim/Scene.cpp
   sim/SimParams.cpp
   sim/SphSolver.cpp
+  sim/Tank.cpp
   ui/Hud.cpp)
 target_include_directories(sph_engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(sph_engine PUBLIC

@@ -23,6 +23,7 @@ struct Options {
   sim::ScenePreset scene = sim::ScenePreset::DamBreak;
   render::DebugView view = render::DebugView::Final;
   sim::SolverMethod solver = sim::SolverMethod::Wcsph;
+  sim::TankShape tank = sim::TankShape::Box;
 };
 
 // Throws std::invalid_argument on unknown flags or malformed values.

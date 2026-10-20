@@ -1,5 +1,7 @@
 #include "sim/Scene.hpp"
+#include "sim/Tank.hpp"
 
+#include <glm/geometric.hpp>
 #include <gtest/gtest.h>
 
 #include <algorithm>
@@ -124,6 +126,57 @@ TEST(SceneTest, DropInPoolSitsBelowTheHangingBlock) {
   EXPECT_GT(start.y, 0.5F * (scene.params.domainMin.y + scene.params.domainMax.y));
   EXPECT_LT(maxFluidY, start.y - WoodenBlockHalf.y);
   EXPECT_STREQ(ScenePresetName(ScenePreset::DropIn), "dropin");
+}
+
+TEST(SceneTest, ParsesTankShapes) {
+  EXPECT_EQ(ParseTankShape("cube"), TankShape::Box);
+  EXPECT_EQ(ParseTankShape("cylinder"), TankShape::Cylinder);
+  EXPECT_EQ(ParseTankShape("hexagon"), TankShape::Hexagon);
+  EXPECT_EQ(ParseTankShape("hex"), TankShape::Hexagon);
+  EXPECT_STREQ(TankShapeName(TankShape::Cylinder), "cylinder");
+  EXPECT_THROW(static_cast<void>(ParseTankShape("torus")), std::invalid_argument);
+}
+
+TEST(SceneTest, CylinderBoundariesStayNearTheRadius) {
+  SimParams params;
+  params.tankShape = TankShape::Cylinder;
+  const Scene scene = BuildScene(ScenePreset::DamBreak, params);
+  const glm::vec2 center = TankCenterXz(params);
+  const float radius = TankRadius(params);
+  std::uint32_t wall = 0;
+  std::uint32_t fluid = 0;
+  float maxFluidR = 0.0F;
+  for (const Particle& particle : scene.particles) {
+    const float r = glm::length(glm::vec2(particle.position.x, particle.position.z) - center);
+    if (particle.flags == ParticleFlagBoundary) {
+      ++wall;
+      EXPECT_LE(r, radius + params.particleSpacing);
+    } else {
+      ++fluid;
+      maxFluidR = std::max(maxFluidR, r);
+    }
+  }
+  EXPECT_GT(wall, 0U);
+  EXPECT_GT(fluid, 0U);
+  EXPECT_LT(maxFluidR, radius);
+}
+
+TEST(SceneTest, HexagonDamBreakFitsThePrism) {
+  SimParams params;
+  params.tankShape = TankShape::Hexagon;
+  const Scene scene = BuildScene(ScenePreset::DamBreak, params);
+  const float apothem = TankApothem(params);
+  const glm::vec2 center = TankCenterXz(params);
+  std::uint32_t fluid = 0;
+  for (const Particle& particle : scene.particles) {
+    if (particle.flags != ParticleFlagFluid) {
+      continue;
+    }
+    ++fluid;
+    const glm::vec2 delta = glm::vec2(particle.position.x, particle.position.z) - center;
+    EXPECT_LE(HexagonNorm(delta), apothem);
+  }
+  EXPECT_GT(fluid, 0U);
 }
 
 TEST(SceneTest, DropInBlockFallsFromTheCeiling) {

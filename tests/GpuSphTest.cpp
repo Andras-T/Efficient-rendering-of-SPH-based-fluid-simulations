@@ -3,6 +3,7 @@
 #include "sim/Grid.hpp"
 #include "sim/Scene.hpp"
 #include "sim/SphSolver.hpp"
+#include "sim/Tank.hpp"
 
 #include <glm/geometric.hpp>
 #include <gtest/gtest.h>
@@ -319,6 +320,34 @@ TEST(GpuSphTest, DfsphDamBreakStaysFinite) {
     }
   }
   EXPECT_LT(maxSpeed, 20.0F);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
+TEST(GpuSphTest, CylinderDamBreakStaysInside) {
+  const gpu::Context context({.validation = true});
+  sim::SimParams params;
+  params.tankShape = sim::TankShape::Cylinder;
+  sim::Scene scene = sim::BuildScene(sim::ScenePreset::DamBreak, params);
+  sim::SphSolver solver(context);
+  solver.upload(scene.particles, scene.params);
+
+  constexpr int Frames = 60;
+  const glm::vec2 center = sim::TankCenterXz(scene.params);
+  const float limit = sim::TankRadius(scene.params) + 1.0e-3F;
+  for (int frame = 1; frame <= Frames; ++frame) {
+    solver.step(scene.params.substeps);
+    solver.download(scene.particles);
+    for (const sim::Particle& particle : scene.particles) {
+      if (particle.flags != sim::ParticleFlagFluid) {
+        continue;
+      }
+      ASSERT_TRUE(std::isfinite(particle.position.x)) << "NaN at frame " << frame;
+      const float r = glm::length(glm::vec2(particle.position.x, particle.position.z) - center);
+      EXPECT_LE(r, limit) << "frame " << frame;
+      EXPECT_GE(particle.position.y, scene.params.domainMin.y - 1.0e-3F);
+      EXPECT_LE(particle.position.y, scene.params.domainMax.y + 1.0e-3F);
+    }
+  }
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 

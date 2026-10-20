@@ -2,6 +2,7 @@
 
 #include "sim/Grid.hpp"
 #include "sim/Kernels.hpp"
+#include "sim/Tank.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -160,29 +161,7 @@ void LimitSpeedCpu(Particle& particle, const SimParams& params) {
 }
 
 void CollideCpu(Particle& particle, const SimParams& params) {
-  const float radius = params.collisionRadius();
-  const glm::vec3 minBound = params.domainMin + glm::vec3(radius);
-  const glm::vec3 maxBound = params.domainMax - glm::vec3(radius);
-  if (!std::isfinite(particle.position.x) || !std::isfinite(particle.velocity.x)) {
-    particle.position = 0.5F * (minBound + maxBound);
-    particle.velocity = glm::vec3{0.0F};
-    return;
-  }
-  for (int axis = 0; axis < 3; ++axis) {
-    const float lo = minBound[axis];
-    const float hi = maxBound[axis];
-    if (particle.position[axis] < lo) {
-      particle.position[axis] = lo;
-      if (particle.velocity[axis] < 0.0F) {
-        particle.velocity[axis] *= -params.restitution;
-      }
-    } else if (particle.position[axis] > hi) {
-      particle.position[axis] = hi;
-      if (particle.velocity[axis] > 0.0F) {
-        particle.velocity[axis] *= -params.restitution;
-      }
-    }
-  }
+  CollideTank(particle.position, particle.velocity, params, params.collisionRadius());
   LimitSpeedCpu(particle, params);
 }
 

@@ -24,6 +24,7 @@ constexpr std::uint32_t FoamBubble = 2;
 constexpr std::uint32_t FoamCapacity = 4096;
 
 enum class SolverMethod : std::uint8_t { Wcsph, Dfsph };
+enum class TankShape : std::uint8_t { Box, Cylinder, Hexagon };
 
 // Scalar-layout particle; must match shaders/Types.glsl.
 struct Particle {
@@ -81,9 +82,10 @@ struct GpuSimParams {
   glm::vec3 blockMin{0.0F};
   float blockEnabled = 0.0F;
   glm::vec3 blockMax{0.0F};
+  std::uint32_t tankShape = 0;
 };
 
-static_assert(sizeof(GpuSimParams) == 184);
+static_assert(sizeof(GpuSimParams) == 188);
 
 struct FrameUniforms {
   glm::mat4 view{1.0F};
@@ -104,6 +106,7 @@ struct FrameUniforms {
   glm::uvec3 gridSize{1, 1, 1};
   float exposure = 0.85F;
   std::uint32_t wallDisplay = 0;
+  std::uint32_t tankShape = 0;
 };
 
 static_assert(offsetof(FrameUniforms, inverseView) == 128);
@@ -111,6 +114,7 @@ static_assert(offsetof(FrameUniforms, particles) == 272);
 static_assert(offsetof(FrameUniforms, absorption) == 288);
 static_assert(offsetof(FrameUniforms, exposure) == 348);
 static_assert(offsetof(FrameUniforms, wallDisplay) == 352);
+static_assert(offsetof(FrameUniforms, tankShape) == 356);
 static_assert(sizeof(FrameUniforms) == 360);
 
 [[nodiscard]] const char* SolverMethodName(SolverMethod method);

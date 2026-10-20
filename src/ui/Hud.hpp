@@ -27,6 +27,7 @@ struct HudState {
   float restDensity = 0.0F;
   float viscosity = 0.0F;
   sim::SolverMethod solver = sim::SolverMethod::Wcsph;
+  sim::TankShape tankShape = sim::TankShape::Box;
   render::DebugView view = render::DebugView::Final;
   render::WallDisplay walls = render::WallDisplay::Glass;
   float paddleRadius = 0.10F;

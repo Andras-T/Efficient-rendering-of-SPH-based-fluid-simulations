@@ -249,6 +249,11 @@ HudResult DrawHud(HudState& state) {
   if (ImGui::Combo("Walls", &walls, "Hidden\0Glass\0Particles\0")) {
     state.walls = static_cast<render::WallDisplay>(walls);
   }
+  int tank = static_cast<int>(state.tankShape);
+  if (ImGui::Combo("Tank", &tank, "Cube\0Cylinder\0Hexagon\0")) {
+    state.tankShape = static_cast<sim::TankShape>(tank);
+    result.sceneChanged = true;
+  }
   ImGui::SliderFloat("Exposure", &state.exposure, 0.05F, 4.0F, "%.2f");
   ImGui::SliderFloat3("Absorption", &state.absorption.x, 0.0F, 8.0F, "%.2f");
   ImGui::TextUnformatted("[ ] cycles stages (foam is last). 1-9 pick the first nine.");

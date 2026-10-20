@@ -66,6 +66,7 @@ struct GpuSimParams {
   vec3 blockMin;
   float blockEnabled;
   vec3 blockMax;
+  uint tankShape;
 };
 
 layout(scalar, buffer_reference, buffer_reference_align = 16) readonly buffer ParticleBuffer {
@@ -101,6 +102,9 @@ const uint DebugViewFoam = 9;
 const uint WallHidden = 0;
 const uint WallGlass = 1;
 const uint WallParticles = 2;
+const uint TankBox = 0;
+const uint TankCylinder = 1;
+const uint TankHexagon = 2;
 
 layout(scalar, buffer_reference, buffer_reference_align = 16) readonly buffer FrameBuffer {
   mat4 view;
@@ -121,6 +125,7 @@ layout(scalar, buffer_reference, buffer_reference_align = 16) readonly buffer Fr
   uvec3 gridSize;
   float exposure;
   uint wallDisplay;
+  uint tankShape;
 };
 
 #endif

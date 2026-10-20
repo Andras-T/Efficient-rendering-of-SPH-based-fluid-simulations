@@ -1,6 +1,7 @@
 #include "sim/CpuSolver.hpp"
 #include "sim/Kernels.hpp"
 #include "sim/Scene.hpp"
+#include "sim/Tank.hpp"
 
 #include <glm/geometric.hpp>
 #include <gtest/gtest.h>
@@ -147,6 +148,44 @@ TEST(CpuSolverTest, CollisionKeepsFluidOffBoundaryParticles) {
     }
   }
   EXPECT_GT(minBoundDist, minGap);
+}
+
+TEST(CpuSolverTest, CylinderStopsRadialSplash) {
+  SimParams params;
+  params.particleSpacing = 0.08F;
+  params.domainMin = {-0.4F, 0.0F, -0.4F};
+  params.domainMax = {0.4F, 0.8F, 0.4F};
+  params.tankShape = TankShape::Cylinder;
+  params.timeStep = 0.0005F;
+  Particle particle;
+  particle.position = {0.0F, 0.3F, 0.0F};
+  particle.velocity = {40.0F, 0.0F, 0.0F};
+  particle.mass = params.mass();
+  particle.density = params.restDensity;
+  std::vector<Particle> particles{particle};
+  StepCpu(particles, params, 80);
+  const glm::vec2 center = TankCenterXz(params);
+  const float r =
+      glm::length(glm::vec2(particles.front().position.x, particles.front().position.z) - center);
+  EXPECT_LE(r, TankRadius(params) - params.collisionRadius() + 1.0e-3F);
+}
+
+TEST(CpuSolverTest, CylinderDamBreakStaysInside) {
+  SimParams params;
+  params.tankShape = TankShape::Cylinder;
+  Scene scene = BuildScene(ScenePreset::DamBreak, params);
+  StepCpu(scene.particles, scene.params, 12);
+  const glm::vec2 center = TankCenterXz(scene.params);
+  const float limit = TankRadius(scene.params) + 1.0e-3F;
+  for (const Particle& particle : scene.particles) {
+    if (particle.flags != ParticleFlagFluid) {
+      continue;
+    }
+    const float r = glm::length(glm::vec2(particle.position.x, particle.position.z) - center);
+    EXPECT_LE(r, limit);
+    EXPECT_LE(particle.position.y, scene.params.domainMax.y);
+    EXPECT_GE(particle.position.y, scene.params.domainMin.y);
+  }
 }
 
 }  // namespace
