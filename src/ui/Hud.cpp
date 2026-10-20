@@ -15,8 +15,9 @@ constexpr float DegreesToRadians = std::numbers::pi_v<float> / 180.0F;
 constexpr float OrbitSensitivity = 0.0055F;
 constexpr float PanInvertX = -1.0F;
 constexpr float TruckSpeed = 0.90F;
-constexpr float CursorAccelScale = 400.0F;
-constexpr float CursorAccelMax = 80.0F;
+constexpr float CursorAccelScale = 1800.0F;
+constexpr float CursorAccelMax = 700.0F;
+constexpr float CursorPush = 420.0F;
 
 float Degrees(float radians) { return radians * RadiansToDegrees; }
 
@@ -66,7 +67,7 @@ void ApplyHotkeys(HudState& state) {
   if (ImGui::IsKeyPressed(ImGuiKey_RightBracket)) {
     state.view = render::NextDebugView(state.view);
   }
-  for (int i = 0; i < static_cast<int>(render::DebugViewCount); ++i) {
+  for (int i = 0; i < render::NumericDebugViewKeys; ++i) {
     if (ImGui::IsKeyPressed(static_cast<ImGuiKey>(ImGuiKey_1 + i))) {
       state.view = static_cast<render::DebugView>(i);
     }
@@ -75,8 +76,7 @@ void ApplyHotkeys(HudState& state) {
 
 }  // namespace
 
-void ApplyCameraInput(render::Camera& camera, glm::vec3 domainMin, glm::vec3 domainMax,
-                      bool leftDragOrbits) {
+void ApplyCameraInput(render::Camera& camera, glm::vec3 domainMin, glm::vec3 domainMax) {
   const ImGuiIO& io = ImGui::GetIO();
   if (!io.WantCaptureKeyboard) {
     const float dt = std::max(io.DeltaTime, 1.0e-4F);
@@ -134,7 +134,7 @@ void ApplyCameraInput(render::Camera& camera, glm::vec3 domainMin, glm::vec3 dom
   const bool lmb = ImGui::IsMouseDragging(ImGuiMouseButton_Left);
   const bool rmb = ImGui::IsMouseDragging(ImGuiMouseButton_Right);
   const bool mmb = ImGui::IsMouseDragging(ImGuiMouseButton_Middle);
-  if ((lmb && leftDragOrbits && !shift) || (rmb && !alt)) {
+  if (rmb && !alt) {
     camera.orbit(-io.MouseDelta.x * OrbitSensitivity, -io.MouseDelta.y * OrbitSensitivity);
   }
   if (mmb || (lmb && shift)) {
@@ -148,23 +148,27 @@ void ApplyCameraInput(render::Camera& camera, glm::vec3 domainMin, glm::vec3 dom
   }
 }
 
-CursorForce SamplePaddle(const render::Camera& camera, bool paused, CursorDrag& drag, float radius,
-                         float swirl) {
+CursorForce SamplePaddle(const render::Camera& camera, glm::vec3 domainMin, glm::vec3 domainMax,
+                         bool paused, CursorDrag& drag, float radius, float swirl) {
   const ImGuiIO& io = ImGui::GetIO();
   if (io.WantCaptureMouse || io.DisplaySize.x <= 0.0F || io.DisplaySize.y <= 0.0F) {
     drag.haveHit = false;
     return {};
   }
 
-  const auto hit = camera.hitPlane(MouseNdc(), camera.target(), camera.forward());
+  auto hit = camera.hitVolume(MouseNdc(), domainMin, domainMax);
+  if (!hit.has_value()) {
+    hit = camera.hitPlane(MouseNdc(), 0.5F * (domainMin + domainMax), camera.forward());
+  }
   if (!hit.has_value()) {
     drag.haveHit = false;
     return {};
   }
 
   CursorForce result{.position = *hit, .radius = radius, .visible = true};
-  const bool stirring = !paused && ImGui::IsMouseDown(ImGuiMouseButton_Left);
-  if (stirring) {
+  result.grabbing = ImGui::IsMouseDown(ImGuiMouseButton_Left);
+  result.stirring = !paused && result.grabbing;
+  if (result.grabbing) {
     if (drag.haveHit) {
       result.force = (*hit - drag.lastHit) * CursorAccelScale;
       const float magnitude = glm::length(result.force);
@@ -172,10 +176,13 @@ CursorForce SamplePaddle(const render::Camera& camera, bool paused, CursorDrag& 
         result.force *= CursorAccelMax / magnitude;
       }
     }
-    result.swirl = swirl;
+    if (result.stirring) {
+      result.swirl = swirl;
+      result.push = CursorPush;
+    }
   }
   drag.lastHit = *hit;
-  drag.haveHit = stirring;
+  drag.haveHit = result.grabbing;
   return result;
 }
 
@@ -219,14 +226,10 @@ HudResult DrawHud(HudState& state) {
   if (ImGui::Button("Reset")) {
     result.resetScene = true;
   }
-  int tool = state.tool == MouseTool::Orbit ? 1 : 0;
-  if (ImGui::Combo("Tool", &tool, "Paddle\0Orbit\0")) {
-    state.tool = tool == 1 ? MouseTool::Orbit : MouseTool::Paddle;
-  }
-  ImGui::SliderFloat("Paddle size", &state.paddleRadius, 0.08F, 0.50F, "%.2f");
-  ImGui::SliderFloat("Swirl", &state.paddleSwirl, 0.0F, 80.0F, "%.1f");
-  ImGui::TextUnformatted(state.tool == MouseTool::Paddle ? "LMB stirs with the paddle, RMB orbits"
-                                                         : "LMB/RMB orbit, MMB or Shift+LMB pan");
+  ImGui::SliderFloat("Paddle size", &state.paddleRadius, 0.05F, 0.16F, "%.2f");
+  ImGui::SliderFloat("Swirl", &state.paddleSwirl, 0.0F, 16.0F, "%.1f");
+  ImGui::Checkbox("Wooden block", &state.showBlock);
+  ImGui::TextUnformatted("LMB paddle; moves the block even while paused");
   ImGui::TextUnformatted("Space play/pause. Scene changes stay paused.");
   ImGui::End();
 
@@ -244,7 +247,7 @@ HudResult DrawHud(HudState& state) {
   }
   ImGui::SliderFloat("Exposure", &state.exposure, 0.05F, 4.0F, "%.2f");
   ImGui::SliderFloat3("Absorption", &state.absorption.x, 0.0F, 8.0F, "%.2f");
-  ImGui::TextUnformatted("[ ] or 1-9 to cycle views, including foam");
+  ImGui::TextUnformatted("[ ] cycles stages (foam is last). 1-9 pick the first nine.");
   ImGui::End();
 
   if (state.camera != nullptr) {

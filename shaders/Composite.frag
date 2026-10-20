@@ -78,7 +78,8 @@ void main() {
     outColor = vec4(Heatmap(thickness * 1.6), 1.0);
     return;
   }
-  if (eyeDepth <= 0.0) {
+  if (eyeDepth <= 0.0 ||
+      (frame.debugView == DebugViewFinal && thickness < frame.radius * 1.25)) {
     if (frame.debugView == DebugViewFinal) {
       discard;
     }

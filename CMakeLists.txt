@@ -15,6 +15,7 @@ endforeach()
 
 option(SPH_BUILD_TESTS "Build the test suites" ${PROJECT_IS_TOP_LEVEL})
 option(SPH_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
+option(SPH_WRITE_GOLDENS "Rewrite tests/goldens from GoldenImageTest" OFF)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 include(Warnings)

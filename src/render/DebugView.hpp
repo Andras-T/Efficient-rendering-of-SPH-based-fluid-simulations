@@ -19,6 +19,8 @@ enum class DebugView : std::uint8_t {
 };
 
 constexpr auto DebugViewCount = static_cast<std::uint8_t>(DebugView::Foam) + 1;
+// Number keys 1-9. Key 10 would be ImGuiKey_A and steal WASD strafe.
+constexpr int NumericDebugViewKeys = 9;
 
 enum class WallDisplay : std::uint8_t {
   Hidden = 0,

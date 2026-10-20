@@ -10,7 +10,7 @@
 namespace sph::render {
 namespace {
 
-constexpr std::uint32_t TankVertexCount = 30;
+constexpr std::uint32_t TankVertexCount = 36;
 
 gpu::Unique<VkDescriptorSetLayout> MakeSamplerLayout(VkDevice device) {
   const std::array bindings{VkDescriptorSetLayoutBinding{

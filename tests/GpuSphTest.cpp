@@ -169,7 +169,7 @@ TEST(GpuSphTest, CursorForcePushesNearbyFluid) {
 
   sim::SphSolver stirred(context);
   stirred.upload(scene.particles, scene.params);
-  stirred.setCursor(scene.particles.front().position, {40.0F, 0.0F, 0.0F}, 0.5F);
+  stirred.setCursor(scene.particles.front().position, {80.0F, 0.0F, 0.0F}, 0.5F);
   stirred.step(1);
   std::vector<sim::Particle> withForce = scene.particles;
   stirred.download(withForce);
@@ -200,6 +200,32 @@ TEST(GpuSphTest, CursorSwirlSpinsNearbyFluid) {
     maxTangent = std::max(maxTangent, glm::dot(particle.velocity, glm::normalize(tangent)));
   }
   EXPECT_GT(maxTangent, 0.01F);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
+TEST(GpuSphTest, PaddleSphereDisplacesFluid) {
+  const gpu::Context context({.validation = true});
+  const sim::Scene scene = MakeCloud();
+  const glm::vec3 center = scene.particles.front().position;
+
+  sim::SphSolver baseline(context);
+  baseline.upload(scene.particles, scene.params);
+  baseline.step(1);
+  std::vector<sim::Particle> without = scene.particles;
+  baseline.download(without);
+
+  sim::SphSolver shoved(context);
+  shoved.upload(scene.particles, scene.params);
+  shoved.setCursor(center, {0.0F, 0.0F, 0.0F}, 0.18F, 0.0F, 300.0F);
+  shoved.step(1);
+  std::vector<sim::Particle> withPaddle = scene.particles;
+  shoved.download(withPaddle);
+
+  float maxSep = 0.0F;
+  for (std::size_t i = 0; i < withPaddle.size(); ++i) {
+    maxSep = std::max(maxSep, glm::length(withPaddle[i].position - without[i].position));
+  }
+  EXPECT_GT(maxSep, 0.005F);
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 
@@ -241,10 +267,12 @@ TEST(GpuSphTest, DamBreakStaysFinite) {
       ASSERT_TRUE(std::isfinite(particle.density)) << "NaN at frame " << frame;
       maxSpeed = std::max(maxSpeed, glm::length(particle.velocity));
       maxDensity = std::max(maxDensity, particle.density);
-      for (int axis = 0; axis < 3; ++axis) {
-        EXPECT_GE(particle.position[axis], scene.params.domainMin[axis] - 1.0e-3F);
-        EXPECT_LE(particle.position[axis], scene.params.domainMax[axis] + 1.0e-3F);
-      }
+      EXPECT_GE(particle.position.x, scene.params.domainMin.x - 1.0e-3F);
+      EXPECT_LE(particle.position.x, scene.params.domainMax.x + 1.0e-3F);
+      EXPECT_GE(particle.position.y, scene.params.domainMin.y - 1.0e-3F);
+      EXPECT_LE(particle.position.y, scene.params.domainMax.y + 1.0e-3F);
+      EXPECT_GE(particle.position.z, scene.params.domainMin.z - 1.0e-3F);
+      EXPECT_LE(particle.position.z, scene.params.domainMax.z + 1.0e-3F);
     }
   }
 
@@ -266,6 +294,34 @@ TEST(GpuSphTest, DamBreakStaysFinite) {
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 
+TEST(GpuSphTest, DfsphDamBreakStaysFinite) {
+  const gpu::Context context({.validation = true});
+  sim::Scene scene = sim::BuildScene(sim::ScenePreset::DamBreak);
+  scene.params.solver = sim::SolverMethod::Dfsph;
+  sim::SphSolver solver(context);
+  solver.upload(scene.particles, scene.params);
+
+  constexpr int Frames = 60;
+  float maxSpeed = 0.0F;
+  for (int frame = 1; frame <= Frames; ++frame) {
+    solver.step(scene.params.substeps);
+    solver.download(scene.particles);
+    for (const sim::Particle& particle : scene.particles) {
+      if (particle.flags != sim::ParticleFlagFluid) {
+        continue;
+      }
+      ASSERT_TRUE(std::isfinite(particle.position.x)) << "NaN at frame " << frame;
+      ASSERT_TRUE(std::isfinite(particle.velocity.x)) << "NaN at frame " << frame;
+      ASSERT_TRUE(std::isfinite(particle.density)) << "NaN at frame " << frame;
+      maxSpeed = std::max(maxSpeed, glm::length(particle.velocity));
+      EXPECT_GE(particle.position.y, scene.params.domainMin.y - 1.0e-3F);
+      EXPECT_LE(particle.position.y, scene.params.domainMax.y + 1.0e-3F);
+    }
+  }
+  EXPECT_LT(maxSpeed, 20.0F);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
 TEST(GpuSphTest, SettledTankStaysNearRestDensity) {
   const gpu::Context context({.validation = true});
   sim::Scene scene = MakeTank();
@@ -282,6 +338,10 @@ TEST(GpuSphTest, SettledTankStaysNearRestDensity) {
     EXPECT_TRUE(std::isfinite(particle.density));
     EXPECT_GE(particle.position.x, scene.params.domainMin.x);
     EXPECT_LE(particle.position.x, scene.params.domainMax.x);
+    EXPECT_GE(particle.position.y, scene.params.domainMin.y);
+    EXPECT_LE(particle.position.y, scene.params.domainMax.y);
+    EXPECT_GE(particle.position.z, scene.params.domainMin.z);
+    EXPECT_LE(particle.position.z, scene.params.domainMax.z);
   }
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }

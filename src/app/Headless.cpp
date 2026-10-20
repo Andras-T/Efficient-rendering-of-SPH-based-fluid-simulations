@@ -87,7 +87,13 @@ std::vector<std::uint8_t> RenderOffscreen(const gpu::Context& context,
   renderer.settings().walls = request.walls;
   renderer.settings().paddleCenter = request.paddleCenter;
   renderer.settings().paddleRadius = request.paddleRadius;
+  renderer.settings().blockMin = request.blockMin;
+  renderer.settings().blockMax = request.blockMax;
+  renderer.settings().block = request.block;
   renderer.resize(extent);
+  solver.setCursor(request.paddleCenter, request.paddleForce, request.paddleRadius, 0.0F,
+                   request.paddlePush);
+  solver.setBlock(request.blockMin, request.blockMax, request.block);
   const render::RenderTarget renderTarget{target.handle(), target.view(), extent};
   gpu::GpuProfiler profiler(context, 1);
 

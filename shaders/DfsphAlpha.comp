@@ -49,6 +49,6 @@ void main() {
     }
   }
 
-  self.alpha = 1.0 / max(1.0e-6, dot(sumGrad, sumGrad) + sumNorm2);
+  self.alpha = DfsphAlphaFromDenom(dot(sumGrad, sumGrad) + sumNorm2, p.dt);
   pc.particles.particles[i] = self;
 }

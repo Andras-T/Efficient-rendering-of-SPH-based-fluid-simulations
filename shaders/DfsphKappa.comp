@@ -48,13 +48,12 @@ void main() {
   }
 
   const float dt = max(p.dt, KernelEpsilon);
-  const float kappaMax = 2.0e4;
   if (pc.solvePass == SolvePassDensity) {
     const float predicted = self.density + dt * source;
-    self.kappa = clamp(((predicted - p.restDensity) / (dt * dt)) * self.alpha, 0.0, kappaMax);
+    self.kappa = DfsphDensityKappa(predicted, p.restDensity, dt, self.alpha);
   } else {
     self.divergence = source / self.density;
-    self.kappa = clamp((source / dt) * self.alpha, -kappaMax, kappaMax);
+    self.kappa = DfsphDivergenceKappa(source, self.density, p.restDensity, dt, self.alpha);
   }
   pc.particles.particles[i] = self;
 }

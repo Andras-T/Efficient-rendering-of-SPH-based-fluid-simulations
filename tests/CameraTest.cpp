@@ -83,6 +83,23 @@ TEST(CameraTest, CenterRayHitsTargetPlane) {
   EXPECT_NEAR(glm::length(*hit - camera.target()), 0.0F, 1.0e-4F);
 }
 
+TEST(CameraTest, CenterRayHitsVolume) {
+  Camera camera;
+  camera.setTarget({0.0F, 0.4F, 0.0F});
+  camera.setYawPitch(0.4F, -0.3F);
+  camera.setDistance(3.0F);
+  camera.setAspect(16.0F / 9.0F);
+  const auto hit = camera.hitVolume({0.0F, 0.0F}, {-0.7F, 0.0F, -0.4F}, {0.7F, 1.0F, 0.4F});
+  if (!hit.has_value()) {
+    FAIL() << "center ray missed the tank volume";
+    return;
+  }
+  EXPECT_GE(hit->x, -0.7F);
+  EXPECT_LE(hit->x, 0.7F);
+  EXPECT_GE(hit->y, 0.0F);
+  EXPECT_LE(hit->y, 1.0F);
+}
+
 TEST(CameraTest, AspectFollowsExtent) {
   Camera camera;
   camera.setAspect(VkExtent2D{1920, 1080});

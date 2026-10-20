@@ -8,9 +8,9 @@
 namespace sph::sim {
 namespace {
 
-TEST(SceneTest, DefaultViscosityIsPointOne) {
-  EXPECT_NEAR(SimParams{}.viscosity, 0.10F, 1.0e-6F);
-  EXPECT_NEAR(BuildScene(ScenePreset::Drop).params.viscosity, 0.10F, 1.0e-6F);
+TEST(SceneTest, DefaultViscosityIsPointZeroThreeThree) {
+  EXPECT_NEAR(SimParams{}.viscosity, 0.033F, 1.0e-6F);
+  EXPECT_NEAR(BuildScene(ScenePreset::Drop).params.viscosity, 0.033F, 1.0e-6F);
 }
 
 TEST(SceneTest, MassIsDensityTimesVolume) {

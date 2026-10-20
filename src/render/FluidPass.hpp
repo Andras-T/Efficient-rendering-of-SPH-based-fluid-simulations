@@ -51,6 +51,7 @@ class FluidPass {
   gpu::Unique<VkPipeline> compositePipeline_;
   VkDescriptorSet horizontalSet_ = VK_NULL_HANDLE;
   VkDescriptorSet verticalSet_ = VK_NULL_HANDLE;
+  VkDescriptorSet refineSet_ = VK_NULL_HANDLE;
   VkDescriptorSet compositeSet_ = VK_NULL_HANDLE;
   gpu::Image rawDepth_;
   gpu::Image thickness_;

@@ -48,7 +48,7 @@ void main() {
     }
   }
 
-  self.velocity += correction * p.dt;
+  self.velocity += correction * p.dt * DfsphOmega;
   LimitSpeed(self.velocity, p);
   pc.particles.particles[i] = self;
 }

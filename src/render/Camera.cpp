@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 namespace sph::render {
 
@@ -120,6 +121,32 @@ std::optional<glm::vec3> Camera::hitPlane(glm::vec2 ndc, glm::vec3 planePoint,
     return std::nullopt;
   }
   return origin + (direction * t);
+}
+
+std::optional<glm::vec3> Camera::hitVolume(glm::vec2 ndc, glm::vec3 min, glm::vec3 max) const {
+  const glm::vec3 origin = position();
+  const glm::vec3 direction = worldDirection(ndc);
+  float tEnter = nearPlane_;
+  float tExit = 1.0e6F;
+  for (int axis = 0; axis < 3; ++axis) {
+    if (std::abs(direction[axis]) < 1.0e-8F) {
+      if (origin[axis] < min[axis] || origin[axis] > max[axis]) {
+        return std::nullopt;
+      }
+      continue;
+    }
+    float t0 = (min[axis] - origin[axis]) / direction[axis];
+    float t1 = (max[axis] - origin[axis]) / direction[axis];
+    if (t0 > t1) {
+      std::swap(t0, t1);
+    }
+    tEnter = std::max(tEnter, t0);
+    tExit = std::min(tExit, t1);
+  }
+  if (tExit < tEnter) {
+    return std::nullopt;
+  }
+  return origin + direction * (tEnter + (tExit - tEnter) * 0.32F);
 }
 
 glm::mat4 Camera::view() const { return glm::lookAt(position(), target_, WorldUp); }

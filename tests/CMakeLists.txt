@@ -15,5 +15,8 @@ target_link_libraries(sph_gpu_tests PRIVATE sph_engine sph_shaders GTest::gtest_
 sph_set_warnings(sph_gpu_tests)
 target_compile_definitions(sph_gpu_tests PRIVATE
   "SPH_GOLDEN_DIR=\"${PROJECT_SOURCE_DIR}/tests/goldens\"")
+if(SPH_WRITE_GOLDENS)
+  target_compile_definitions(sph_gpu_tests PRIVATE SPH_WRITE_GOLDENS)
+endif()
 gtest_discover_tests(sph_gpu_tests DISCOVERY_MODE PRE_TEST DISCOVERY_TIMEOUT 60
                      PROPERTIES LABELS gpu)

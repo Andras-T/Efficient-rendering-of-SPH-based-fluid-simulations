@@ -9,12 +9,12 @@
 namespace sph::sim {
 
 struct SimParams {
-  float particleSpacing = 0.04F;
+  float particleSpacing = 0.032F;
   float restDensity = 1000.0F;
   glm::vec3 domainMin{-0.70F, 0.00F, -0.40F};
   glm::vec3 domainMax{0.70F, 1.00F, 0.40F};
   glm::vec3 gravity{0.0F, -9.81F, 0.0F};
-  float viscosity = 0.10F;
+  float viscosity = 0.033F;
   float speedOfSound = 32.0F;
   float eosGamma = 7.0F;
   float restitution = 0.05F;

@@ -2,6 +2,7 @@
 
 #include "gpu/Buffer.hpp"
 #include "gpu/Image.hpp"
+#include "render/BlockPass.hpp"
 #include "render/Camera.hpp"
 #include "render/DebugView.hpp"
 #include "render/FluidPass.hpp"
@@ -35,6 +36,9 @@ struct RenderSettings {
   float exposure = 0.85F;
   glm::vec3 paddleCenter{0.0F};
   float paddleRadius = 0.0F;
+  glm::vec3 blockMin{0.0F};
+  glm::vec3 blockMax{0.0F};
+  bool block = false;
 };
 
 using OverlayCallback = std::function<void(VkCommandBuffer)>;
@@ -66,6 +70,7 @@ class Renderer {
   FluidPass fluidPass_;
   FoamPass foamPass_;
   TankPass tankPass_;
+  BlockPass blockPass_;
   PaddlePass paddlePass_;
   TonemapPass tonemapPass_;
   gpu::Unique<VkSampler> hdrSampler_;

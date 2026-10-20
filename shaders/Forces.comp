@@ -51,11 +51,15 @@ void main() {
               pressureTerm += other.pressure / (other.density * other.density);
             }
             force -= other.mass * pressureTerm * grad;
-            xsph += other.mass * (other.velocity - self.velocity) / otherDensity *
-                    Poly6(dot(delta, delta), p.kernelRadius);
+            if (other.flags != ParticleFlagBoundary) {
+              xsph += other.mass * (other.velocity - self.velocity) / otherDensity *
+                      Poly6(dot(delta, delta), p.kernelRadius);
+            }
           }
-          const float lap = ViscosityLaplacian(distance, p.kernelRadius);
-          force += p.viscosity * other.mass * ((other.velocity - self.velocity) / otherDensity) * lap;
+          if (other.flags != ParticleFlagBoundary) {
+            const float lap = ViscosityLaplacian(distance, p.kernelRadius);
+            force += p.viscosity * other.mass * ((other.velocity - self.velocity) / otherDensity) * lap;
+          }
         }
       }
     }
