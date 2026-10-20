@@ -96,7 +96,7 @@ std::string_view UsageText() {
   --size WxH         framebuffer size (default: 1280x720)
   --capture PATH     write the last frame as PNG (implies --headless)
   --sequence DIR     write every frame as DIR/0000.png (implies --headless)
-  --scene NAME       empty, dam, drop, or double (default: dam)
+  --scene NAME       empty, dam, drop, double, or dropin (default: dam)
   --view NAME        final, particles, density, velocity, cell, depth, smooth, thickness, normals, foam
   --solver NAME      wcsph or dfsph (default: wcsph)
   --validation       enable Vulkan validation layers (default in debug builds)

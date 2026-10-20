@@ -3,6 +3,7 @@
 #include "sim/CpuSolver.hpp"
 #include "sim/Kernels.hpp"
 
+#include <glm/common.hpp>
 #include <glm/geometric.hpp>
 
 #include <algorithm>
@@ -103,6 +104,8 @@ const char* ScenePresetName(ScenePreset preset) {
       return "drop";
     case ScenePreset::DoubleDam:
       return "double";
+    case ScenePreset::DropIn:
+      return "dropin";
   }
   return "dam";
 }
@@ -119,6 +122,9 @@ ScenePreset ParseScenePreset(std::string_view name) {
   }
   if (name == "double") {
     return ScenePreset::DoubleDam;
+  }
+  if (name == "dropin" || name == "impact") {
+    return ScenePreset::DropIn;
   }
   throw std::invalid_argument(std::format("unknown scene '{}'", name));
 }
@@ -165,6 +171,13 @@ Scene BuildScene(ScenePreset preset, const SimParams& params) {
       AddBlock(scene, rightMin, rightMax, ParticleFlagFluid);
       break;
     }
+    case ScenePreset::DropIn: {
+      AddBoxBoundaries(scene);
+      glm::vec3 poolMax = max;
+      poolMax.y = min.y + 0.34F * (max.y - min.y);
+      AddBlock(scene, min, poolMax, ParticleFlagFluid);
+      break;
+    }
   }
   CalibrateRestDensity(scene.particles, scene.params);
   CalibrateBoundaryPsi(scene);
@@ -188,6 +201,36 @@ void CalibrateBoundaryPsi(Scene& scene) {
     }
     boundary.mass = rest / std::max(sum, KernelEpsilon);
     boundary.density = rest;
+  }
+}
+
+glm::vec3 WoodenBlockStart(ScenePreset preset, const SimParams& params) {
+  const float floorY = params.domainMin.y + WoodenBlockHalf.y + params.collisionRadius();
+  if (preset != ScenePreset::DropIn) {
+    return {0.32F, floorY, 0.0F};
+  }
+  const float ceiling = params.domainMax.y - WoodenBlockHalf.y - params.collisionRadius();
+  return {0.0F, ceiling, 0.0F};
+}
+
+void AdvanceWoodenBlock(glm::vec3& center, glm::vec3& velocity, const SimParams& params) {
+  const float dt = params.timeStep * static_cast<float>(std::max(1U, params.substeps));
+  velocity += params.gravity * dt;
+  center += velocity * dt;
+  const glm::vec3 lo = params.domainMin + WoodenBlockHalf;
+  const glm::vec3 hi = params.domainMax - WoodenBlockHalf;
+  for (int axis = 0; axis < 3; ++axis) {
+    if (center[axis] < lo[axis]) {
+      center[axis] = lo[axis];
+      if (velocity[axis] < 0.0F) {
+        velocity[axis] *= -params.restitution;
+      }
+    } else if (center[axis] > hi[axis]) {
+      center[axis] = hi[axis];
+      if (velocity[axis] > 0.0F) {
+        velocity[axis] *= -params.restitution;
+      }
+    }
   }
 }
 

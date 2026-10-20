@@ -93,7 +93,20 @@ std::vector<std::uint8_t> RenderOffscreen(const gpu::Context& context,
   renderer.resize(extent);
   solver.setCursor(request.paddleCenter, request.paddleForce, request.paddleRadius, 0.0F,
                    request.paddlePush);
-  solver.setBlock(request.blockMin, request.blockMax, request.block);
+  const bool fallingBlock = request.preset == sim::ScenePreset::DropIn;
+  glm::vec3 blockCenter = 0.5F * (request.blockMin + request.blockMax);
+  glm::vec3 blockHalf = 0.5F * (request.blockMax - request.blockMin);
+  glm::vec3 blockVelocity{0.0F};
+  bool showBlock = request.block;
+  if (fallingBlock) {
+    showBlock = true;
+    blockHalf = sim::WoodenBlockHalf;
+    blockCenter = sim::WoodenBlockStart(sim::ScenePreset::DropIn, solver.params());
+  }
+  solver.setBlock(blockCenter - blockHalf, blockCenter + blockHalf, showBlock);
+  renderer.settings().blockMin = blockCenter - blockHalf;
+  renderer.settings().blockMax = blockCenter + blockHalf;
+  renderer.settings().block = showBlock;
   const render::RenderTarget renderTarget{target.handle(), target.view(), extent};
   gpu::GpuProfiler profiler(context, 1);
 
@@ -108,6 +121,13 @@ std::vector<std::uint8_t> RenderOffscreen(const gpu::Context& context,
     gpu::ImmediateSubmit(context, [&](VkCommandBuffer commandBuffer) {
       profiler.beginFrame(commandBuffer, 0);
       if (request.simulate) {
+        if (fallingBlock && frame > 0) {
+          sim::AdvanceWoodenBlock(blockCenter, blockVelocity, solver.params());
+          solver.setBlock(blockCenter - blockHalf, blockCenter + blockHalf, true);
+          renderer.settings().blockMin = blockCenter - blockHalf;
+          renderer.settings().blockMax = blockCenter + blockHalf;
+          renderer.settings().block = true;
+        }
         solver.record(commandBuffer, solver.params().substeps);
         gpu::GlobalBarrier(
             commandBuffer, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
