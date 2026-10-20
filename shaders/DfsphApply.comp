@@ -38,12 +38,17 @@ void main() {
           }
           const Particle other = pc.particles.particles[j];
           const vec3 grad = SpikyGradient(self.position - other.position, p.kernelRadius);
-          correction -= other.mass * (self.kappa + other.kappa) * grad;
+          float kappaSum = self.kappa;
+          if (other.flags != ParticleFlagBoundary) {
+            kappaSum += other.kappa;
+          }
+          correction -= other.mass * kappaSum * grad;
         }
       }
     }
   }
 
   self.velocity += correction * p.dt;
+  LimitSpeed(self.velocity, p);
   pc.particles.particles[i] = self;
 }

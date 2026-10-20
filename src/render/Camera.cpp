@@ -82,6 +82,11 @@ void Camera::pan(glm::vec2 localDelta) {
   target_ += ((basis.right * localDelta.x) + (basis.up * localDelta.y)) * speed;
 }
 
+void Camera::truck(float right, float up, float forward) {
+  const Basis basis = CameraBasis(this->forward());
+  target_ += (basis.right * right) + (basis.up * up) + (basis.forward * forward);
+}
+
 glm::vec3 Camera::position() const {
   const float cosPitch = std::cos(pitch_);
   const glm::vec3 offset{

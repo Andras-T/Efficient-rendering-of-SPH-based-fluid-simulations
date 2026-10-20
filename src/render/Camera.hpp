@@ -26,6 +26,7 @@ class Camera {
   void orbit(float deltaYaw, float deltaPitch);
   void dolly(float delta);
   void pan(glm::vec2 localDelta);
+  void truck(float right, float up, float forward);
 
   [[nodiscard]] glm::vec3 target() const { return target_; }
   [[nodiscard]] float distance() const { return distance_; }

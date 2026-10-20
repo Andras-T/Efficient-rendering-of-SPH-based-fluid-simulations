@@ -73,7 +73,7 @@ GpuSimParams MakeGpuParams(const SimParams& params, const Grid& grid, std::uint3
       .viscosity = params.viscosity,
       .dt = params.timeStep,
       .restitution = params.restitution,
-      .collisionRadius = params.particleSpacing * 0.5F,
+      .collisionRadius = params.collisionRadius(),
       .invCellSize = 1.0F / grid.cellSize,
       .gridSize = grid.size,
       .particleCount = particleCount,
@@ -85,6 +85,7 @@ GpuSimParams MakeGpuParams(const SimParams& params, const Grid& grid, std::uint3
       .densityIterations = params.densityIterations,
       .foamCapacity = FoamCapacity,
       .foamDt = params.timeStep * static_cast<float>(std::max(1U, params.substeps)),
+      .xsph = params.xsph,
   };
 }
 
@@ -164,8 +165,7 @@ void SphSolver::ensureGridBuffers(std::uint32_t cellCount) {
 
 void SphSolver::writeParams(std::uint32_t particleCount, std::uint32_t cellCount) {
   const Grid grid = MakeGrid(paramsHost_);
-  const float mass =
-      particleCount == 0 ? paramsHost_.mass() : particles_.mapped<Particle>().front().mass;
+  const float mass = paramsHost_.mass();
   GpuSimParams gpu = MakeGpuParams(paramsHost_, grid, particleCount, mass, cursorPosition_,
                                    cursorForce_, cursorRadius_);
   gpu.cellCount = cellCount;

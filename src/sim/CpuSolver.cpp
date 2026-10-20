@@ -113,6 +113,7 @@ void ComputeForces(std::span<Particle> particles, const SimParams& params) {
       continue;
     }
     glm::vec3 force{0.0F};
+    glm::vec3 xsph{0.0F};
     const Particle& self = particles[i];
     ForNeighbors(i, particles, neighbors, [&](std::uint32_t j, const Particle& other) {
       if (j == i) {
@@ -121,31 +122,51 @@ void ComputeForces(std::span<Particle> particles, const SimParams& params) {
       const glm::vec3 delta = self.position - other.position;
       const float distance = glm::length(delta);
       const glm::vec3 grad = SpikyGradient(delta, h);
+      const float otherDensity = std::max(other.density, KernelEpsilon);
       if (!dfsph) {
         float pressureTerm = self.pressure / (self.density * self.density);
         if (other.flags != ParticleFlagBoundary) {
           pressureTerm += other.pressure / (other.density * other.density);
         }
         force -= other.mass * pressureTerm * grad;
+        xsph += other.mass * (other.velocity - self.velocity) / otherDensity *
+                Poly6(glm::dot(delta, delta), h);
       }
       const float lap = ViscosityLaplacian(distance, h);
-      const float otherDensity = std::max(other.density, KernelEpsilon);
       force +=
           params.viscosity * other.mass * ((other.velocity - self.velocity) / otherDensity) * lap;
     });
     particles[i].force = force;
+    if (!dfsph) {
+      particles[i].velocity += params.xsph * xsph;
+    }
   }
 }
 
 glm::vec3 CpuNonPressureAccel(const Particle& particle, const SimParams& params) {
-  return particle.force / particle.density + params.gravity;
+  return particle.force + params.gravity;
+}
+
+void LimitSpeedCpu(Particle& particle, const SimParams& params) {
+  const float vmax = params.cflSpeed();
+  const float speed = glm::length(particle.velocity);
+  if (speed > vmax) {
+    particle.velocity *= vmax / speed;
+  }
 }
 
 void CollideCpu(Particle& particle, const SimParams& params) {
-  const float radius = params.particleSpacing * 0.5F;
+  const float radius = params.collisionRadius();
+  const glm::vec3 minBound = params.domainMin + glm::vec3(radius);
+  const glm::vec3 maxBound = params.domainMax - glm::vec3(radius);
+  if (!std::isfinite(particle.position.x) || !std::isfinite(particle.velocity.x)) {
+    particle.position = 0.5F * (minBound + maxBound);
+    particle.velocity = glm::vec3{0.0F};
+    return;
+  }
   for (int axis = 0; axis < 3; ++axis) {
-    const float lo = params.domainMin[axis] + radius;
-    const float hi = params.domainMax[axis] - radius;
+    const float lo = minBound[axis];
+    const float hi = maxBound[axis];
     if (particle.position[axis] < lo) {
       particle.position[axis] = lo;
       if (particle.velocity[axis] < 0.0F) {
@@ -158,6 +179,7 @@ void CollideCpu(Particle& particle, const SimParams& params) {
       }
     }
   }
+  LimitSpeedCpu(particle, params);
 }
 
 void Integrate(std::span<Particle> particles, const SimParams& params, float timeStep) {
@@ -241,9 +263,14 @@ void ApplyKappa(std::span<Particle> particles, const SimParams& params, bool den
         return;
       }
       const glm::vec3 grad = SpikyGradient(particles[i].position - other.position, h);
-      correction -= other.mass * (particles[i].kappa + other.kappa) * grad;
+      float kappaSum = particles[i].kappa;
+      if (other.flags != ParticleFlagBoundary) {
+        kappaSum += other.kappa;
+      }
+      correction -= other.mass * kappaSum * grad;
     });
     particles[i].velocity += correction * dt;
+    LimitSpeedCpu(particles[i], params);
   }
 }
 
@@ -258,6 +285,7 @@ void StepDfsph(std::span<Particle> particles, const SimParams& params) {
       continue;
     }
     particle.velocity += CpuNonPressureAccel(particle, params) * dt;
+    LimitSpeedCpu(particle, params);
   }
   ComputeAlpha(particles, params);
   const std::uint32_t densityIters = std::max(1U, params.densityIterations);
@@ -326,12 +354,22 @@ float MeanInteriorDensity(std::span<const Particle> particles, const SimParams& 
 
 void CalibrateRestDensity(std::span<Particle> particles, SimParams& params) {
   ComputeDensityAndPressure(particles, params);
+  const float margin = params.supportRadius();
   float packed = 0.0F;
   for (const Particle& particle : particles) {
     if (particle.flags != ParticleFlagFluid) {
       continue;
     }
-    packed = std::max(packed, particle.density);
+    bool interior = true;
+    for (int axis = 0; axis < 3; ++axis) {
+      if (particle.position[axis] < params.domainMin[axis] + margin ||
+          particle.position[axis] > params.domainMax[axis] - margin) {
+        interior = false;
+      }
+    }
+    if (interior) {
+      packed = std::max(packed, particle.density);
+    }
   }
   if (packed > KernelEpsilon) {
     params.restDensity = packed;

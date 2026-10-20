@@ -141,7 +141,7 @@ int RunWindowed(const Options& options) {
                "vkResetCommandPool");
 
     imgui.beginFrame();
-    ui::ApplyCameraInput(camera);
+    ui::ApplyCameraInput(camera, solver.params().domainMin, solver.params().domainMax);
     ui::HudState hud{
         .deviceName = context.deviceName(),
         .extent = swapchain.extent(),

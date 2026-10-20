@@ -23,6 +23,18 @@ TEST(CameraTest, OrbitKeepsDistanceAndLooksAtTarget) {
   EXPECT_GT(glm::dot(glm::normalize(toTarget), camera.forward()), 0.999F);
 }
 
+TEST(CameraTest, TruckMovesTargetAlongView) {
+  Camera camera;
+  camera.setYawPitch(0.0F, 0.0F);
+  camera.setTarget({0.0F, 0.0F, 0.0F});
+  camera.setDistance(3.0F);
+  const glm::vec3 before = camera.position();
+  camera.truck(0.0F, 0.0F, 1.0F);
+  EXPECT_LT(camera.target().z, -0.5F);
+  EXPECT_NEAR(camera.distance(), 3.0F, 1.0e-4F);
+  EXPECT_GT(glm::length(camera.position() - before), 0.5F);
+}
+
 TEST(CameraTest, DollyAndPanMoveAsExpected) {
   Camera camera;
   camera.setYawPitch(0.0F, 0.0F);

@@ -7,6 +7,7 @@
 #include <glm/geometric.hpp>
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cmath>
 #include <vector>
 
@@ -16,11 +17,12 @@ namespace {
 sim::Scene MakeCloud() {
   sim::SimParams params;
   params.particleSpacing = 0.08F;
-  params.domainMin = {0.0F, 0.0F, 0.0F};
-  params.domainMax = {0.40F, 0.40F, 0.40F};
-  params.timeStep = 0.0008F;
+  params.domainMin = {-0.12F, -0.12F, -0.12F};
+  params.domainMax = {0.52F, 0.52F, 0.52F};
+  params.timeStep = 0.0005F;
   params.substeps = 1;
   params.speedOfSound = 32.0F;
+  params.viscosity = 0.05F;
 
   sim::Scene scene;
   scene.params = params;
@@ -48,11 +50,11 @@ sim::Scene MakeTank() {
   sim::SimParams params;
   params.particleSpacing = 0.08F;
   params.domainMin = {0.0F, 0.0F, 0.0F};
-  params.domainMax = {0.64F, 0.64F, 0.64F};
-  params.timeStep = 0.0008F;
+  params.domainMax = {0.72F, 0.72F, 0.72F};
+  params.timeStep = 0.0005F;
   params.substeps = 4;
   params.speedOfSound = 32.0F;
-  params.viscosity = 0.40F;
+  params.viscosity = 0.05F;
 
   sim::Scene scene;
   scene.params = params;
@@ -62,9 +64,9 @@ sim::Scene MakeTank() {
       for (int x = 0; x < Extent; ++x) {
         sim::Particle particle;
         particle.position = {
-            (static_cast<float>(x) + 0.5F) * params.particleSpacing,
-            (static_cast<float>(y) + 0.5F) * params.particleSpacing,
-            (static_cast<float>(z) + 0.5F) * params.particleSpacing,
+            (static_cast<float>(x) + 1.0F) * params.particleSpacing,
+            (static_cast<float>(y) + 1.0F) * params.particleSpacing,
+            (static_cast<float>(z) + 1.0F) * params.particleSpacing,
         };
         particle.mass = params.mass();
         particle.density = params.restDensity;
@@ -190,6 +192,52 @@ TEST(GpuSphTest, DfsphOneStepMatchesCpuReference) {
   std::vector<sim::Particle> gpu = scene.particles;
   solver.download(gpu);
   ExpectMatched(gpu, cpu, scene.params.particleSpacing);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
+TEST(GpuSphTest, DamBreakStaysFinite) {
+  const gpu::Context context({.validation = true});
+  sim::Scene scene = sim::BuildScene(sim::ScenePreset::DamBreak);
+  sim::SphSolver solver(context);
+  solver.upload(scene.particles, scene.params);
+
+  constexpr int Frames = 180;
+  float maxSpeed = 0.0F;
+  float maxDensity = 0.0F;
+  for (int frame = 1; frame <= Frames; ++frame) {
+    solver.step(scene.params.substeps);
+    solver.download(scene.particles);
+    for (const sim::Particle& particle : scene.particles) {
+      if (particle.flags != sim::ParticleFlagFluid) {
+        continue;
+      }
+      ASSERT_TRUE(std::isfinite(particle.position.x)) << "NaN at frame " << frame;
+      ASSERT_TRUE(std::isfinite(particle.velocity.x)) << "NaN at frame " << frame;
+      ASSERT_TRUE(std::isfinite(particle.density)) << "NaN at frame " << frame;
+      maxSpeed = std::max(maxSpeed, glm::length(particle.velocity));
+      maxDensity = std::max(maxDensity, particle.density);
+      for (int axis = 0; axis < 3; ++axis) {
+        EXPECT_GE(particle.position[axis], scene.params.domainMin[axis] - 1.0e-3F);
+        EXPECT_LE(particle.position[axis], scene.params.domainMax[axis] + 1.0e-3F);
+      }
+    }
+  }
+
+  float minBoundDist = 1.0e9F;
+  for (const sim::Particle& fluid : scene.particles) {
+    if (fluid.flags != sim::ParticleFlagFluid) {
+      continue;
+    }
+    for (const sim::Particle& wall : scene.particles) {
+      if (wall.flags != sim::ParticleFlagBoundary) {
+        continue;
+      }
+      minBoundDist = std::min(minBoundDist, glm::distance(fluid.position, wall.position));
+    }
+  }
+  EXPECT_GT(minBoundDist, 0.25F * scene.params.particleSpacing);
+  EXPECT_LT(maxSpeed, 20.0F);
+  EXPECT_LT(maxDensity, 1.45F * scene.params.restDensity);
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 

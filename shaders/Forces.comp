@@ -23,6 +23,7 @@ void main() {
 
   const ivec3 center = CellCoords(self.position, p);
   vec3 force = vec3(0.0);
+  vec3 xsph = vec3(0.0);
   const bool dfsph = p.solverMode == SolverModeDfsph;
 
   for (int z = -1; z <= 1; ++z) {
@@ -43,15 +44,17 @@ void main() {
           const vec3 delta = self.position - other.position;
           const float distance = length(delta);
           const vec3 grad = SpikyGradient(delta, p.kernelRadius);
+          const float otherDensity = max(other.density, KernelEpsilon);
           if (!dfsph) {
             float pressureTerm = self.pressure / (self.density * self.density);
             if (other.flags != ParticleFlagBoundary) {
               pressureTerm += other.pressure / (other.density * other.density);
             }
             force -= other.mass * pressureTerm * grad;
+            xsph += other.mass * (other.velocity - self.velocity) / otherDensity *
+                    Poly6(dot(delta, delta), p.kernelRadius);
           }
           const float lap = ViscosityLaplacian(distance, p.kernelRadius);
-          const float otherDensity = max(other.density, KernelEpsilon);
           force += p.viscosity * other.mass * ((other.velocity - self.velocity) / otherDensity) * lap;
         }
       }
@@ -59,5 +62,8 @@ void main() {
   }
 
   self.force = force;
+  if (!dfsph) {
+    self.velocity += p.xsph * xsph;
+  }
   pc.particles.particles[i] = self;
 }
