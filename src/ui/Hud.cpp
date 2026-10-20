@@ -230,7 +230,7 @@ HudResult DrawHud(HudState& state) {
   ImGui::TextUnformatted("Space play/pause. Scene changes stay paused.");
   ImGui::End();
 
-  ImGui::SetNextWindowPos({12.0F, 280.0F}, ImGuiCond_FirstUseEver);
+  ImGui::SetNextWindowPos({300.0F, 12.0F}, ImGuiCond_FirstUseEver);
   ImGui::Begin("Stage", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
   int view = static_cast<int>(state.view);
   if (ImGui::Combo(
@@ -249,7 +249,7 @@ HudResult DrawHud(HudState& state) {
 
   if (state.camera != nullptr) {
     render::Camera& camera = *state.camera;
-    ImGui::SetNextWindowPos({12.0F, 500.0F}, ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos({12.0F, 520.0F}, ImGuiCond_FirstUseEver);
     ImGui::Begin("Camera", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     float yaw = Degrees(camera.yaw());
     float pitch = Degrees(camera.pitch());
