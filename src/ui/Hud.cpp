@@ -233,6 +233,8 @@ HudResult DrawHud(HudState& state) {
   ImGui::SliderFloat("Paddle size", &state.paddleRadius, 0.05F, 0.16F, "%.2f");
   ImGui::SliderFloat("Swirl", &state.paddleSwirl, 0.0F, 16.0F, "%.1f");
   ImGui::Checkbox("Wooden block", &state.showBlock);
+  ImGui::SameLine();
+  ImGui::Checkbox("Float", &state.floatBlock);
   ImGui::TextUnformatted("LMB paddle; moves the block even while paused");
   ImGui::TextUnformatted("Space play/pause. Scene changes stay paused.");
   ImGui::End();

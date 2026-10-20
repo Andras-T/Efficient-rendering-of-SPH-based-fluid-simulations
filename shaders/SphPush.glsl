@@ -14,6 +14,7 @@ layout(push_constant, scalar) uniform PushConstants {
   FoamRW foam;
   uint solvePass;
   uint foamSeed;
+  UintRW overlap;
 } pc;
 
 #endif

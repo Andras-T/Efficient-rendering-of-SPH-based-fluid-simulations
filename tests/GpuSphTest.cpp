@@ -351,6 +351,44 @@ TEST(GpuSphTest, CylinderDamBreakStaysInside) {
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 
+TEST(GpuSphTest, BlockSampleSeesThePool) {
+  const gpu::Context context({.validation = true});
+  sim::Scene scene = sim::BuildScene(sim::ScenePreset::DropIn);
+  sim::SphSolver solver(context);
+  solver.upload(scene.particles, scene.params);
+  const glm::vec3 half = sim::WoodenBlockHalf;
+  const glm::vec3 center{0.0F, 0.30F, 0.0F};
+  solver.setBlock(center - half, center + half, true);
+  solver.step(1);
+  EXPECT_GT(solver.blockWaterSurface(), 0.18F);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
+TEST(GpuSphTest, DropInBlockFloatsInsteadOfSinking) {
+  const gpu::Context context({.validation = true});
+  sim::Scene scene = sim::BuildScene(sim::ScenePreset::DropIn);
+  sim::SphSolver solver(context);
+  solver.upload(scene.particles, scene.params);
+  const glm::vec3 half = sim::WoodenBlockHalf;
+  glm::vec3 center = sim::WoodenBlockStart(sim::ScenePreset::DropIn, scene.params);
+  glm::vec3 velocity{0.0F};
+  solver.setBlock(center - half, center + half, true);
+
+  constexpr int Frames = 180;
+  for (int frame = 0; frame < Frames; ++frame) {
+    if (frame > 0) {
+      sim::AdvanceWoodenBlock(center, velocity, solver.params(), solver.blockWaterSurface(), true);
+      solver.setBlock(center - half, center + half, true);
+    }
+    solver.step(scene.params.substeps);
+  }
+  EXPECT_TRUE(std::isfinite(center.y));
+  EXPECT_GT(center.y, scene.params.domainMin.y + half.y + 0.06F)
+      << "surface " << solver.blockWaterSurface();
+  EXPECT_LT(center.y, scene.params.domainMax.y - half.y);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
 TEST(GpuSphTest, SettledTankStaysNearRestDensity) {
   const gpu::Context context({.validation = true});
   sim::Scene scene = MakeTank();

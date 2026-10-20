@@ -27,6 +27,7 @@ sph_add_shader_library(sph_shaders
     DfsphApply.comp
     FoamSpawn.comp
     FoamAdvect.comp
+    BlockSample.comp
     Foam.vert
     Foam.frag
     Tank.vert
