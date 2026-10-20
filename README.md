@@ -15,7 +15,7 @@ cmake --preset release
 cmake --build --preset release
 ctest --preset release
 build/release/bin/sph-fluid                          # window
-build/release/bin/sph-fluid --scene drop             # empty, dam, drop, or double
+build/release/bin/sph-fluid --scene drop             # empty, dam, drop, double, or dropin
 build/release/bin/sph-fluid --view depth             # stage explorer
 build/release/bin/sph-fluid --solver dfsph           # incompressible DFSPH
 build/release/bin/sph-fluid --capture out.png        # last frame
@@ -23,7 +23,7 @@ build/release/bin/sph-fluid --sequence frames --frames 12
 cmake --install build/release --prefix dist          # dist/bin/sph-fluid
 ```
 
-Starts paused so viscosity and other parameters can be set before Play. Scene changes and Reset pause again.
+Starts paused so viscosity and other parameters can be set before Play. Scene changes and Reset pause again. Drop-in hangs a wooden block over a pool until Play.
 
 Left-drag is always the paddle: a small cyan sphere sits in the tank on the mouse ray, shoves water aside, and can slide the wooden block even while paused. Uncheck Wooden block to hide it (no draw, no collision). Right-drag orbits; Shift+left or middle-drag pans; scroll zooms; WASD/QE moves; arrows look; F frames the tank. Space play/pauses. `[` `]` cycles stages (foam is last); 1–9 pick the first nine. A never changes the view.
 

@@ -45,6 +45,7 @@ TEST(OptionsTest, ParsesScenePreset) {
   EXPECT_EQ(Parse({"--scene", "drop"}).scene, sim::ScenePreset::Drop);
   EXPECT_EQ(Parse({"--scene", "double"}).scene, sim::ScenePreset::DoubleDam);
   EXPECT_EQ(Parse({"--scene", "empty"}).scene, sim::ScenePreset::Empty);
+  EXPECT_EQ(Parse({"--scene", "dropin"}).scene, sim::ScenePreset::DropIn);
   EXPECT_THROW(Parse({"--scene", "plasma"}), std::invalid_argument);
 }
 

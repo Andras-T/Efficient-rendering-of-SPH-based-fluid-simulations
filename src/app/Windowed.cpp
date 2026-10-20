@@ -93,11 +93,15 @@ int RunWindowed(const Options& options) {
   float paddleSwirl = 6.0F;
   bool showBlock = true;
   ui::CursorDrag cursorDrag;
-  const glm::vec3 blockHalf{0.10F, 0.16F, 0.10F};
-  glm::vec3 blockCenter{0.32F, 0.22F, 0.0F};
+  const glm::vec3 blockHalf = sim::WoodenBlockHalf;
+  glm::vec3 blockCenter = sim::WoodenBlockStart(preset, scene.params);
+  glm::vec3 blockVelocity{0.0F};
   const auto placeBlock = [&] {
-    blockCenter = {0.32F, scene.params.domainMin.y + blockHalf.y + scene.params.collisionRadius(),
-                   0.0F};
+    blockCenter = sim::WoodenBlockStart(preset, scene.params);
+    blockVelocity = {};
+    if (preset == sim::ScenePreset::DropIn) {
+      showBlock = true;
+    }
   };
   placeBlock();
 
@@ -217,7 +221,11 @@ int RunWindowed(const Options& options) {
           glm::clamp(cursor.position, blockCenter - blockHalf, blockCenter + blockHalf);
       if (glm::length(cursor.position - closest) < cursor.radius) {
         blockCenter += cursor.force * (1.0F / 1800.0F);
+        blockVelocity = {};
       }
+    }
+    if (!paused && showBlock && preset == sim::ScenePreset::DropIn && !cursor.grabbing) {
+      sim::AdvanceWoodenBlock(blockCenter, blockVelocity, solver.params());
     }
     const glm::vec3 domainMin = solver.params().domainMin + blockHalf;
     const glm::vec3 domainMax = solver.params().domainMax - blockHalf;

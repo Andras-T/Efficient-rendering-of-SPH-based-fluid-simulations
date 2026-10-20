@@ -29,6 +29,8 @@ int PresetIndex(sim::ScenePreset preset) {
       return 2;
     case sim::ScenePreset::DoubleDam:
       return 3;
+    case sim::ScenePreset::DropIn:
+      return 4;
     default:
       return 1;
   }
@@ -42,6 +44,8 @@ sim::ScenePreset PresetFromIndex(int index) {
       return sim::ScenePreset::Drop;
     case 3:
       return sim::ScenePreset::DoubleDam;
+    case 4:
+      return sim::ScenePreset::DropIn;
     default:
       return sim::ScenePreset::DamBreak;
   }
@@ -219,7 +223,7 @@ HudResult DrawHud(HudState& state) {
     state.solver = solver == 1 ? sim::SolverMethod::Dfsph : sim::SolverMethod::Wcsph;
   }
   int scene = PresetIndex(state.preset);
-  if (ImGui::Combo("Scene", &scene, "Empty\0Dam break\0Drop\0Double dam\0")) {
+  if (ImGui::Combo("Scene", &scene, "Empty\0Dam break\0Drop\0Double dam\0Drop-in\0")) {
     state.preset = PresetFromIndex(scene);
     result.sceneChanged = true;
   }
