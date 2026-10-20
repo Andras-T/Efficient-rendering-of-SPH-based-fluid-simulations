@@ -20,6 +20,7 @@ add_library(sph_engine STATIC
   render/BackgroundPass.cpp
   render/BlockPass.cpp
   render/Camera.cpp
+  render/CarPass.cpp
   render/DebugView.cpp
   render/FluidPass.cpp
   render/FoamPass.cpp
@@ -30,6 +31,8 @@ add_library(sph_engine STATIC
   render/TankPass.cpp
   render/SkyPass.cpp
   render/TonemapPass.cpp
+  render/WindTracerPass.cpp
+  sim/Car.cpp
   sim/CpuSolver.cpp
   sim/GpuParticles.cpp
   sim/Grid.cpp
@@ -37,6 +40,7 @@ add_library(sph_engine STATIC
   sim/SimParams.cpp
   sim/SphSolver.cpp
   sim/Tank.cpp
+  sim/WindSolver.cpp
   ui/Hud.cpp)
 target_include_directories(sph_engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(sph_engine PUBLIC

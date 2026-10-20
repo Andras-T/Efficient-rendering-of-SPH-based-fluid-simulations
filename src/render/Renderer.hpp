@@ -4,6 +4,7 @@
 #include "gpu/Image.hpp"
 #include "render/BlockPass.hpp"
 #include "render/Camera.hpp"
+#include "render/CarPass.hpp"
 #include "render/DebugView.hpp"
 #include "render/FluidPass.hpp"
 #include "render/FoamPass.hpp"
@@ -13,6 +14,7 @@
 #include "render/SkyPass.hpp"
 #include "render/TankPass.hpp"
 #include "render/TonemapPass.hpp"
+#include "render/WindTracerPass.hpp"
 #include "sim/SimParams.hpp"
 
 #include <glm/vec3.hpp>
@@ -61,6 +63,10 @@ class Renderer {
               VkDeviceAddress particles, std::uint32_t particleCount, VkDeviceAddress foam,
               std::uint32_t foamCapacity, const sim::SimParams& params,
               const OverlayCallback& overlay = {});
+  void recordWind(VkCommandBuffer commandBuffer, const RenderTarget& target, const Camera& camera,
+                  VkDeviceAddress mesh, std::uint32_t meshVertices, VkDeviceAddress tracers,
+                  std::uint32_t tracerCount, glm::vec3 domainMin, glm::vec3 domainMax,
+                  const OverlayCallback& overlay = {});
 
  private:
   const gpu::Context* context_ = nullptr;
@@ -72,6 +78,8 @@ class Renderer {
   TankPass tankPass_;
   BlockPass blockPass_;
   PaddlePass paddlePass_;
+  CarPass carPass_;
+  WindTracerPass windTracerPass_;
   TonemapPass tonemapPass_;
   gpu::Unique<VkSampler> hdrSampler_;
   gpu::Image hdr_;

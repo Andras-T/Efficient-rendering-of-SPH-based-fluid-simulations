@@ -11,6 +11,7 @@
 #include "render/Renderer.hpp"
 #include "sim/CpuSolver.hpp"
 #include "sim/SphSolver.hpp"
+#include "sim/WindSolver.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -47,8 +48,72 @@ void CopyTargetToBuffer(VkCommandBuffer commandBuffer, VkImage image, VkBuffer b
 
 }  // namespace
 
+std::vector<std::uint8_t> RenderWindOffscreen(const gpu::Context& context,
+                                              const OffscreenRequest& request) {
+  const VkExtent2D extent = request.extent;
+  const gpu::Image target(
+      context, {
+                   .extent = extent,
+                   .format = CaptureFormat,
+                   .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+               });
+  const VkDeviceSize byteCount = VkDeviceSize{extent.width} * extent.height * BytesPerPixel;
+  const gpu::Buffer readback(context,
+                             {
+                                 .size = byteCount,
+                                 .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                 .allocationFlags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT |
+                                                    VMA_ALLOCATION_CREATE_MAPPED_BIT,
+                             });
+  sim::WindSolver wind(context);
+  render::Camera ownedCamera;
+  ownedCamera.setAspect(extent);
+  ownedCamera.setTarget({0.02F, 0.12F, 0.0F});
+  ownedCamera.setYawPitch(0.95F, 0.32F);
+  ownedCamera.setDistance(1.30F);
+  const render::Camera& camera = request.camera == nullptr ? ownedCamera : *request.camera;
+  render::Renderer renderer(context, CaptureFormat);
+  renderer.settings().view = request.view;
+  renderer.resize(extent);
+  const render::RenderTarget renderTarget{target.handle(), target.view(), extent};
+  if (!request.sequenceDirectory.empty()) {
+    std::filesystem::create_directories(request.sequenceDirectory);
+  }
+  std::vector<std::uint8_t> lastFrame;
+  const std::uint32_t frameCount = std::max(request.frames, 1U);
+  for (std::uint32_t frame = 0; frame < frameCount; ++frame) {
+    const bool needPixels = !request.sequenceDirectory.empty() || (frame + 1 >= frameCount);
+    gpu::ImmediateSubmit(context, [&](VkCommandBuffer commandBuffer) {
+      if (request.simulate) {
+        wind.record(commandBuffer, 1);
+      }
+      renderer.recordWind(commandBuffer, renderTarget, camera, wind.meshAddress(),
+                          wind.meshVertexCount(), wind.tracerAddress(), wind.tracerCount(),
+                          wind.domainMin(), wind.domainMax());
+      if (needPixels) {
+        CopyTargetToBuffer(commandBuffer, target.handle(), readback.handle(), extent);
+      }
+    });
+    if (!needPixels) {
+      continue;
+    }
+    readback.invalidate();
+    const auto pixels = readback.mapped<const std::uint8_t>();
+    if (!request.sequenceDirectory.empty()) {
+      WritePng(SequenceFramePath(request.sequenceDirectory, frame), extent, pixels);
+    }
+    if (frame + 1 >= frameCount) {
+      lastFrame.assign(pixels.begin(), pixels.end());
+    }
+  }
+  return lastFrame;
+}
+
 std::vector<std::uint8_t> RenderOffscreen(const gpu::Context& context,
                                           const OffscreenRequest& request) {
+  if (request.simulation == SimulationKind::WindTunnel) {
+    return RenderWindOffscreen(context, request);
+  }
   const VkExtent2D extent = request.extent;
   const gpu::Image target(
       context, {
@@ -192,11 +257,12 @@ int RunHeadless(const Options& options) {
                                                 .view = options.view,
                                                 .walls = render::WallDisplay::Glass,
                                                 .solver = options.solver,
-                                                .tankShape = options.tank});
+                                                .tankShape = options.tank,
+                                                .simulation = options.simulation});
   const std::chrono::duration<double, std::milli> elapsed =
       std::chrono::steady_clock::now() - start;
   LogInfo("Rendered {} frame(s) of '{}' at {}x{} in {:.1f} ms", options.frames,
-          sim::ScenePresetName(options.scene), extent.width, extent.height, elapsed.count());
+          SimulationKindName(options.simulation), extent.width, extent.height, elapsed.count());
 
   if (!options.capturePath.empty()) {
     WritePng(options.capturePath, extent, pixels);

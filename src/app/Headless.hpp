@@ -38,6 +38,7 @@ struct OffscreenRequest {
   bool buoyant = true;
   sim::SolverMethod solver = sim::SolverMethod::Wcsph;
   sim::TankShape tankShape = sim::TankShape::Box;
+  SimulationKind simulation = SimulationKind::Fluid;
 };
 
 // Renders offscreen and returns the last frame as tightly packed sRGB RGBA8.

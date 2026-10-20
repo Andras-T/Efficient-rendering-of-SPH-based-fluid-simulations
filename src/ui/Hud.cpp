@@ -98,7 +98,7 @@ void DrawSimulationMenu(HudState& state) {
     StartSelectedSimulation(state);
   }
   ImGui::EndDisabled();
-  ImGui::TextWrapped("Space starts Fluid. Wind tunnel and Smoke plug in here later.");
+  ImGui::TextWrapped("Space starts the selected sim. Smoke is coming soon.");
   ImGui::End();
 }
 
@@ -115,6 +115,14 @@ void ApplyHotkeys(HudState& state) {
     }
   }
   if (state.showMenu) {
+    return;
+  }
+  if (state.simulation == SimulationKind::WindTunnel) {
+    if (ImGui::IsKeyPressed(ImGuiKey_LeftBracket) || ImGui::IsKeyPressed(ImGuiKey_RightBracket) ||
+        ImGui::IsKeyPressed(ImGuiKey_2) || ImGui::IsKeyPressed(ImGuiKey_3)) {
+      state.view = state.view == render::DebugView::Velocity ? render::DebugView::Final
+                                                             : render::DebugView::Velocity;
+    }
     return;
   }
   if (ImGui::IsKeyPressed(ImGuiKey_LeftBracket)) {
@@ -276,51 +284,71 @@ HudResult DrawHud(HudState& state) {
     state.showMenu = true;
     state.paused = true;
   }
-  ImGui::Text("dt %.4f x %u", static_cast<double>(state.timeStep), state.substeps);
-  ImGui::Text("rest density %.1f", static_cast<double>(state.restDensity));
-  ImGui::SliderFloat("Viscosity", &state.viscosity, 0.0F, 0.40F, "%.3f");
-  int solver = state.solver == sim::SolverMethod::Dfsph ? 1 : 0;
-  if (ImGui::Combo("Solver", &solver, "WCSPH\0DFSPH\0")) {
-    state.solver = solver == 1 ? sim::SolverMethod::Dfsph : sim::SolverMethod::Wcsph;
-  }
-  int scene = PresetIndex(state.preset);
-  if (ImGui::Combo("Scene", &scene, "Empty\0Dam break\0Drop\0Double dam\0Drop-in\0")) {
-    state.preset = PresetFromIndex(scene);
-    result.sceneChanged = true;
-  }
-  if (ImGui::Button("Reset")) {
-    result.resetScene = true;
-  }
-  ImGui::SliderFloat("Paddle size", &state.paddleRadius, 0.05F, 0.16F, "%.2f");
-  ImGui::SliderFloat("Swirl", &state.paddleSwirl, 0.0F, 16.0F, "%.1f");
-  ImGui::Checkbox("Wooden block", &state.showBlock);
-  ImGui::SameLine();
-  ImGui::Checkbox("Float", &state.floatBlock);
-  ImGui::TextUnformatted("LMB paddle; moves the block even while paused");
-  ImGui::TextUnformatted("Space play/pause. Scene changes stay paused.");
-  ImGui::End();
+  if (state.simulation == SimulationKind::WindTunnel) {
+    ImGui::TextUnformatted("Wind tunnel  LBM D3Q19");
+    ImGui::SliderFloat("Inlet speed", &state.windSpeed, 0.03F, 0.12F, "%.3f");
+    if (ImGui::Button("Reset")) {
+      result.resetScene = true;
+    }
+    ImGui::TextUnformatted("Space play/pause. [ ] toggles velocity.");
+    ImGui::End();
 
-  ImGui::SetNextWindowPos({300.0F, 12.0F}, ImGuiCond_FirstUseEver);
-  ImGui::Begin("Stage", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-  int view = static_cast<int>(state.view);
-  if (ImGui::Combo(
-          "View", &view,
-          "Final\0Particles\0Density\0Velocity\0Cell\0Depth\0Smooth\0Thickness\0Normals\0Foam\0")) {
-    state.view = static_cast<render::DebugView>(view);
+    ImGui::SetNextWindowPos({300.0F, 12.0F}, ImGuiCond_FirstUseEver);
+    ImGui::Begin("Stage", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+    int windView = state.view == render::DebugView::Velocity ? 1 : 0;
+    if (ImGui::Combo("View", &windView, "Final\0Velocity\0")) {
+      state.view = windView == 1 ? render::DebugView::Velocity : render::DebugView::Final;
+    }
+    ImGui::SliderFloat("Exposure", &state.exposure, 0.05F, 4.0F, "%.2f");
+    ImGui::End();
+  } else {
+    ImGui::Text("dt %.4f x %u", static_cast<double>(state.timeStep), state.substeps);
+    ImGui::Text("rest density %.1f", static_cast<double>(state.restDensity));
+    ImGui::SliderFloat("Viscosity", &state.viscosity, 0.0F, 0.40F, "%.3f");
+    int solver = state.solver == sim::SolverMethod::Dfsph ? 1 : 0;
+    if (ImGui::Combo("Solver", &solver, "WCSPH\0DFSPH\0")) {
+      state.solver = solver == 1 ? sim::SolverMethod::Dfsph : sim::SolverMethod::Wcsph;
+    }
+    int scene = PresetIndex(state.preset);
+    if (ImGui::Combo("Scene", &scene, "Empty\0Dam break\0Drop\0Double dam\0Drop-in\0")) {
+      state.preset = PresetFromIndex(scene);
+      result.sceneChanged = true;
+    }
+    if (ImGui::Button("Reset")) {
+      result.resetScene = true;
+    }
+    ImGui::SliderFloat("Paddle size", &state.paddleRadius, 0.05F, 0.16F, "%.2f");
+    ImGui::SliderFloat("Swirl", &state.paddleSwirl, 0.0F, 16.0F, "%.1f");
+    ImGui::Checkbox("Wooden block", &state.showBlock);
+    ImGui::SameLine();
+    ImGui::Checkbox("Float", &state.floatBlock);
+    ImGui::TextUnformatted("LMB paddle; moves the block even while paused");
+    ImGui::TextUnformatted("Space play/pause. Scene changes stay paused.");
+    ImGui::End();
+
+    ImGui::SetNextWindowPos({300.0F, 12.0F}, ImGuiCond_FirstUseEver);
+    ImGui::Begin("Stage", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+    int view = static_cast<int>(state.view);
+    if (ImGui::Combo(
+            "View", &view,
+            "Final\0Particles\0Density\0Velocity\0Cell\0Depth\0Smooth\0Thickness\0Normals\0"
+            "Foam\0")) {
+      state.view = static_cast<render::DebugView>(view);
+    }
+    int walls = static_cast<int>(state.walls);
+    if (ImGui::Combo("Walls", &walls, "Hidden\0Glass\0Particles\0")) {
+      state.walls = static_cast<render::WallDisplay>(walls);
+    }
+    int tank = static_cast<int>(state.tankShape);
+    if (ImGui::Combo("Tank", &tank, "Cube\0Cylinder\0Hexagon\0")) {
+      state.tankShape = static_cast<sim::TankShape>(tank);
+      result.sceneChanged = true;
+    }
+    ImGui::SliderFloat("Exposure", &state.exposure, 0.05F, 4.0F, "%.2f");
+    ImGui::SliderFloat3("Absorption", &state.absorption.x, 0.0F, 8.0F, "%.2f");
+    ImGui::TextUnformatted("[ ] cycles stages (foam is last). 1-9 pick the first nine.");
+    ImGui::End();
   }
-  int walls = static_cast<int>(state.walls);
-  if (ImGui::Combo("Walls", &walls, "Hidden\0Glass\0Particles\0")) {
-    state.walls = static_cast<render::WallDisplay>(walls);
-  }
-  int tank = static_cast<int>(state.tankShape);
-  if (ImGui::Combo("Tank", &tank, "Cube\0Cylinder\0Hexagon\0")) {
-    state.tankShape = static_cast<sim::TankShape>(tank);
-    result.sceneChanged = true;
-  }
-  ImGui::SliderFloat("Exposure", &state.exposure, 0.05F, 4.0F, "%.2f");
-  ImGui::SliderFloat3("Absorption", &state.absorption.x, 0.0F, 8.0F, "%.2f");
-  ImGui::TextUnformatted("[ ] cycles stages (foam is last). 1-9 pick the first nine.");
-  ImGui::End();
 
   if (state.camera != nullptr) {
     render::Camera& camera = *state.camera;
