@@ -4,7 +4,7 @@ Real-time fluid simulation on the GPU: smoothed particle hydrodynamics in Vulkan
 
 ![Dam break](docs/showcase.gif)
 
-WCSPH by default (Tait EOS, poly6 / spiky / viscosity Laplacian) on a uniform grid, with DFSPH as a toggle. Solid walls use Akinci boundary particles. Diffuse foam and spray spawn from splashes and crests. Screen-space fluid rendering: eye-depth impostors, additive thickness, narrow-range smoothing, Schlick Fresnel, Beer–Lambert absorption, and a Poly Haven HDRI.
+WCSPH by default (Tait EOS, poly6 / spiky / viscosity Laplacian) on a uniform grid, with DFSPH as a toggle. Solid walls use Akinci boundary particles. Wet foam pads spawn on crests. Screen-space fluid rendering: eye-depth impostors, additive thickness, bilateral smoothing, HDRI refraction/reflection, a faint meniscus at the glass, and a Poly Haven HDRI.
 
 ## Build
 

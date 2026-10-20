@@ -21,24 +21,25 @@ float SampleDepth(sampler2D depthImage, vec2 uv) {
 }
 
 vec3 FluidNormal(vec2 uv, float center, vec2 texel) {
-  const float zx1 = SampleDepth(smoothDepth, uv + vec2(texel.x, 0.0));
-  const float zx0 = SampleDepth(smoothDepth, uv - vec2(texel.x, 0.0));
-  const float zy1 = SampleDepth(smoothDepth, uv + vec2(0.0, texel.y));
-  const float zy0 = SampleDepth(smoothDepth, uv - vec2(0.0, texel.y));
+  const vec2 tap = texel * 1.25;
+  float zx1 = SampleDepth(smoothDepth, uv + vec2(tap.x, 0.0));
+  float zx0 = SampleDepth(smoothDepth, uv - vec2(tap.x, 0.0));
+  float zy1 = SampleDepth(smoothDepth, uv + vec2(0.0, tap.y));
+  float zy0 = SampleDepth(smoothDepth, uv - vec2(0.0, tap.y));
 
-  vec2 offset = vec2(texel.x, 0.0);
+  vec2 offset = vec2(tap.x, 0.0);
   float neighbor = zx1;
   if (zx1 <= 0.0 || (zx0 > 0.0 && abs(zx0 - center) < abs(zx1 - center))) {
-    offset = vec2(-texel.x, 0.0);
+    offset = vec2(-tap.x, 0.0);
     neighbor = zx0;
   }
   const vec3 p = ViewPosition(uv, center, frame.projection);
   vec3 dx = ViewPosition(uv + offset, neighbor > 0.0 ? neighbor : center, frame.projection) - p;
 
-  offset = vec2(0.0, texel.y);
+  offset = vec2(0.0, tap.y);
   neighbor = zy1;
   if (zy1 <= 0.0 || (zy0 > 0.0 && abs(zy0 - center) < abs(zy1 - center))) {
-    offset = vec2(0.0, -texel.y);
+    offset = vec2(0.0, -tap.y);
     neighbor = zy0;
   }
   vec3 dy = ViewPosition(uv + offset, neighbor > 0.0 ? neighbor : center, frame.projection) - p;
@@ -53,19 +54,33 @@ vec3 FluidNormal(vec2 uv, float center, vec2 texel) {
 vec3 ShadeFluid(vec2 uv, float eyeDepth, vec3 normal, float thickness) {
   const vec3 viewPos = ViewPosition(uv, eyeDepth, frame.projection);
   const vec3 viewDir = normalize(-viewPos);
-  const vec3 worldN = normalize(mat3(frame.inverseView) * normal);
+  vec3 worldN = normalize(mat3(frame.inverseView) * normal);
+  const vec3 worldP = (frame.inverseView * vec4(viewPos, 1.0)).xyz;
   const vec3 worldI = normalize(mat3(frame.inverseView) * (-viewDir));
+
+  const vec3 gap = min(worldP - frame.domainMin, frame.domainMax - worldP);
+  const float wall = min(gap.x, min(gap.y, gap.z));
+  const float contact = 1.0 - smoothstep(0.0, frame.radius * 2.6, wall);
+  worldN = normalize(mix(worldN, vec3(0.0, 1.0, 0.0), contact * 0.18));
+
   const vec3 reflected = reflect(worldI, worldN);
-  const vec3 refracted = refract(worldI, worldN, 1.0 / max(frame.ior, 1.01));
+  vec3 refracted = refract(worldI, worldN, 1.0 / max(frame.ior, 1.01));
+  if (refracted == vec3(0.0)) {
+    refracted = reflected;
+  }
   const vec3 envRefl = SampleEquirect(hdri, reflected);
-  const vec3 envRefr = SampleEquirect(hdri, refracted == vec3(0.0) ? reflected : refracted);
-  const vec3 transmitted = envRefr * exp(-frame.absorption * max(thickness, 0.0));
+  const vec3 envRefr = SampleEquirect(hdri, refracted);
+  const float optical = max(thickness, 0.0) * 2.85;
+  vec3 transmitted = envRefr * exp(-frame.absorption * optical);
+  transmitted *= mix(1.0, 0.70, contact);
+
+  const float ndotv = clamp(dot(normal, viewDir), 0.0, 1.0);
   const float f0 = pow((1.0 - frame.ior) / (1.0 + frame.ior), 2.0);
-  const float fresnel = f0 + (1.0 - f0) * pow(1.0 - clamp(dot(normal, viewDir), 0.0, 1.0), 5.0);
-  const vec3 light = normalize(mat3(frame.view) * frame.lightDirection);
-  const vec3 halfDir = normalize(light + viewDir);
-  const float specular = pow(max(dot(normal, halfDir), 0.0), 48.0);
-  return mix(transmitted, envRefl, fresnel) + vec3(0.28 * specular);
+  float fresnel = f0 + (1.0 - f0) * pow(1.0 - ndotv, 5.0);
+  fresnel = mix(fresnel, min(1.0, fresnel + 0.22), contact);
+  vec3 color = mix(transmitted, envRefl, fresnel);
+  color += envRefl * envRefl * (0.04 + 0.10 * fresnel);
+  return color;
 }
 
 void main() {
@@ -79,7 +94,7 @@ void main() {
     return;
   }
   if (eyeDepth <= 0.0 ||
-      (frame.debugView == DebugViewFinal && thickness < frame.radius * 1.25)) {
+      (frame.debugView == DebugViewFinal && thickness < frame.radius * 0.45)) {
     if (frame.debugView == DebugViewFinal) {
       discard;
     }
@@ -97,5 +112,8 @@ void main() {
     return;
   }
 
-  outColor = vec4(ShadeFluid(inUv, eyeDepth, normal, thickness), 1.0);
+  const vec3 color = ShadeFluid(inUv, eyeDepth, normal, thickness);
+  const float coverage = mix(0.78, 1.0, smoothstep(frame.radius * 0.45, frame.radius * 1.8, thickness));
+  const float alpha = (frame.debugView == DebugViewFinal) ? coverage : 1.0;
+  outColor = vec4(color, alpha);
 }

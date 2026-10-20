@@ -29,8 +29,8 @@ void main() {
     return;
   }
 
-  const float radius = frame.radius * (particle.flags == ParticleFlagFluid ? mix(0.70, 1.0, scale)
-                                                                          : 1.0);
+  const float radius =
+      frame.radius * (particle.flags == ParticleFlagFluid ? mix(0.82, 1.12, scale) : 1.0);
   const vec3 center = (frame.view * vec4(particle.position, 1.0)).xyz;
   const vec2 corner = kCorners[gl_VertexIndex];
   const vec3 viewPos = center + vec3(corner * (radius * 2.0), 0.0);

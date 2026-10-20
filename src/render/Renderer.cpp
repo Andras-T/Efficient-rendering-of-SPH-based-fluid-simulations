@@ -195,7 +195,7 @@ void Renderer::record(VkCommandBuffer commandBuffer, const RenderTarget& target,
   skyPass_.record(commandBuffer, frameAddress);
   vkCmdEndRendering(commandBuffer);
 
-  const float foamRadius = params.renderRadius() * 0.62F;
+  const float foamRadius = params.renderRadius() * 1.22F;
   const bool glass = settings_.walls == WallDisplay::Glass;
   const bool wallParticles = settings_.walls == WallDisplay::Particles;
   const bool showPaddle = settings_.paddleRadius > 0.0F;
