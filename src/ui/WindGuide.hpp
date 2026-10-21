@@ -23,8 +23,9 @@ inline constexpr std::array WindGuideSteps{
                   "wall; the rest of the domain starts as fluid cells.",
                   render::DebugView::Final, false, false, false},
     WindGuideStep{"Car",
-                  "The formula car is a solid. Lattice cells inside the body use bounce-back, so "
-                  "air cannot stream through the mesh.",
+                  "The default body is an FIA-style 2022 open-wheeler: multi-element wings, "
+                  "venturi floor, diffuser, sidepods, and 18-inch wheels. Cells inside the mesh "
+                  "use bounce-back. The surface is colored by pressure coefficient, not paint.",
                   render::DebugView::Final, true, false, false},
     WindGuideStep{"Inlet",
                   "The left face injects equilibrium flow at the inlet speed. A volume heatmap of "
@@ -39,8 +40,8 @@ inline constexpr std::array WindGuideSteps{
                   "velocity field. They sketch streamlines; they are not the solver.",
                   render::DebugView::Final, true, true, false},
     WindGuideStep{"Final",
-                  "The shaded car, ground, HDRI, and a volume raymarch of the lattice wake. This "
-                  "is D3Q19 LBM, not a particle spray.",
+                  "Cp on the body (blue suction, red high pressure), ground, HDRI, and a volume "
+                  "raymarch of the lattice wake. This is D3Q19 LBM, not a particle spray.",
                   render::DebugView::Final, true, false, true},
 };
 

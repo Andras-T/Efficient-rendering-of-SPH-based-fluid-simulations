@@ -54,7 +54,11 @@ target_compile_definitions(sph_engine PUBLIC
   GLFW_INCLUDE_NONE
   GLM_FORCE_DEPTH_ZERO_TO_ONE
   GLM_FORCE_RADIANS)
-target_compile_definitions(sph_engine PRIVATE "SPH_HDRI_PATH=\"${SPH_HDRI_PATH}\"")
+set(SPH_FORMULA_MESH "${PROJECT_SOURCE_DIR}/assets/formula-car/formula2022.stl")
+file(TO_CMAKE_PATH "${SPH_FORMULA_MESH}" SPH_FORMULA_MESH_PATH)
+target_compile_definitions(sph_engine PRIVATE
+  "SPH_HDRI_PATH=\"${SPH_HDRI_PATH}\""
+  "SPH_FORMULA_MESH_PATH=\"${SPH_FORMULA_MESH_PATH}\"")
 target_link_libraries(sph_engine
   PUBLIC volk::volk vk-bootstrap::vk-bootstrap GPUOpen::VulkanMemoryAllocator glm::glm glfw
   PRIVATE imgui stb sph_shaders assimp::assimp)

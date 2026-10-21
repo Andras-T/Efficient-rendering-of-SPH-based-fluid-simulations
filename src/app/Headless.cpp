@@ -90,10 +90,12 @@ std::vector<std::uint8_t> RenderWindOffscreen(const gpu::Context& context,
   const std::uint32_t frameCount = std::max(request.frames, 1U);
   for (std::uint32_t frame = 0; frame < frameCount; ++frame) {
     const bool needPixels = !request.sequenceDirectory.empty() || (frame + 1 >= frameCount);
+    if (request.simulate) {
+      gpu::ImmediateSubmit(context,
+                           [&](VkCommandBuffer commandBuffer) { wind.record(commandBuffer, 1); });
+      wind.refreshAero();
+    }
     gpu::ImmediateSubmit(context, [&](VkCommandBuffer commandBuffer) {
-      if (request.simulate) {
-        wind.record(commandBuffer, 1);
-      }
       renderer.recordWind(commandBuffer, renderTarget, camera, wind.meshAddress(),
                           wind.meshVertexCount(), wind.tracerAddress(), wind.tracerCount(),
                           wind.macroAddress(), wind.occupancyAddress(), wind.domain().grid,

@@ -4,10 +4,13 @@
 #include "sim/Mesh.hpp"
 #include "sim/WindSolver.hpp"
 
+#include <glm/common.hpp>
+#include <glm/geometric.hpp>
 #include <gtest/gtest.h>
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <filesystem>
 #include <vector>
 
@@ -18,7 +21,11 @@ TEST(GpuWindTest, InletStaysFastAndTheCarMakesAWake) {
   const gpu::Context context({.validation = true});
   sim::WindSolver wind(context);
   wind.step(48);
-  const auto occupancy = sim::BuildWindOccupancy(wind.domain());
+  const auto cellCount = static_cast<std::size_t>(wind.domain().grid.x) *
+                         static_cast<std::size_t>(wind.domain().grid.y) *
+                         static_cast<std::size_t>(wind.domain().grid.z);
+  std::vector<std::uint32_t> occupancy(cellCount);
+  wind.downloadOccupancy(occupancy);
   std::vector<glm::vec4> macro(occupancy.size());
   wind.downloadMacro(macro);
   const glm::uvec3 grid = wind.domain().grid;
@@ -74,6 +81,28 @@ TEST(GpuWindTest, TracersStayFinite) {
     }
   }
   EXPECT_GT(inside, tracers.size() / 2);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
+TEST(GpuWindTest, SurfaceColorsSpanTheCpLegend) {
+  const gpu::Context context({.validation = true});
+  sim::WindSolver wind(context);
+  wind.step(64);
+  wind.refreshAero();
+  glm::vec3 mn{1.0F};
+  glm::vec3 mx{0.0F};
+  bool suction = false;
+  bool highPressure = false;
+  for (const sim::MeshVertex& vertex : wind.cpuMesh()) {
+    mn = glm::min(mn, vertex.color);
+    mx = glm::max(mx, vertex.color);
+    suction = suction || (vertex.color.z > vertex.color.x + 0.12F);
+    highPressure = highPressure || (vertex.color.x > vertex.color.z + 0.12F);
+  }
+  EXPECT_GT(glm::length(mx - mn), 0.12F);
+  EXPECT_TRUE(suction || highPressure);
+  EXPECT_LT(wind.aero().cpMin, 0.0F);
+  EXPECT_GT(wind.aero().cpMax, 0.0F);
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 

@@ -19,8 +19,7 @@ void main() {
   const vec3 light = normalize(frame.lightDirection);
   const float diffuse = max(dot(normal, light), 0.0);
   const vec3 viewDir = normalize(frame.inverseView[3].xyz - inWorld);
-  const vec3 halfway = normalize(light + viewDir);
-  const float specular = pow(max(dot(normal, halfway), 0.0), 48.0);
-  const vec3 color = inColor * (0.32 + 0.78 * diffuse) + vec3(0.28 * specular);
-  outColor = vec4(color, 1.0);
+  const float rim = pow(1.0 - max(dot(normal, viewDir), 0.0), 3.0);
+  const float shade = 0.40 + 0.55 * diffuse;
+  outColor = vec4(inColor * shade + inColor * rim * 0.10, 1.0);
 }
