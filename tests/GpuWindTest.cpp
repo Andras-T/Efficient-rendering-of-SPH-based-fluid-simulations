@@ -100,7 +100,8 @@ TEST(GpuWindTest, SurfaceColorsSpanTheCpLegend) {
     highPressure = highPressure || (vertex.color.x > vertex.color.z + 0.12F);
   }
   EXPECT_GT(glm::length(mx - mn), 0.12F);
-  EXPECT_TRUE(suction || highPressure);
+  EXPECT_TRUE(suction);
+  EXPECT_TRUE(highPressure);
   EXPECT_LT(wind.aero().cpMin, 0.0F);
   EXPECT_GT(wind.aero().cpMax, 0.0F);
   EXPECT_EQ(context.validationErrorCount(), 0U);

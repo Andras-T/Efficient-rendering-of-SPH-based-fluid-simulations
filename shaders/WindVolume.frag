@@ -69,7 +69,7 @@ void main() {
     if (density < 0.02) {
       continue;
     }
-    float extinction = density * stepLen * 5.8;
+    float extinction = density * stepLen * 1.6;
     vec3 lightColor;
     if (frame.debugView == DebugViewVelocity) {
       lightColor = Heatmap(clamp(speed / max(inletUx * 1.6, 0.04), 0.0, 1.0));
@@ -78,7 +78,7 @@ void main() {
       lightColor = mix(vec3(0.10, 0.36, 0.78), vec3(0.62, 0.88, 1.0),
                        clamp(speed / max(inletUx, 0.04), 0.0, 1.0));
     }
-    emitted += transmittance * density * stepLen * lightColor * 6.4;
+    emitted += transmittance * density * stepLen * lightColor * 3.6;
     transmittance *= exp(-extinction);
     if (transmittance < 0.02) {
       break;

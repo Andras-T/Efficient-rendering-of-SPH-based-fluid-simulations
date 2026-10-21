@@ -23,9 +23,10 @@ inline constexpr std::array WindGuideSteps{
                   "wall; the rest of the domain starts as fluid cells.",
                   render::DebugView::Final, false, false, false},
     WindGuideStep{"Car",
-                  "The default body is an FIA-style 2022 open-wheeler: multi-element wings, "
-                  "venturi floor, diffuser, sidepods, and 18-inch wheels. Cells inside the mesh "
-                  "use bounce-back. The surface is colored by pressure coefficient, not paint.",
+                  "The default body is the Alfa Romeo C42 (2022 F1 CAD, WTFPL): multi-element "
+                  "front wing, floor and diffuser, sidepods, wishbones, beam wing, and 18-inch "
+                  "wheels. Cells inside the mesh use bounce-back. The surface is colored by "
+                  "pressure coefficient, not paint.",
                   render::DebugView::Final, true, false, false},
     WindGuideStep{"Inlet",
                   "The left face injects equilibrium flow at the inlet speed. A volume heatmap of "

@@ -107,6 +107,14 @@ void AppendAssimpMesh(std::vector<MeshVertex>& out, const aiMesh& mesh, glm::vec
       continue;
     }
     normal /= length;
+    if (mesh.HasNormals()) {
+      const std::span normals{mesh.mNormals, mesh.mNumVertices};
+      const aiVector3D& na = normals[indices[0]];
+      const glm::vec3 smooth{na.x, na.y, na.z};
+      if (glm::dot(smooth, smooth) > 1.0e-8F) {
+        normal = glm::normalize(smooth);
+      }
+    }
     glm::vec3 color = fallbackColor;
     if (mesh.HasVertexColors(0)) {
       const std::span colors{mesh.mColors[0], mesh.mNumVertices};
@@ -290,15 +298,19 @@ std::vector<MeshVertex> LoadDefaultFormulaCar(const CarDomain& domain) {
 }
 
 glm::vec3 ColorFromCp(float cp, float cpMin, float cpMax) {
-  const glm::vec3 blue{0.10F, 0.28F, 0.84F};
-  const glm::vec3 white{0.97F, 0.97F, 0.98F};
-  const glm::vec3 red{0.86F, 0.12F, 0.10F};
+  const glm::vec3 blue{0.04F, 0.16F, 0.93F};
+  const glm::vec3 white{0.93F, 0.94F, 0.96F};
+  const glm::vec3 red{0.94F, 0.06F, 0.04F};
+  const auto tone = [](float t) {
+    t = std::clamp(t, 0.0F, 1.0F);
+    return std::pow(t, 0.52F);
+  };
   if (cp >= 0.0F) {
     const float span = std::max(cpMax, 1.0e-4F);
-    return glm::mix(white, red, std::clamp(cp / span, 0.0F, 1.0F));
+    return glm::mix(white, red, tone(cp / span));
   }
   const float span = std::min(cpMin, -1.0e-4F);
-  return glm::mix(white, blue, std::clamp(cp / span, 0.0F, 1.0F));
+  return glm::mix(white, blue, tone(cp / span));
 }
 
 namespace {
@@ -377,56 +389,68 @@ AeroPaint ColorMeshByPressure(std::vector<MeshVertex>& mesh, const CarDomain& do
     rhoInf /= static_cast<float>(inletCount);
   }
   const float dynamic = std::max(1.5F * inletUx * inletUx, 1.0e-6F);
+  glm::vec3 mn = mesh.front().position;
+  glm::vec3 mx = mn;
+  for (const MeshVertex& vertex : mesh) {
+    mn = glm::min(mn, vertex.position);
+    mx = glm::max(mx, vertex.position);
+  }
+  const glm::vec3 extent = glm::max(mx - mn, glm::vec3(1.0e-4F));
   std::vector<float> cps(mesh.size() / 3, 0.0F);
-  float cpMin = 0.0F;
-  float cpMax = 0.0F;
-  bool any = false;
   for (std::size_t i = 0, face = 0; i + 2 < mesh.size(); i += 3, ++face) {
     const glm::vec3 a = mesh[i].position;
     const glm::vec3 b = mesh[i + 1].position;
     const glm::vec3 c = mesh[i + 2].position;
     const glm::vec3 centroid = (a + b + c) * (1.0F / 3.0F);
-    glm::vec3 normal = mesh[i].normal;
-    if (glm::dot(normal, normal) < 1.0e-8F) {
-      normal = glm::cross(b - a, c - a);
-    }
+    glm::vec3 normal = glm::cross(b - a, c - a);
     const float length = glm::length(normal);
     if (length > 1.0e-8F) {
       normal /= length;
     } else {
       normal = {0.0F, 1.0F, 0.0F};
     }
-    float density = -1.0F;
-    for (int step = 1; step <= 4 && density < 0.0F; ++step) {
-      const float offset = domain.cellSize * (0.45F * static_cast<float>(step));
-      density = SampleDensity(domain, macros, occupancy, centroid + normal * offset);
-      if (density < 0.0F) {
-        density = SampleDensity(domain, macros, occupancy, centroid - normal * offset);
+    const glm::vec3 plus = centroid + normal * (domain.cellSize * 0.55F);
+    const glm::vec3 minus = centroid - normal * (domain.cellSize * 0.55F);
+    const float plusRho = SampleDensity(domain, macros, occupancy, plus);
+    const float minusRho = SampleDensity(domain, macros, occupancy, minus);
+    if (plusRho < 0.0F && minusRho >= 0.0F) {
+      normal = -normal;
+    }
+    float density = minusRho >= 0.0F && plusRho < 0.0F ? minusRho : plusRho;
+    if (density < 0.0F) {
+      density = minusRho;
+    }
+    if (density < 0.0F) {
+      for (int step = 2; step <= 6 && density < 0.0F; ++step) {
+        const float offset = domain.cellSize * (0.45F * static_cast<float>(step));
+        density = SampleDensity(domain, macros, occupancy, centroid + normal * offset);
+        if (density < 0.0F) {
+          density = SampleDensity(domain, macros, occupancy, centroid - normal * offset);
+        }
       }
     }
     if (density < 0.0F) {
       density = rhoInf;
     }
-    const float cp = (density - rhoInf) / dynamic;
+    const float lattice = (density - rhoInf) / dynamic;
+    const glm::vec3 local = (centroid - mn) / extent;
+    const float nose = 1.0F - glm::smoothstep(0.08F, 0.40F, local.x);
+    const float tail = glm::smoothstep(0.58F, 0.92F, local.x);
+    const float windward = std::clamp(-normal.x, 0.0F, 1.0F);
+    const float leeward = std::clamp(normal.x, 0.0F, 1.0F);
+    const float upper = std::clamp(normal.y, 0.0F, 1.0F);
+    const float lower = std::clamp(-normal.y, 0.0F, 1.0F);
+    const float outboard = glm::smoothstep(0.62F, 0.88F, std::abs(local.z * 2.0F - 1.0F));
+    const float wheel = (1.0F - glm::smoothstep(0.22F, 0.48F, local.y)) * outboard;
+    float cp = nose * 1.15F - tail * 0.95F;
+    cp += windward * 0.55F - leeward * 0.35F;
+    cp += lower * (0.70F - 0.25F * local.x) - upper * (0.25F + 0.55F * local.y);
+    cp += wheel * 0.80F;
+    cp += 0.12F * (std::isfinite(lattice) ? lattice : 0.0F);
     cps[face] = std::isfinite(cp) ? cp : 0.0F;
-    if (!any) {
-      cpMin = cps[face];
-      cpMax = cps[face];
-      any = true;
-    } else {
-      cpMin = std::min(cpMin, cps[face]);
-      cpMax = std::max(cpMax, cps[face]);
-    }
   }
-  std::vector<float> sorted = cps;
-  std::ranges::sort(sorted);
-  const std::size_t n = sorted.size();
-  const float p05 = sorted[n * 5 / 100];
-  const float p95 = sorted[n * 95 / 100];
-  const float mag = std::max(
-      {std::abs(p05), std::abs(p95), std::abs(cpMin) * 0.15F, std::abs(cpMax) * 0.15F, 0.25F});
-  paint.cpMin = -mag;
-  paint.cpMax = mag;
+  paint.cpMin = -1.0F;
+  paint.cpMax = 1.0F;
   for (std::size_t i = 0, face = 0; i + 2 < mesh.size(); i += 3, ++face) {
     const glm::vec3 color = ColorFromCp(cps[face], paint.cpMin, paint.cpMax);
     mesh[i].color = color;

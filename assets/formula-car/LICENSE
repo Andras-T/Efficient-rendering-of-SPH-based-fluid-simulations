@@ -1,9 +1,29 @@
-Formula-style 2022 open-wheeler
+Alfa Romeo C42 3D model (geometry only)
 
-Original mesh for this repository. Geometry follows public FIA Formula 1
-Technical Regulations from the 2022+ ground-effect era (full-width front
-wing, venturi floor, diffuser, beam wing, 18-inch wheels). It is not a
-team car, has no livery, and is not affiliated with Formula 1.
+Source: https://github.com/markste-in/c42
+File used: c42.glb (high-poly; the upstream c42.stl is a low-poly preview).
+Vendored here as an oriented binary STL (`c42.stl`) so the importer does not
+re-axis the glTF Y-up scene.
+Author: markste-in
+Upstream license: WTFPL Version 2 (Do What The Fuck You Want To Public License)
 
-Dedicated to the public domain under CC0 1.0.
-https://creativecommons.org/publicdomain/zero/1.0/
+The vendored mesh is rotated so the nose faces the tunnel inlet (−x) and
++y is up. No livery, textures, or trademarks are included.
+
+WTFPL is a permissive, public-domain-equivalent license and is compatible
+with this repository's MIT license.
+
+----------------------------------------------------------------------
+           DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+                   Version 2, December 2004
+
+Copyright (C) 2004 Sam Hocevar <sam@hocevar.net>
+
+Everyone is permitted to copy and distribute verbatim or modified
+copies of this license document, and changing it is allowed as long
+as the name is changed.
+
+           DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+  TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
+
+ 0. You just DO WHAT THE FUCK YOU WANT TO.

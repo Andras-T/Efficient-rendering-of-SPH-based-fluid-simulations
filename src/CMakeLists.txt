@@ -54,7 +54,7 @@ target_compile_definitions(sph_engine PUBLIC
   GLFW_INCLUDE_NONE
   GLM_FORCE_DEPTH_ZERO_TO_ONE
   GLM_FORCE_RADIANS)
-set(SPH_FORMULA_MESH "${PROJECT_SOURCE_DIR}/assets/formula-car/formula2022.stl")
+set(SPH_FORMULA_MESH "${PROJECT_SOURCE_DIR}/assets/formula-car/c42.stl")
 file(TO_CMAKE_PATH "${SPH_FORMULA_MESH}" SPH_FORMULA_MESH_PATH)
 target_compile_definitions(sph_engine PRIVATE
   "SPH_HDRI_PATH=\"${SPH_HDRI_PATH}\""

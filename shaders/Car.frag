@@ -20,6 +20,6 @@ void main() {
   const float diffuse = max(dot(normal, light), 0.0);
   const vec3 viewDir = normalize(frame.inverseView[3].xyz - inWorld);
   const float rim = pow(1.0 - max(dot(normal, viewDir), 0.0), 3.0);
-  const float shade = 0.40 + 0.55 * diffuse;
-  outColor = vec4(inColor * shade + inColor * rim * 0.10, 1.0);
+  const float shade = 0.52 + 0.46 * diffuse;
+  outColor = vec4(inColor * shade + inColor * rim * 0.08, 1.0);
 }
