@@ -249,7 +249,7 @@ void WindSolver::refreshAero() {
           if (occupancy[neighbor] != static_cast<std::uint32_t>(WindCell::Solid)) {
             continue;
           }
-          const std::size_t dir = static_cast<std::size_t>(k);
+          const auto dir = static_cast<std::size_t>(k);
           const int bounced = Opp.at(dir);
           const float fi = cells[index].f.at(static_cast<std::size_t>(bounced));
           // Subtract rest equilibrium so an open underbody does not leak p0 into lift.
