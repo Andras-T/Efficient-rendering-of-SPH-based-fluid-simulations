@@ -44,6 +44,7 @@ sph_add_shader_library(sph_shaders
     WindGround.frag
     WindTracer.vert
     WindTracer.frag
+    WindVolume.frag
     Foam.vert
     Foam.frag
     Tank.vert

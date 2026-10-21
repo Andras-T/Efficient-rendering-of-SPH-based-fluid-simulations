@@ -67,6 +67,9 @@ std::vector<std::uint8_t> RenderWindOffscreen(const gpu::Context& context,
                                                     VMA_ALLOCATION_CREATE_MAPPED_BIT,
                              });
   sim::WindSolver wind(context);
+  if (!request.meshPath.empty()) {
+    wind.setObstacleMesh(request.meshPath);
+  }
   render::Camera ownedCamera;
   ownedCamera.setAspect(extent);
   ownedCamera.setTarget({0.02F, 0.12F, 0.0F});
@@ -77,6 +80,7 @@ std::vector<std::uint8_t> RenderWindOffscreen(const gpu::Context& context,
   renderer.settings().view = request.view;
   renderer.settings().windCar = request.windCar;
   renderer.settings().windTracers = request.windTracers;
+  renderer.settings().windVolume = request.windVolume;
   renderer.resize(extent);
   const render::RenderTarget renderTarget{target.handle(), target.view(), extent};
   if (!request.sequenceDirectory.empty()) {
@@ -92,6 +96,8 @@ std::vector<std::uint8_t> RenderWindOffscreen(const gpu::Context& context,
       }
       renderer.recordWind(commandBuffer, renderTarget, camera, wind.meshAddress(),
                           wind.meshVertexCount(), wind.tracerAddress(), wind.tracerCount(),
+                          wind.macroAddress(), wind.occupancyAddress(), wind.domain().grid,
+                          wind.domain().origin, wind.domain().cellSize, wind.inletSpeed(),
                           wind.domainMin(), wind.domainMax());
       if (needPixels) {
         CopyTargetToBuffer(commandBuffer, target.handle(), readback.handle(), extent);
@@ -327,7 +333,8 @@ int RunHeadless(const Options& options) {
                                                 .walls = render::WallDisplay::Glass,
                                                 .solver = options.solver,
                                                 .tankShape = options.tank,
-                                                .simulation = options.simulation});
+                                                .simulation = options.simulation,
+                                                .meshPath = options.meshPath});
   const std::chrono::duration<double, std::milli> elapsed =
       std::chrono::steady_clock::now() - start;
   LogInfo("Rendered {} frame(s) of '{}' at {}x{} in {:.1f} ms", options.frames,

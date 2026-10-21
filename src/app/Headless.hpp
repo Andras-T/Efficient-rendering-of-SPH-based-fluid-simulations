@@ -40,7 +40,9 @@ struct OffscreenRequest {
   sim::TankShape tankShape = sim::TankShape::Box;
   SimulationKind simulation = SimulationKind::Fluid;
   bool windCar = true;
-  bool windTracers = true;
+  bool windTracers = false;
+  bool windVolume = true;
+  std::filesystem::path meshPath;
   bool smokeVolume = true;
   float smokeClipY = 0.0F;
 };

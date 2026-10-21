@@ -97,6 +97,7 @@ Renderer::Renderer(const gpu::Context& context, VkFormat colorFormat)
       blockPass_(context, HdrFormat, DepthFormat),
       paddlePass_(context, HdrFormat, DepthFormat),
       carPass_(context, HdrFormat, DepthFormat),
+      windVolumePass_(context, HdrFormat, DepthFormat),
       windTracerPass_(context, HdrFormat, DepthFormat),
       smokePass_(context, HdrFormat, DepthFormat),
       tonemapPass_(context, colorFormat),
@@ -308,8 +309,10 @@ void Renderer::record(VkCommandBuffer commandBuffer, const RenderTarget& target,
 
 void Renderer::recordWind(VkCommandBuffer commandBuffer, const RenderTarget& target,
                           const Camera& camera, VkDeviceAddress mesh, std::uint32_t meshVertices,
-                          VkDeviceAddress tracers, std::uint32_t tracerCount, glm::vec3 domainMin,
-                          glm::vec3 domainMax, const OverlayCallback& overlay) {
+                          VkDeviceAddress tracers, std::uint32_t tracerCount, VkDeviceAddress macro,
+                          VkDeviceAddress occupancy, glm::uvec3 grid, glm::vec3 origin,
+                          float cellSize, float inletUx, glm::vec3 domainMin, glm::vec3 domainMax,
+                          const OverlayCallback& overlay) {
   resize(target.extent);
 
   sim::FrameUniforms uniforms;
@@ -324,7 +327,7 @@ void Renderer::recordWind(VkCommandBuffer commandBuffer, const RenderTarget& tar
   uniforms.debugView = static_cast<std::uint32_t>(settings_.view);
   uniforms.domainMin = domainMin;
   uniforms.domainMax = domainMax;
-  uniforms.invCellSize = 25.0F;
+  uniforms.invCellSize = 1.0F / cellSize;
   const glm::vec3 extent = domainMax - domainMin;
   uniforms.gridSize =
       glm::uvec3(glm::max(glm::round(extent * uniforms.invCellSize), glm::vec3(1.0F)));
@@ -373,6 +376,10 @@ void Renderer::recordWind(VkCommandBuffer commandBuffer, const RenderTarget& tar
   const glm::vec3 groundMin{domainMin.x, domainMin.y, domainMin.z};
   const glm::vec3 groundMax{domainMax.x, domainMin.y, domainMax.z};
   carPass_.recordGround(commandBuffer, frameAddress, groundMin, groundMax);
+  if (settings_.windVolume) {
+    windVolumePass_.record(commandBuffer, frameAddress, macro, occupancy, grid, origin, cellSize,
+                           inletUx);
+  }
   if (settings_.windCar) {
     carPass_.record(commandBuffer, frameAddress, mesh, meshVertices);
   }

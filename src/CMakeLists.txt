@@ -33,7 +33,9 @@ add_library(sph_engine STATIC
   render/SmokePass.cpp
   render/TonemapPass.cpp
   render/WindTracerPass.cpp
+  render/WindVolumePass.cpp
   sim/Car.cpp
+  sim/Mesh.cpp
   sim/CpuSolver.cpp
   sim/GpuParticles.cpp
   sim/Grid.cpp
@@ -55,7 +57,7 @@ target_compile_definitions(sph_engine PUBLIC
 target_compile_definitions(sph_engine PRIVATE "SPH_HDRI_PATH=\"${SPH_HDRI_PATH}\"")
 target_link_libraries(sph_engine
   PUBLIC volk::volk vk-bootstrap::vk-bootstrap GPUOpen::VulkanMemoryAllocator glm::glm glfw
-  PRIVATE imgui stb sph_shaders)
+  PRIVATE imgui stb sph_shaders assimp::assimp)
 sph_set_warnings(sph_engine)
 
 add_executable(sph-fluid main.cpp)

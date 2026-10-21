@@ -1,10 +1,14 @@
+#include "CubeMesh.hpp"
 #include "gpu/Context.hpp"
 #include "sim/Car.hpp"
+#include "sim/Mesh.hpp"
 #include "sim/WindSolver.hpp"
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <vector>
 
 namespace sph {
@@ -21,8 +25,6 @@ TEST(GpuWindTest, InletStaysFastAndTheCarMakesAWake) {
   const auto at = [&](std::uint32_t x, std::uint32_t y, std::uint32_t z) {
     return x + y * grid.x + z * grid.x * grid.y;
   };
-  const std::uint32_t midY = grid.y / 2U;
-  const std::uint32_t midZ = grid.z / 2U;
   float inletUx = 0.0F;
   std::uint32_t inletCount = 0;
   for (std::uint32_t y = 2; y + 2 < grid.y; ++y) {
@@ -40,10 +42,20 @@ TEST(GpuWindTest, InletStaysFastAndTheCarMakesAWake) {
   inletUx /= static_cast<float>(inletCount);
   EXPECT_GT(inletUx, 0.5F * wind.inletSpeed());
 
-  const std::uint32_t wakeIndex = at(grid.x * 3 / 4, midY, midZ);
-  const float wakeUx = macro[wakeIndex].y;
-  EXPECT_LT(wakeUx, inletUx);
-  EXPECT_TRUE(std::isfinite(wakeUx));
+  float minUx = inletUx;
+  for (std::uint32_t z = 2; z + 2 < grid.z; ++z) {
+    for (std::uint32_t y = 2; y + 2 < grid.y; ++y) {
+      for (std::uint32_t x = grid.x / 2U; x + 2 < grid.x; ++x) {
+        const std::uint32_t index = at(x, y, z);
+        if (occupancy[index] != static_cast<std::uint32_t>(sim::WindCell::Fluid)) {
+          continue;
+        }
+        minUx = std::min(minUx, macro[index].y);
+      }
+    }
+  }
+  EXPECT_LT(minUx, 0.85F * inletUx);
+  EXPECT_TRUE(std::isfinite(minUx));
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 
@@ -62,6 +74,56 @@ TEST(GpuWindTest, TracersStayFinite) {
     }
   }
   EXPECT_GT(inside, tracers.size() / 2);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
+TEST(GpuWindTest, CarMakesPositiveDragAndFiniteCoefficients) {
+  const gpu::Context context({.validation = true});
+  sim::WindSolver wind(context);
+  wind.step(64);
+  wind.refreshAero();
+  const sim::WindAero aero = wind.aero();
+  EXPECT_GT(aero.drag, 0.0F);
+  EXPECT_GT(aero.cd, 0.0F);
+  EXPECT_GT(aero.frontalArea, 0.0F);
+  EXPECT_TRUE(std::isfinite(aero.lift));
+  EXPECT_TRUE(std::isfinite(aero.cl));
+  EXPECT_LT(aero.cd, 20.0F);
+  EXPECT_LT(std::abs(aero.cl), 40.0F);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
+TEST(GpuWindTest, ImportedCubeOccupiesTheTunnel) {
+  const gpu::Context context({.validation = true});
+  const auto directory = std::filesystem::temp_directory_path() / "sph-gpu-mesh";
+  std::filesystem::create_directories(directory);
+  const auto cube = test::WriteCubeObj(directory);
+  sim::WindSolver wind(context);
+  wind.setObstacleMesh(cube);
+  wind.step(32);
+  auto mesh = sim::LoadObstacleMesh(cube);
+  sim::FitMeshToTunnel(mesh, wind.domain());
+  const auto occupancy = sim::BuildWindOccupancy(wind.domain(), mesh);
+  std::uint32_t solids = 0;
+  for (const std::uint32_t cell : occupancy) {
+    solids += cell == static_cast<std::uint32_t>(sim::WindCell::Solid) ? 1U : 0U;
+  }
+  EXPECT_GT(solids, 40U);
+  std::vector<glm::vec4> macro(occupancy.size());
+  wind.downloadMacro(macro);
+  const glm::uvec3 grid = wind.domain().grid;
+  float inletUx = 0.0F;
+  std::uint32_t inletCount = 0;
+  for (std::uint32_t y = 2; y + 2 < grid.y; ++y) {
+    for (std::uint32_t z = 2; z + 2 < grid.z; ++z) {
+      const std::uint32_t index = 2 + y * grid.x + z * grid.x * grid.y;
+      inletUx += macro[index].y;
+      ++inletCount;
+    }
+  }
+  ASSERT_GT(inletCount, 0U);
+  inletUx /= static_cast<float>(inletCount);
+  EXPECT_GT(inletUx, 0.4F * wind.inletSpeed());
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 

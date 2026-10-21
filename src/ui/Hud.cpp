@@ -118,7 +118,8 @@ void CloseGuide(HudState& state) {
   state.showGuide = false;
   state.view = render::DebugView::Final;
   state.windCar = true;
-  state.windTracers = true;
+  state.windTracers = false;
+  state.windVolume = true;
   state.smokeVolume = true;
   state.smokeClipY = 0.0F;
 }
@@ -365,6 +366,7 @@ void DrawWindGuide(HudState& state) {
   state.view = current.view;
   state.windCar = current.showCar;
   state.windTracers = current.showTracers;
+  state.windVolume = current.showVolume;
   ImGui::Separator();
   ImGui::TextUnformatted(current.title);
   ImGui::TextWrapped("%s", current.text);
@@ -443,7 +445,13 @@ HudResult DrawHud(HudState& state) {
   ImGui::Text("%ux%u", state.extent.width, state.extent.height);
   ImGui::Text("%.1f FPS (%.2f ms)", static_cast<double>(io.Framerate),
               1000.0 / static_cast<double>(io.Framerate));
-  ImGui::Text("%u particles", state.particleCount);
+  if (state.simulation == SimulationKind::WindTunnel) {
+    ImGui::TextUnformatted("D3Q19 LBM grid  (not particles)");
+  } else if (state.simulation == SimulationKind::Smoke) {
+    ImGui::Text("%u cells", state.particleCount);
+  } else {
+    ImGui::Text("%u particles", state.particleCount);
+  }
   if (state.paused) {
     if (ImGui::Button("Play", ImVec2(110.0F, 0.0F))) {
       state.paused = false;
@@ -464,7 +472,7 @@ HudResult DrawHud(HudState& state) {
     state.showGuide = false;
   }
   if (state.simulation == SimulationKind::WindTunnel) {
-    ImGui::TextUnformatted("Wind tunnel  LBM D3Q19");
+    ImGui::TextUnformatted("Wind tunnel  D3Q19 lattice Boltzmann");
     ImGui::SliderFloat("Inlet speed", &state.windSpeed, 0.03F, 0.12F, "%.3f");
     if (ImGui::Button("Reset")) {
       result.resetScene = true;
@@ -487,11 +495,46 @@ HudResult DrawHud(HudState& state) {
     } else {
       ImGui::SetNextWindowPos({300.0F, 12.0F}, ImGuiCond_FirstUseEver);
       ImGui::Begin("Stage", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-      int windView = state.view == render::DebugView::Velocity ? 1 : 0;
-      if (ImGui::Combo("View", &windView, "Final\0Velocity\0")) {
-        state.view = windView == 1 ? render::DebugView::Velocity : render::DebugView::Final;
+      int windView = 0;
+      if (state.view == render::DebugView::Velocity) {
+        windView = 1;
+      } else if (state.windTracers && !state.windVolume) {
+        windView = 2;
       }
+      if (ImGui::Combo("View", &windView, "Final\0Velocity\0Tracers\0")) {
+        if (windView == 1) {
+          state.view = render::DebugView::Velocity;
+          state.windVolume = true;
+          state.windTracers = false;
+        } else if (windView == 2) {
+          state.view = render::DebugView::Final;
+          state.windVolume = false;
+          state.windTracers = true;
+        } else {
+          state.view = render::DebugView::Final;
+          state.windVolume = true;
+          state.windTracers = false;
+        }
+      }
+      ImGui::Checkbox("Car", &state.windCar);
       ImGui::SliderFloat("Exposure", &state.exposure, 0.05F, 4.0F, "%.2f");
+      std::array<char, 512> pathBuf{};
+      const std::size_t copy = std::min(state.meshPath.size(), pathBuf.size() - 1U);
+      std::copy_n(state.meshPath.begin(), copy, pathBuf.begin());
+      if (ImGui::InputText("Mesh", pathBuf.data(), pathBuf.size())) {
+        state.meshPath = pathBuf.data();
+      }
+      if (ImGui::Button("Load")) {
+        result.loadMesh = true;
+      }
+      ImGui::SameLine();
+      if (ImGui::Button("Built-in")) {
+        result.useBuiltinCar = true;
+      }
+      ImGui::TextUnformatted("glTF, glb, OBJ, STL, FBX. Drop a file on the window.");
+      if (!state.meshStatus.empty()) {
+        ImGui::TextWrapped("%s", state.meshStatus.c_str());
+      }
       ImGui::End();
     }
   } else if (state.simulation == SimulationKind::Smoke) {
@@ -623,6 +666,18 @@ HudResult DrawHud(HudState& state) {
 
   const float gpuX =
       state.extent.width > 12 ? static_cast<float>(state.extent.width) - 12.0F : 12.0F;
+  if (state.simulation == SimulationKind::WindTunnel) {
+    ImGui::SetNextWindowPos({gpuX, 150.0F}, ImGuiCond_FirstUseEver, {1.0F, 0.0F});
+    ImGui::Begin("Aero", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::Text("Drag  %.4f", static_cast<double>(state.windDrag));
+    ImGui::Text("Lift  %.4f  %s", static_cast<double>(state.windLift),
+                state.windLift < 0.0F ? "downforce" : "lift");
+    ImGui::Text("Cd    %.3f", static_cast<double>(state.windCd));
+    ImGui::Text("Cl    %.3f", static_cast<double>(state.windCl));
+    ImGui::Text("Area  %.3f m^2", static_cast<double>(state.windArea));
+    ImGui::TextUnformatted("Momentum exchange on the solid");
+    ImGui::End();
+  }
   ImGui::SetNextWindowPos({gpuX, 12.0F}, ImGuiCond_FirstUseEver, {1.0F, 0.0F});
   ImGui::Begin("GPU", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
   if (state.timings.empty()) {

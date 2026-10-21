@@ -3,7 +3,9 @@
 #include "gpu/Vulkan.hpp"
 
 #include <cstdint>
+#include <filesystem>
 #include <string>
+#include <vector>
 
 struct GLFWwindow;
 
@@ -25,10 +27,12 @@ class Window {
 
   // Returns whether the framebuffer was resized since the last call.
   bool consumeResize();
+  std::vector<std::filesystem::path> consumeDrops();
 
  private:
   GLFWwindow* window_ = nullptr;
   bool resized_ = false;
+  std::vector<std::filesystem::path> dropped_;
 };
 
 }  // namespace sph
