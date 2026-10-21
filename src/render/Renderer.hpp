@@ -16,6 +16,7 @@
 #include "render/TankPass.hpp"
 #include "render/TonemapPass.hpp"
 #include "render/WindTracerPass.hpp"
+#include "render/WindVolumePass.hpp"
 #include "sim/SimParams.hpp"
 
 #include <glm/ext/vector_uint3.hpp>
@@ -44,7 +45,8 @@ struct RenderSettings {
   glm::vec3 blockMax{0.0F};
   bool block = false;
   bool windCar = true;
-  bool windTracers = true;
+  bool windTracers = false;
+  bool windVolume = true;
   bool smokeVolume = true;
   float smokeClipY = 0.0F;
 };
@@ -71,8 +73,9 @@ class Renderer {
               const OverlayCallback& overlay = {});
   void recordWind(VkCommandBuffer commandBuffer, const RenderTarget& target, const Camera& camera,
                   VkDeviceAddress mesh, std::uint32_t meshVertices, VkDeviceAddress tracers,
-                  std::uint32_t tracerCount, glm::vec3 domainMin, glm::vec3 domainMax,
-                  const OverlayCallback& overlay = {});
+                  std::uint32_t tracerCount, VkDeviceAddress macro, VkDeviceAddress occupancy,
+                  glm::uvec3 grid, glm::vec3 origin, float cellSize, float inletUx,
+                  glm::vec3 domainMin, glm::vec3 domainMax, const OverlayCallback& overlay = {});
   void recordSmoke(VkCommandBuffer commandBuffer, const RenderTarget& target, const Camera& camera,
                    VkDeviceAddress scalar, VkDeviceAddress velocity, glm::uvec3 grid,
                    glm::vec3 origin, float cellSize, glm::vec3 domainMin, glm::vec3 domainMax,
@@ -89,6 +92,7 @@ class Renderer {
   BlockPass blockPass_;
   PaddlePass paddlePass_;
   CarPass carPass_;
+  WindVolumePass windVolumePass_;
   WindTracerPass windTracerPass_;
   SmokePass smokePass_;
   TonemapPass tonemapPass_;

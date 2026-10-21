@@ -18,6 +18,7 @@ build/release/bin/sph-fluid                          # window
 build/release/bin/sph-fluid --scene drop             # empty, dam, drop, double, or dropin
 build/release/bin/sph-fluid --tank cylinder          # cube, cylinder, or hexagon
 build/release/bin/sph-fluid --sim smoke              # fluid, wind, or smoke
+build/release/bin/sph-fluid --sim wind --mesh car.glb
 build/release/bin/sph-fluid --guide                  # fluid pipeline walkthrough
 build/release/bin/sph-fluid --sim wind --guide       # wind tunnel walkthrough
 build/release/bin/sph-fluid --sim smoke --guide      # smoke pipeline walkthrough
@@ -28,7 +29,7 @@ build/release/bin/sph-fluid --sequence frames --frames 12
 cmake --install build/release --prefix dist          # dist/bin/sph-fluid
 ```
 
-Starts on a simulation menu: Fluid, Wind tunnel, and Smoke. Play (or Space) runs the selected sim. Each mode has a Continue overlay that isolates pipeline stages: fluid through SPH and screen-space rendering, wind through the LBM tunnel, smoke through the Eulerian grid and volume raymarch. Menu on the HUD returns to the picker. Scene changes and Reset pause again. Drop-in hangs a wooden block over a pool until Play. Wind tunnel is LBM airflow around a formula-style car. Smoke is an Eulerian grid solver with buoyancy and a floor emitter; Final is a volume raymarch, Velocity is a speed heatmap.
+Starts on a simulation menu: Fluid, Wind tunnel, and Smoke. Play (or Space) runs the selected sim. Each mode has a Continue overlay that isolates pipeline stages: fluid through SPH and screen-space rendering, wind through the LBM tunnel, smoke through the Eulerian grid and volume raymarch. Menu on the HUD returns to the picker. Scene changes and Reset pause again. Drop-in hangs a wooden block over a pool until Play. Wind tunnel is a D3Q19 lattice Boltzmann grid (not SPH particles) around a formula-style car; Final raymarches the lattice wake, Velocity is a speed heatmap of that field, and Tracers keeps optional inlet rakes. Drop a glTF/glb, OBJ, STL, or FBX on the window, or pass `--mesh`, to replace the built-in car. The HUD reports live momentum-exchange drag, lift/downforce, Cd, and Cl. Smoke is an Eulerian grid solver with buoyancy and a floor emitter; Final is a volume raymarch, Velocity is a speed heatmap.
 
 Left-drag is always the paddle: a small cyan sphere sits in the tank on the mouse ray, shoves water aside, and can slide the wooden block even while paused. Uncheck Wooden block to hide it (no draw, no collision). Float (on by default) applies Archimedes buoyancy so the cube rides the water instead of sinking. Right-drag orbits; Shift+left or middle-drag pans; scroll zooms; WASD/QE moves; arrows look; F frames the tank. Space play/pauses. `[` `]` cycles stages (foam is last); 1–9 pick the first nine. A never changes the view.
 

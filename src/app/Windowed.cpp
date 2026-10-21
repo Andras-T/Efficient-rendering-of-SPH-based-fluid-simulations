@@ -11,6 +11,7 @@
 #include "render/Camera.hpp"
 #include "render/Renderer.hpp"
 #include "sim/CpuSolver.hpp"
+#include "sim/Mesh.hpp"
 #include "sim/Scene.hpp"
 #include "sim/SmokeSolver.hpp"
 #include "sim/SphSolver.hpp"
@@ -24,7 +25,9 @@
 #include <glm/vec3.hpp>
 
 #include <array>
+#include <exception>
 #include <limits>
+#include <string>
 #include <vector>
 
 namespace sph {
@@ -90,6 +93,17 @@ int RunWindowed(const Options& options) {
   sim::SphSolver solver(context);
   solver.upload(scene.particles, scene.params);
   sim::WindSolver wind(context);
+  std::string meshPath = options.meshPath.string();
+  std::string meshStatus;
+  if (!options.meshPath.empty()) {
+    try {
+      wind.setObstacleMesh(options.meshPath);
+      meshStatus = "Loaded " + meshPath;
+    } catch (const std::exception& ex) {
+      meshStatus = ex.what();
+      LogError("{}", meshStatus);
+    }
+  }
   sim::SmokeSolver smoke(context);
   render::Camera camera;
   camera.setAspect(swapchain.extent());
@@ -168,6 +182,9 @@ int RunWindowed(const Options& options) {
     gpu::Check(vkWaitForFences(context.device(), 1, &inFlight, VK_TRUE, NoTimeout),
                "vkWaitForFences");
     profiler.resolve(flight);
+    if (simulation == SimulationKind::WindTunnel && frameNumber > 0) {
+      wind.refreshAero();
+    }
     // Particle buffers are updated in place, so consecutive frames cannot overlap.
     if (frameNumber > 0) {
       const auto previous = static_cast<std::uint32_t>((frameNumber - 1) % FramesInFlight);
@@ -224,7 +241,17 @@ int RunWindowed(const Options& options) {
         .guideStep = guideStep,
         .simulation = simulation,
         .windSpeed = windSpeed,
+        .windDrag = wind.aero().drag,
+        .windLift = wind.aero().lift,
+        .windCd = wind.aero().cd,
+        .windCl = wind.aero().cl,
+        .windArea = wind.aero().frontalArea,
         .smokeStrength = smokeStrength,
+        .windCar = renderer.settings().windCar,
+        .windTracers = renderer.settings().windTracers,
+        .windVolume = renderer.settings().windVolume,
+        .meshPath = meshPath,
+        .meshStatus = meshStatus,
         .exposure = renderer.settings().exposure,
         .absorption = renderer.settings().absorption,
     };
@@ -240,6 +267,8 @@ int RunWindowed(const Options& options) {
     simulation = hud.simulation;
     windSpeed = hud.windSpeed;
     smokeStrength = hud.smokeStrength;
+    meshPath = hud.meshPath;
+    meshStatus = hud.meshStatus;
     wind.setInletSpeed(windSpeed);
     smoke.setEmitterStrength(smokeStrength);
     if (!showMenu) {
@@ -294,6 +323,7 @@ int RunWindowed(const Options& options) {
     renderer.settings().walls = hud.walls;
     renderer.settings().windCar = hud.windCar;
     renderer.settings().windTracers = hud.windTracers;
+    renderer.settings().windVolume = hud.windVolume;
     renderer.settings().smokeVolume = hud.smokeVolume;
     renderer.settings().smokeClipY = hud.smokeClipY;
     renderer.settings().exposure = hud.exposure;
@@ -329,6 +359,32 @@ int RunWindowed(const Options& options) {
     renderer.settings().blockMin = blockCenter - blockHalf;
     renderer.settings().blockMax = blockCenter + blockHalf;
     renderer.settings().block = showBlock;
+    if (hudResult.useBuiltinCar) {
+      wind.useFormulaCar();
+      meshStatus = "Built-in car";
+    }
+    if (hudResult.loadMesh && !meshPath.empty()) {
+      try {
+        wind.setObstacleMesh(meshPath);
+        meshStatus = "Loaded " + meshPath;
+      } catch (const std::exception& ex) {
+        meshStatus = ex.what();
+        LogError("{}", meshStatus);
+      }
+    }
+    for (const auto& dropped : window.consumeDrops()) {
+      if (!sim::MeshPathLooksSupported(dropped)) {
+        continue;
+      }
+      try {
+        wind.setObstacleMesh(dropped);
+        meshPath = dropped.string();
+        meshStatus = "Loaded " + meshPath;
+      } catch (const std::exception& ex) {
+        meshStatus = ex.what();
+        LogError("{}", meshStatus);
+      }
+    }
     imgui.endFrame();
 
     const VkCommandBuffer commandBuffer = frame.commandBuffer;
@@ -346,7 +402,9 @@ int RunWindowed(const Options& options) {
       }
       renderer.recordWind(commandBuffer, {image, swapchain.view(imageIndex), swapchain.extent()},
                           camera, wind.meshAddress(), wind.meshVertexCount(), wind.tracerAddress(),
-                          wind.tracerCount(), wind.domainMin(), wind.domainMax(),
+                          wind.tracerCount(), wind.macroAddress(), wind.occupancyAddress(),
+                          wind.domain().grid, wind.domain().origin, wind.domain().cellSize,
+                          wind.inletSpeed(), wind.domainMin(), wind.domainMax(),
                           [&](VkCommandBuffer overlay) { imgui.record(overlay); });
     } else if (simulation == SimulationKind::Smoke) {
       if (!paused && !showMenu) {

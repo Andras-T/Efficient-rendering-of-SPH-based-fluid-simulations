@@ -14,33 +14,34 @@ struct WindGuideStep {
   render::DebugView view;
   bool showCar;
   bool showTracers;
+  bool showVolume;
 };
 
 inline constexpr std::array WindGuideSteps{
     WindGuideStep{"Tunnel",
                   "Air lives on a D3Q19 lattice inside this closed box. The floor is a bounce-back "
                   "wall; the rest of the domain starts as fluid cells.",
-                  render::DebugView::Final, false, false},
+                  render::DebugView::Final, false, false, false},
     WindGuideStep{"Car",
                   "The formula car is a solid. Lattice cells inside the body use bounce-back, so "
                   "air cannot stream through the mesh.",
-                  render::DebugView::Final, true, false},
+                  render::DebugView::Final, true, false, false},
     WindGuideStep{"Inlet",
-                  "The left face injects equilibrium flow at the inlet speed. Heatmap tracers "
-                  "show that incoming stream before the body disturbs it.",
-                  render::DebugView::Velocity, false, true},
+                  "The left face injects equilibrium flow at the inlet speed. A volume heatmap of "
+                  "the lattice velocity shows that stream before the body disturbs it.",
+                  render::DebugView::Velocity, false, false, true},
     WindGuideStep{"Velocity",
                   "Collide and stream update D3Q19 populations. Macroscopic speed from those "
-                  "moments is the wake around the car.",
-                  render::DebugView::Velocity, true, true},
+                  "moments is the wake field around the car.",
+                  render::DebugView::Velocity, true, false, true},
     WindGuideStep{"Tracers",
-                  "Rake particles spawn at the inlet and advect with the interpolated velocity "
-                  "field, so they sketch streamlines.",
-                  render::DebugView::Final, false, true},
+                  "Optional rake particles spawn at the inlet and advect with the interpolated "
+                  "velocity field. They sketch streamlines; they are not the solver.",
+                  render::DebugView::Final, true, true, false},
     WindGuideStep{"Final",
-                  "The shaded car, ground, HDRI, and smoke rakes composite into the finished "
-                  "tunnel view.",
-                  render::DebugView::Final, true, true},
+                  "The shaded car, ground, HDRI, and a volume raymarch of the lattice wake. This "
+                  "is D3Q19 LBM, not a particle spray.",
+                  render::DebugView::Final, true, false, true},
 };
 
 [[nodiscard]] constexpr std::uint32_t WindGuideStepCount() {

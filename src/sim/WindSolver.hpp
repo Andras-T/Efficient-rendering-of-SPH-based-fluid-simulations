@@ -8,6 +8,7 @@
 #include <glm/vec4.hpp>
 
 #include <cstdint>
+#include <filesystem>
 #include <span>
 #include <vector>
 
@@ -16,6 +17,15 @@ namespace gpu {
 class Context;
 }
 namespace sim {
+
+struct WindAero {
+  float drag = 0.0F;
+  float lift = 0.0F;
+  float side = 0.0F;
+  float cd = 0.0F;
+  float cl = 0.0F;
+  float frontalArea = 0.0F;
+};
 
 class WindSolver {
  public:
@@ -28,20 +38,28 @@ class WindSolver {
   void step(std::uint32_t steps = 1);
   void downloadMacro(std::span<glm::vec4> dest) const;
   void downloadTracers(std::span<Particle> dest) const;
+  void setObstacleMesh(const std::filesystem::path& path);
+  void useFormulaCar();
 
   [[nodiscard]] VkDeviceAddress meshAddress() const { return mesh_.address(); }
   [[nodiscard]] std::uint32_t meshVertexCount() const { return meshCount_; }
   [[nodiscard]] VkDeviceAddress tracerAddress() const { return tracers_.address(); }
   [[nodiscard]] std::uint32_t tracerCount() const { return TracerCount; }
+  [[nodiscard]] VkDeviceAddress macroAddress() const { return macro_.address(); }
+  [[nodiscard]] VkDeviceAddress occupancyAddress() const { return occupancy_.address(); }
   [[nodiscard]] const CarDomain& domain() const { return domain_; }
   [[nodiscard]] glm::vec3 domainMin() const { return domain_.origin; }
   [[nodiscard]] glm::vec3 domainMax() const { return CarDomainMax(domain_); }
   [[nodiscard]] float inletSpeed() const { return inletUx_; }
+  [[nodiscard]] const WindAero& aero() const { return aero_; }
   void setInletSpeed(float latticeSpeed);
+  void refreshAero();
 
  private:
   void push(VkCommandBuffer commandBuffer, bool collide) const;
   void initState();
+  void uploadMesh();
+  void cacheFrontalArea(std::span<const std::uint32_t> occupancy);
 
   const gpu::Context* context_ = nullptr;
   CarDomain domain_{};
@@ -60,6 +78,10 @@ class WindSolver {
   gpu::Buffer macro_;
   gpu::Buffer tracers_;
   gpu::Buffer mesh_;
+  std::vector<MeshVertex> cpuMesh_;
+  bool importedMesh_ = false;
+  float frontalArea_ = 0.0F;
+  WindAero aero_{};
 };
 
 }  // namespace sim

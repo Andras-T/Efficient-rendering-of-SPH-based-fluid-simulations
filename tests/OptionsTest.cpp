@@ -66,6 +66,12 @@ TEST(OptionsTest, ParsesWindSimulation) {
   EXPECT_EQ(Parse({"--sim", "wind"}).simulation, SimulationKind::WindTunnel);
 }
 
+TEST(OptionsTest, ParsesMeshPath) {
+  const Options options = Parse({"--sim", "wind", "--mesh", "car.glb"});
+  EXPECT_EQ(options.simulation, SimulationKind::WindTunnel);
+  EXPECT_EQ(options.meshPath, "car.glb");
+}
+
 TEST(OptionsTest, ParsesSmokeSimulation) {
   EXPECT_EQ(Parse({"--sim", "smoke"}).simulation, SimulationKind::Smoke);
 }

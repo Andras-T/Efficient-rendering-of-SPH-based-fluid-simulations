@@ -4,6 +4,7 @@
 
 #include <GLFW/glfw3.h>
 
+#include <span>
 #include <stdexcept>
 #include <utility>
 
@@ -33,6 +34,17 @@ Window::Window(const std::string& title, std::uint32_t width, std::uint32_t heig
   glfwSetFramebufferSizeCallback(window_, [](GLFWwindow* window, int /*width*/, int /*height*/) {
     static_cast<Window*>(glfwGetWindowUserPointer(window))->resized_ = true;
   });
+  glfwSetDropCallback(window_, [](GLFWwindow* window, int count, const char** paths) {
+    auto* self = static_cast<Window*>(glfwGetWindowUserPointer(window));
+    if (count <= 0 || paths == nullptr) {
+      return;
+    }
+    for (const char* path : std::span(paths, static_cast<std::size_t>(count))) {
+      if (path != nullptr) {
+        self->dropped_.emplace_back(path);
+      }
+    }
+  });
 }
 
 Window::~Window() {
@@ -50,5 +62,7 @@ VkExtent2D Window::framebufferExtent() const {
 }
 
 bool Window::consumeResize() { return std::exchange(resized_, false); }
+
+std::vector<std::filesystem::path> Window::consumeDrops() { return std::exchange(dropped_, {}); }
 
 }  // namespace sph

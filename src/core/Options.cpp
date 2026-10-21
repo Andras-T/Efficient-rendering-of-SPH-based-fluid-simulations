@@ -83,6 +83,8 @@ Options ParseOptions(std::span<const std::string_view> args) {
       }
     } else if (arg == "--guide") {
       options.guide = true;
+    } else if (arg == "--mesh") {
+      options.meshPath = value();
     } else if (arg == "--validation") {
       options.validation = true;
     } else if (arg == "--no-validation") {
@@ -114,6 +116,7 @@ std::string_view UsageText() {
   --scene NAME       empty, dam, drop, double, or dropin (default: dam)
   --tank NAME        cube, cylinder, or hexagon (default: cube)
   --sim NAME         fluid, wind, or smoke (default: fluid)
+  --mesh PATH        wind-tunnel obstacle (glTF/glb, OBJ, STL, or FBX)
   --guide            start a pipeline walkthrough (fluid, wind, or smoke with --sim)
   --view NAME        final, particles, density, velocity, cell, depth, smooth, thickness, normals, foam
   --solver NAME      wcsph or dfsph (default: wcsph)

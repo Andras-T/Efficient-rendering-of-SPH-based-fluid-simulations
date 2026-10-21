@@ -11,6 +11,7 @@
 
 #include <cstdint>
 #include <span>
+#include <string>
 #include <string_view>
 
 namespace sph::ui {
@@ -40,9 +41,17 @@ struct HudState {
   std::uint32_t guideStep = 0;
   SimulationKind simulation = SimulationKind::Fluid;
   float windSpeed = 0.08F;
+  float windDrag = 0.0F;
+  float windLift = 0.0F;
+  float windCd = 0.0F;
+  float windCl = 0.0F;
+  float windArea = 0.0F;
   float smokeStrength = 1.0F;
   bool windCar = true;
-  bool windTracers = true;
+  bool windTracers = false;
+  bool windVolume = true;
+  std::string meshPath;
+  std::string meshStatus;
   bool smokeVolume = true;
   float smokeClipY = 0.0F;
   float exposure = 0.85F;
@@ -52,6 +61,8 @@ struct HudState {
 struct HudResult {
   bool sceneChanged = false;
   bool resetScene = false;
+  bool loadMesh = false;
+  bool useBuiltinCar = false;
 };
 
 struct CursorDrag {

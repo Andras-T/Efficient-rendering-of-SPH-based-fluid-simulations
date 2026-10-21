@@ -1,3 +1,4 @@
+#include "CubeMesh.hpp"
 #include "app/Headless.hpp"
 #include "app/ImageWriter.hpp"
 #include "core/Capture.hpp"
@@ -308,14 +309,16 @@ TEST(HeadlessRenderTest, WindGuideStepsIsolateTheStage) {
                                                .view = tunnel.view,
                                                .simulation = SimulationKind::WindTunnel,
                                                .windCar = tunnel.showCar,
-                                               .windTracers = tunnel.showTracers});
+                                               .windTracers = tunnel.showTracers,
+                                               .windVolume = tunnel.showVolume});
   const auto body = RenderOffscreen(context, {.extent = Extent,
                                               .frames = 16,
                                               .simulate = true,
                                               .view = car.view,
                                               .simulation = SimulationKind::WindTunnel,
                                               .windCar = car.showCar,
-                                              .windTracers = car.showTracers});
+                                              .windTracers = car.showTracers,
+                                              .windVolume = car.showVolume});
   ASSERT_EQ(empty.size(), body.size());
   int changed = 0;
   for (std::size_t i = 0; i < empty.size(); ++i) {
@@ -354,6 +357,77 @@ TEST(HeadlessRenderTest, SmokeGuideStepsIsolateTheStage) {
   EXPECT_FALSE(domain.showVolume);
   EXPECT_TRUE(finalStep.showVolume);
   EXPECT_GT(changed, static_cast<int>(empty.size() / 40));
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
+TEST(HeadlessRenderTest, WindVolumeViewDiffersFromTracers) {
+  const gpu::Context context({.validation = true});
+  constexpr VkExtent2D Extent{80, 48};
+  const auto volume = RenderOffscreen(context, {.extent = Extent,
+                                                .frames = 28,
+                                                .simulate = true,
+                                                .view = render::DebugView::Final,
+                                                .simulation = SimulationKind::WindTunnel,
+                                                .windCar = true,
+                                                .windTracers = false,
+                                                .windVolume = true});
+  const auto tracers = RenderOffscreen(context, {.extent = Extent,
+                                                 .frames = 28,
+                                                 .simulate = true,
+                                                 .view = render::DebugView::Final,
+                                                 .simulation = SimulationKind::WindTunnel,
+                                                 .windCar = true,
+                                                 .windTracers = true,
+                                                 .windVolume = false});
+  ASSERT_EQ(volume.size(), tracers.size());
+  int changed = 0;
+  int fieldPixels = 0;
+  for (std::size_t i = 0; i + 3 < volume.size(); i += 4) {
+    changed += (volume[i] != tracers[i] || volume[i + 1] != tracers[i + 1] ||
+                volume[i + 2] != tracers[i + 2])
+                   ? 1
+                   : 0;
+    const int r = volume[i];
+    const int g = volume[i + 1];
+    const int b = volume[i + 2];
+    if (b > r + 8 && b > 70 && g > 50) {
+      ++fieldPixels;
+    }
+  }
+  EXPECT_GT(changed, static_cast<int>(volume.size() / 40));
+  EXPECT_GT(fieldPixels, 20);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
+TEST(HeadlessRenderTest, WindImportedMeshReplacesTheCar) {
+  const gpu::Context context({.validation = true});
+  constexpr VkExtent2D Extent{80, 48};
+  const auto directory = std::filesystem::temp_directory_path() / "sph-wind-mesh";
+  std::filesystem::create_directories(directory);
+  const auto cube = test::WriteCubeObj(directory);
+  const auto car = RenderOffscreen(context, {.extent = Extent,
+                                             .frames = 20,
+                                             .simulate = true,
+                                             .view = render::DebugView::Final,
+                                             .simulation = SimulationKind::WindTunnel,
+                                             .windCar = true,
+                                             .windTracers = false,
+                                             .windVolume = false});
+  const auto mesh = RenderOffscreen(context, {.extent = Extent,
+                                              .frames = 20,
+                                              .simulate = true,
+                                              .view = render::DebugView::Final,
+                                              .simulation = SimulationKind::WindTunnel,
+                                              .windCar = true,
+                                              .windTracers = false,
+                                              .windVolume = false,
+                                              .meshPath = cube});
+  ASSERT_EQ(car.size(), mesh.size());
+  int changed = 0;
+  for (std::size_t i = 0; i < car.size(); ++i) {
+    changed += car[i] != mesh[i] ? 1 : 0;
+  }
+  EXPECT_GT(changed, static_cast<int>(car.size() / 40));
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 

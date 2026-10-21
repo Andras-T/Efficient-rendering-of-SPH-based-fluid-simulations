@@ -17,17 +17,19 @@ TEST(WindGuideTest, WalksEveryPipelineStage) {
     EXPECT_FALSE(std::string_view(step.title).empty());
     EXPECT_FALSE(std::string_view(step.text).empty());
     titles.insert(step.title);
-    looks.insert((static_cast<std::uint32_t>(step.view) << 2U) | (step.showCar ? 2U : 0U) |
-                 (step.showTracers ? 1U : 0U));
+    looks.insert((static_cast<std::uint32_t>(step.view) << 3U) | (step.showCar ? 4U : 0U) |
+                 (step.showTracers ? 2U : 0U) | (step.showVolume ? 1U : 0U));
   }
   EXPECT_EQ(titles.size(), WindGuideStepCount());
   EXPECT_EQ(looks.size(), WindGuideStepCount());
   EXPECT_EQ(WindGuideAt(0).view, render::DebugView::Final);
   EXPECT_FALSE(WindGuideAt(0).showCar);
   EXPECT_FALSE(WindGuideAt(0).showTracers);
+  EXPECT_FALSE(WindGuideAt(0).showVolume);
   EXPECT_EQ(WindGuideAt(WindGuideStepCount() - 1U).view, render::DebugView::Final);
   EXPECT_TRUE(WindGuideAt(WindGuideStepCount() - 1U).showCar);
-  EXPECT_TRUE(WindGuideAt(WindGuideStepCount() - 1U).showTracers);
+  EXPECT_FALSE(WindGuideAt(WindGuideStepCount() - 1U).showTracers);
+  EXPECT_TRUE(WindGuideAt(WindGuideStepCount() - 1U).showVolume);
 }
 
 TEST(WindGuideTest, ContinueAdvancesThenFinishes) {

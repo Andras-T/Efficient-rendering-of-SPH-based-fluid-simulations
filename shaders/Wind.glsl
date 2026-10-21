@@ -71,4 +71,34 @@ float LbmFeq(uint k, float density, vec3 velocity) {
          (1.0 + 3.0 * eu + 4.5 * eu * eu - 1.5 * dot(velocity, velocity));
 }
 
+bool WindIsBlocked(uint occ) { return occ == WindSolid || occ == WindWall; }
+
+vec4 WindInterpMacro(MacroRW field, OccupancyRW occupancy, vec3 world, vec3 origin, float cellSize,
+                     uvec3 grid) {
+  const vec3 local = (world - origin) / cellSize - vec3(0.5);
+  const ivec3 base = ivec3(floor(local));
+  const vec3 frac = local - vec3(base);
+  vec4 value = vec4(0.0);
+  float weightSum = 0.0;
+  for (int z = 0; z <= 1; ++z) {
+    for (int y = 0; y <= 1; ++y) {
+      for (int x = 0; x <= 1; ++x) {
+        const ivec3 cell = base + ivec3(x, y, z);
+        if (any(lessThan(cell, ivec3(0))) || any(greaterThanEqual(cell, ivec3(grid)))) {
+          continue;
+        }
+        const uint index = WindCellIndex(uvec3(cell), grid);
+        if (WindIsBlocked(occupancy.data[index])) {
+          continue;
+        }
+        const float w = ((x == 1) ? frac.x : 1.0 - frac.x) * ((y == 1) ? frac.y : 1.0 - frac.y) *
+                        ((z == 1) ? frac.z : 1.0 - frac.z);
+        value += field.values[index] * w;
+        weightSum += w;
+      }
+    }
+  }
+  return weightSum > 1.0e-6 ? value / weightSum : vec4(0.0);
+}
+
 #endif
