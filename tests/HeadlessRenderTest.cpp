@@ -224,7 +224,7 @@ TEST(HeadlessRenderTest, WindTunnelCarIsVisible) {
     const int r = rgba[i];
     const int g = rgba[i + 1];
     const int b = rgba[i + 2];
-    if (r > 50 && r > g + 12 && r > b + 8) {
+    if ((r > 50 && r > g + 12 && r > b + 8) || (b > 50 && b > r + 12 && b > g + 4)) {
       ++carPixels;
     }
   }

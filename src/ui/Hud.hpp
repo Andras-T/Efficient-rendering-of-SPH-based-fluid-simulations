@@ -46,6 +46,8 @@ struct HudState {
   float windCd = 0.0F;
   float windCl = 0.0F;
   float windArea = 0.0F;
+  float windCpMin = 0.0F;
+  float windCpMax = 0.0F;
   float smokeStrength = 1.0F;
   bool windCar = true;
   bool windTracers = false;

@@ -72,9 +72,9 @@ std::vector<std::uint8_t> RenderWindOffscreen(const gpu::Context& context,
   }
   render::Camera ownedCamera;
   ownedCamera.setAspect(extent);
-  ownedCamera.setTarget({0.02F, 0.12F, 0.0F});
-  ownedCamera.setYawPitch(0.95F, 0.32F);
-  ownedCamera.setDistance(1.30F);
+  ownedCamera.setTarget({-0.62F, 0.10F, 0.0F});
+  ownedCamera.setYawPitch(-0.19F, 0.22F);
+  ownedCamera.setDistance(1.42F);
   const render::Camera& camera = request.camera == nullptr ? ownedCamera : *request.camera;
   render::Renderer renderer(context, CaptureFormat);
   renderer.settings().view = request.view;
@@ -90,10 +90,12 @@ std::vector<std::uint8_t> RenderWindOffscreen(const gpu::Context& context,
   const std::uint32_t frameCount = std::max(request.frames, 1U);
   for (std::uint32_t frame = 0; frame < frameCount; ++frame) {
     const bool needPixels = !request.sequenceDirectory.empty() || (frame + 1 >= frameCount);
+    if (request.simulate) {
+      gpu::ImmediateSubmit(context,
+                           [&](VkCommandBuffer commandBuffer) { wind.record(commandBuffer, 1); });
+      wind.refreshAero();
+    }
     gpu::ImmediateSubmit(context, [&](VkCommandBuffer commandBuffer) {
-      if (request.simulate) {
-        wind.record(commandBuffer, 1);
-      }
       renderer.recordWind(commandBuffer, renderTarget, camera, wind.meshAddress(),
                           wind.meshVertexCount(), wind.tracerAddress(), wind.tracerCount(),
                           wind.macroAddress(), wind.occupancyAddress(), wind.domain().grid,

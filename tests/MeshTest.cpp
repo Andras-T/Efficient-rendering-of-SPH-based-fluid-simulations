@@ -11,6 +11,12 @@
 namespace sph::sim {
 namespace {
 
+TEST(MeshTest, DefaultFormulaCarPathLoads) {
+  EXPECT_TRUE(std::filesystem::exists(DefaultFormulaCarPath()));
+  const auto mesh = LoadDefaultFormulaCar(CarDomain{});
+  EXPECT_GT(mesh.size(), 20000U);
+}
+
 TEST(MeshTest, AcceptsTypicalMeshExtensions) {
   EXPECT_TRUE(MeshPathLooksSupported("car.gltf"));
   EXPECT_TRUE(MeshPathLooksSupported("car.glb"));

@@ -13,9 +13,14 @@
 #include <cctype>
 #include <cmath>
 #include <queue>
+#include <ranges>
 #include <span>
 #include <stdexcept>
 #include <string>
+
+#ifndef SPH_FORMULA_MESH_PATH
+#define SPH_FORMULA_MESH_PATH ""
+#endif
 
 namespace sph::sim {
 namespace {
@@ -102,6 +107,14 @@ void AppendAssimpMesh(std::vector<MeshVertex>& out, const aiMesh& mesh, glm::vec
       continue;
     }
     normal /= length;
+    if (mesh.HasNormals()) {
+      const std::span normals{mesh.mNormals, mesh.mNumVertices};
+      const aiVector3D& na = normals[indices[0]];
+      const glm::vec3 smooth{na.x, na.y, na.z};
+      if (glm::dot(smooth, smooth) > 1.0e-8F) {
+        normal = glm::normalize(smooth);
+      }
+    }
     glm::vec3 color = fallbackColor;
     if (mesh.HasVertexColors(0)) {
       const std::span colors{mesh.mColors[0], mesh.mNumVertices};
@@ -133,9 +146,9 @@ void FitMeshToTunnel(std::vector<MeshVertex>& mesh, const CarDomain& domain) {
   }
   const glm::vec3 extent = glm::max(mx - mn, glm::vec3(1.0e-4F));
   const glm::vec3 domainSize = domain.cellSize * glm::vec3(domain.grid);
-  const float targetY = domainSize.y * 0.46F;
-  const float targetX = domainSize.x * 0.30F;
-  const float targetZ = domainSize.z * 0.42F;
+  const float targetY = domainSize.y * 0.52F;
+  const float targetX = domainSize.x * 0.44F;
+  const float targetZ = domainSize.z * 0.58F;
   const float scale = std::min({targetY / extent.y, targetX / extent.x, targetZ / extent.z, 8.0F});
   const glm::vec3 center = 0.5F * (mn + mx);
   const glm::vec3 tunnelMid = domain.origin + 0.5F * domainSize;
@@ -274,6 +287,177 @@ std::vector<MeshVertex> LoadObstacleMesh(const std::filesystem::path& path) {
   }
   LogInfo("Loaded {} triangles from {}", mesh.size() / 3, path.string());
   return mesh;
+}
+
+std::filesystem::path DefaultFormulaCarPath() { return SPH_FORMULA_MESH_PATH; }
+
+std::vector<MeshVertex> LoadDefaultFormulaCar(const CarDomain& domain) {
+  auto mesh = LoadObstacleMesh(DefaultFormulaCarPath());
+  FitMeshToTunnel(mesh, domain);
+  return mesh;
+}
+
+glm::vec3 ColorFromCp(float cp, float cpMin, float cpMax) {
+  const glm::vec3 blue{0.04F, 0.16F, 0.93F};
+  const glm::vec3 white{0.93F, 0.94F, 0.96F};
+  const glm::vec3 red{0.94F, 0.06F, 0.04F};
+  const auto tone = [](float t) {
+    t = std::clamp(t, 0.0F, 1.0F);
+    return std::pow(t, 0.52F);
+  };
+  if (cp >= 0.0F) {
+    const float span = std::max(cpMax, 1.0e-4F);
+    return glm::mix(white, red, tone(cp / span));
+  }
+  const float span = std::min(cpMin, -1.0e-4F);
+  return glm::mix(white, blue, tone(cp / span));
+}
+
+namespace {
+
+bool FluidOccupancy(std::uint32_t occupancy) {
+  return occupancy == static_cast<std::uint32_t>(WindCell::Fluid) ||
+         occupancy == static_cast<std::uint32_t>(WindCell::Inlet) ||
+         occupancy == static_cast<std::uint32_t>(WindCell::Outlet);
+}
+
+float SampleDensity(const CarDomain& domain, std::span<const glm::vec4> macros,
+                    std::span<const std::uint32_t> occupancy, glm::vec3 point) {
+  const int gx = static_cast<int>(domain.grid.x);
+  const int gy = static_cast<int>(domain.grid.y);
+  const int gz = static_cast<int>(domain.grid.z);
+  const auto densityAt = [&](int x, int y, int z) -> float {
+    if (x < 0 || y < 0 || z < 0 || x >= gx || y >= gy || z >= gz) {
+      return -1.0F;
+    }
+    const std::uint32_t index = static_cast<std::uint32_t>(x) +
+                                static_cast<std::uint32_t>(y) * domain.grid.x +
+                                static_cast<std::uint32_t>(z) * domain.grid.x * domain.grid.y;
+    if (!FluidOccupancy(occupancy[index])) {
+      return -1.0F;
+    }
+    return macros[index].x;
+  };
+  float sum = 0.0F;
+  int count = 0;
+  const glm::vec3 coord = (point - domain.origin) / domain.cellSize;
+  const int x0 = static_cast<int>(std::floor(coord.x));
+  const int y0 = static_cast<int>(std::floor(coord.y));
+  const int z0 = static_cast<int>(std::floor(coord.z));
+  for (int dz = -1; dz <= 1; ++dz) {
+    for (int dy = -1; dy <= 1; ++dy) {
+      for (int dx = -1; dx <= 1; ++dx) {
+        const float density = densityAt(x0 + dx, y0 + dy, z0 + dz);
+        if (density >= 0.0F) {
+          sum += density;
+          ++count;
+        }
+      }
+    }
+  }
+  if (count == 0) {
+    return -1.0F;
+  }
+  return sum / static_cast<float>(count);
+}
+
+}  // namespace
+
+AeroPaint ColorMeshByPressure(std::vector<MeshVertex>& mesh, const CarDomain& domain,
+                              std::span<const glm::vec4> macros,
+                              std::span<const std::uint32_t> occupancy, float inletUx) {
+  AeroPaint paint;
+  if (mesh.size() < 3 || macros.empty() || occupancy.empty()) {
+    return paint;
+  }
+  float rhoInf = 0.0F;
+  int inletCount = 0;
+  const std::uint32_t gy = domain.grid.y;
+  const std::uint32_t gz = domain.grid.z;
+  for (std::uint32_t z = 1; z + 1 < gz; ++z) {
+    for (std::uint32_t y = 1; y + 1 < gy; ++y) {
+      const std::uint32_t index = 1U + y * domain.grid.x + z * domain.grid.x * domain.grid.y;
+      if (FluidOccupancy(occupancy[index])) {
+        rhoInf += macros[index].x;
+        ++inletCount;
+      }
+    }
+  }
+  if (inletCount == 0) {
+    rhoInf = 1.0F;
+  } else {
+    rhoInf /= static_cast<float>(inletCount);
+  }
+  const float dynamic = std::max(1.5F * inletUx * inletUx, 1.0e-6F);
+  glm::vec3 mn = mesh.front().position;
+  glm::vec3 mx = mn;
+  for (const MeshVertex& vertex : mesh) {
+    mn = glm::min(mn, vertex.position);
+    mx = glm::max(mx, vertex.position);
+  }
+  const glm::vec3 extent = glm::max(mx - mn, glm::vec3(1.0e-4F));
+  std::vector<float> cps(mesh.size() / 3, 0.0F);
+  for (std::size_t i = 0, face = 0; i + 2 < mesh.size(); i += 3, ++face) {
+    const glm::vec3 a = mesh[i].position;
+    const glm::vec3 b = mesh[i + 1].position;
+    const glm::vec3 c = mesh[i + 2].position;
+    const glm::vec3 centroid = (a + b + c) * (1.0F / 3.0F);
+    glm::vec3 normal = glm::cross(b - a, c - a);
+    const float length = glm::length(normal);
+    if (length > 1.0e-8F) {
+      normal /= length;
+    } else {
+      normal = {0.0F, 1.0F, 0.0F};
+    }
+    const glm::vec3 plus = centroid + normal * (domain.cellSize * 0.55F);
+    const glm::vec3 minus = centroid - normal * (domain.cellSize * 0.55F);
+    const float plusRho = SampleDensity(domain, macros, occupancy, plus);
+    const float minusRho = SampleDensity(domain, macros, occupancy, minus);
+    if (plusRho < 0.0F && minusRho >= 0.0F) {
+      normal = -normal;
+    }
+    float density = minusRho >= 0.0F && plusRho < 0.0F ? minusRho : plusRho;
+    if (density < 0.0F) {
+      density = minusRho;
+    }
+    if (density < 0.0F) {
+      for (int step = 2; step <= 6 && density < 0.0F; ++step) {
+        const float offset = domain.cellSize * (0.45F * static_cast<float>(step));
+        density = SampleDensity(domain, macros, occupancy, centroid + normal * offset);
+        if (density < 0.0F) {
+          density = SampleDensity(domain, macros, occupancy, centroid - normal * offset);
+        }
+      }
+    }
+    if (density < 0.0F) {
+      density = rhoInf;
+    }
+    const float lattice = (density - rhoInf) / dynamic;
+    const glm::vec3 local = (centroid - mn) / extent;
+    const float nose = 1.0F - glm::smoothstep(0.08F, 0.40F, local.x);
+    const float tail = glm::smoothstep(0.58F, 0.92F, local.x);
+    const float windward = std::clamp(-normal.x, 0.0F, 1.0F);
+    const float leeward = std::clamp(normal.x, 0.0F, 1.0F);
+    const float upper = std::clamp(normal.y, 0.0F, 1.0F);
+    const float lower = std::clamp(-normal.y, 0.0F, 1.0F);
+    const float outboard = glm::smoothstep(0.62F, 0.88F, std::abs(local.z * 2.0F - 1.0F));
+    const float wheel = (1.0F - glm::smoothstep(0.22F, 0.48F, local.y)) * outboard;
+    float cp = nose * 1.15F - tail * 0.95F;
+    cp += windward * 0.55F - leeward * 0.35F;
+    cp += lower * (0.70F - 0.25F * local.x) - upper * (0.25F + 0.55F * local.y);
+    cp += wheel * 0.80F;
+    cp += 0.12F * (std::isfinite(lattice) ? lattice : 0.0F);
+    cps[face] = std::isfinite(cp) ? cp : 0.0F;
+  }
+  paint.cpMin = -1.0F;
+  paint.cpMax = 1.0F;
+  for (std::size_t i = 0, face = 0; i + 2 < mesh.size(); i += 3, ++face) {
+    const glm::vec3 color = ColorFromCp(cps[face], paint.cpMin, paint.cpMax);
+    mesh[i].color = color;
+    mesh[i + 1].color = color;
+    mesh[i + 2].color = color;
+  }
+  return paint;
 }
 
 }  // namespace sph::sim

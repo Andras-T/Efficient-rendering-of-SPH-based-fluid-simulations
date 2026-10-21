@@ -112,9 +112,9 @@ int RunWindowed(const Options& options) {
   const bool startSmokeGuide = options.guide && options.simulation == SimulationKind::Smoke;
   const auto frameWindCamera = [&] {
     camera.setAspect(swapchain.extent());
-    camera.setTarget({0.02F, 0.12F, 0.0F});
-    camera.setYawPitch(0.95F, 0.32F);
-    camera.setDistance(1.30F);
+    camera.setTarget({-0.62F, 0.10F, 0.0F});
+    camera.setYawPitch(-0.19F, 0.22F);
+    camera.setDistance(1.42F);
   };
   const auto frameSmokeCamera = [&] {
     camera.setAspect(swapchain.extent());
@@ -246,6 +246,8 @@ int RunWindowed(const Options& options) {
         .windCd = wind.aero().cd,
         .windCl = wind.aero().cl,
         .windArea = wind.aero().frontalArea,
+        .windCpMin = wind.aero().cpMin,
+        .windCpMax = wind.aero().cpMax,
         .smokeStrength = smokeStrength,
         .windCar = renderer.settings().windCar,
         .windTracers = renderer.settings().windTracers,

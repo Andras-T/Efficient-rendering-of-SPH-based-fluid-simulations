@@ -1,14 +1,18 @@
 #include "ui/Hud.hpp"
 
+#include "sim/Mesh.hpp"
 #include "ui/FluidGuide.hpp"
 #include "ui/SmokeGuide.hpp"
 #include "ui/WindGuide.hpp"
 
+#include <glm/common.hpp>
 #include <glm/geometric.hpp>
 #include <imgui.h>
 
 #include <algorithm>
 #include <array>
+#include <cmath>
+#include <format>
 #include <numbers>
 
 namespace sph::ui {
@@ -25,6 +29,41 @@ constexpr float CursorAccelMax = 700.0F;
 constexpr float CursorPush = 420.0F;
 
 float Degrees(float radians) { return radians * RadiansToDegrees; }
+
+ImU32 CpLegendColor(float cp, float cpMin, float cpMax) {
+  const glm::vec3 color = sim::ColorFromCp(cp, cpMin, cpMax);
+  return IM_COL32(static_cast<int>(std::lround(color.x * 255.0F)),
+                  static_cast<int>(std::lround(color.y * 255.0F)),
+                  static_cast<int>(std::lround(color.z * 255.0F)), 255);
+}
+
+void DrawCpLegend(float cpMin, float cpMax) {
+  const float lo = cpMin < 0.0F ? cpMin : sim::AeroCpMin;
+  const float hi = cpMax > 0.0F ? cpMax : sim::AeroCpMax;
+  ImGui::TextUnformatted("Surface Cp");
+  const ImVec2 origin = ImGui::GetCursorScreenPos();
+  constexpr float BarWidth = 16.0F;
+  constexpr float BarHeight = 118.0F;
+  constexpr int Stops = 24;
+  ImDrawList* draw = ImGui::GetWindowDrawList();
+  for (int i = 0; i < Stops; ++i) {
+    const float t = 1.0F - (static_cast<float>(i) + 0.5F) / static_cast<float>(Stops);
+    const float cp = glm::mix(lo, hi, t);
+    draw->AddRectFilled(
+        {origin.x, origin.y + BarHeight * static_cast<float>(i) / Stops},
+        {origin.x + BarWidth, origin.y + BarHeight * static_cast<float>(i + 1) / Stops},
+        CpLegendColor(cp, lo, hi));
+  }
+  draw->AddRect({origin.x, origin.y}, {origin.x + BarWidth, origin.y + BarHeight},
+                IM_COL32(20, 20, 24, 255));
+  const float textX = origin.x + BarWidth + 8.0F;
+  const auto high = std::format("{:+.2f}  high p", static_cast<double>(hi));
+  const auto low = std::format("{:+.2f}  suction", static_cast<double>(lo));
+  draw->AddText({textX, origin.y - 2.0F}, IM_COL32(220, 80, 70, 255), high.c_str());
+  draw->AddText({textX, origin.y + BarHeight * 0.5F - 8.0F}, IM_COL32(210, 210, 214, 255), " 0.0");
+  draw->AddText({textX, origin.y + BarHeight - 16.0F}, IM_COL32(90, 130, 230, 255), low.c_str());
+  ImGui::Dummy({BarWidth + 118.0F, BarHeight});
+}
 
 int PresetIndex(sim::ScenePreset preset) {
   switch (preset) {
@@ -517,6 +556,8 @@ HudResult DrawHud(HudState& state) {
         }
       }
       ImGui::Checkbox("Car", &state.windCar);
+      ImGui::SameLine();
+      ImGui::Checkbox("Wake", &state.windVolume);
       ImGui::SliderFloat("Exposure", &state.exposure, 0.05F, 4.0F, "%.2f");
       std::array<char, 512> pathBuf{};
       const std::size_t copy = std::min(state.meshPath.size(), pathBuf.size() - 1U);
@@ -676,6 +717,8 @@ HudResult DrawHud(HudState& state) {
     ImGui::Text("Cl    %.3f", static_cast<double>(state.windCl));
     ImGui::Text("Area  %.3f m^2", static_cast<double>(state.windArea));
     ImGui::TextUnformatted("Momentum exchange on the solid");
+    ImGui::Spacing();
+    DrawCpLegend(state.windCpMin, state.windCpMax);
     ImGui::End();
   }
   ImGui::SetNextWindowPos({gpuX, 12.0F}, ImGuiCond_FirstUseEver, {1.0F, 0.0F});

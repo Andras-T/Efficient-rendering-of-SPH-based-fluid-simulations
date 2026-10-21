@@ -102,18 +102,21 @@ WindSolver::WindSolver(const gpu::Context& context)
   occupancy_ = MakeStorage(context, static_cast<VkDeviceSize>(cellCount_) * sizeof(std::uint32_t));
   macro_ = MakeStorage(context, static_cast<VkDeviceSize>(cellCount_) * sizeof(glm::vec4));
   tracers_ = MakeStorage(context, static_cast<VkDeviceSize>(TracerCount) * sizeof(Particle));
-  cpuMesh_ = BuildFormulaCarMesh();
+  cpuMesh_ = LoadDefaultFormulaCar(domain_);
   uploadMesh();
   initState();
 }
 
 void WindSolver::uploadMesh() {
-  if (mesh_.handle() != VK_NULL_HANDLE) {
-    context_->waitIdle();
-  }
   const std::size_t count = std::max(cpuMesh_.size(), std::size_t{1});
+  if (mesh_.handle() == VK_NULL_HANDLE ||
+      meshCount_ != static_cast<std::uint32_t>(cpuMesh_.size())) {
+    if (mesh_.handle() != VK_NULL_HANDLE) {
+      context_->waitIdle();
+    }
+    mesh_ = MakeStorage(*context_, count * sizeof(MeshVertex));
+  }
   meshCount_ = static_cast<std::uint32_t>(cpuMesh_.size());
-  mesh_ = MakeStorage(*context_, count * sizeof(MeshVertex));
   if (!cpuMesh_.empty()) {
     std::memcpy(mesh_.mapped<std::uint8_t>().data(), cpuMesh_.data(),
                 cpuMesh_.size() * sizeof(MeshVertex));
@@ -125,14 +128,12 @@ void WindSolver::setObstacleMesh(const std::filesystem::path& path) {
   auto mesh = LoadObstacleMesh(path);
   FitMeshToTunnel(mesh, domain_);
   cpuMesh_ = std::move(mesh);
-  importedMesh_ = true;
   uploadMesh();
   initState();
 }
 
 void WindSolver::useFormulaCar() {
-  cpuMesh_ = BuildFormulaCarMesh();
-  importedMesh_ = false;
+  cpuMesh_ = LoadDefaultFormulaCar(domain_);
   uploadMesh();
   initState();
 }
@@ -142,8 +143,7 @@ void WindSolver::setInletSpeed(float latticeSpeed) {
 }
 
 void WindSolver::initState() {
-  const auto occupancy =
-      importedMesh_ ? BuildWindOccupancy(domain_, cpuMesh_) : BuildWindOccupancy(domain_);
+  const auto occupancy = BuildWindOccupancy(domain_, cpuMesh_);
   std::memcpy(occupancy_.mapped<std::uint8_t>().data(), occupancy.data(),
               occupancy.size() * sizeof(std::uint32_t));
   occupancy_.flush();
@@ -189,6 +189,10 @@ void WindSolver::initState() {
   }
   tracers_.flush();
   seed_ = 1;
+  const auto paint = ColorMeshByPressure(cpuMesh_, domain_, macros, occupancy, inletUx_);
+  aero_.cpMin = paint.cpMin;
+  aero_.cpMax = paint.cpMax;
+  uploadMesh();
 }
 
 void WindSolver::reset() { initState(); }
@@ -278,6 +282,12 @@ void WindSolver::refreshAero() {
   aero_.cd += AeroSmooth * (raw.cd - aero_.cd);
   aero_.cl += AeroSmooth * (raw.cl - aero_.cl);
   aero_.frontalArea = raw.frontalArea;
+  macro_.invalidate();
+  const auto paint =
+      ColorMeshByPressure(cpuMesh_, domain_, macro_.mapped<const glm::vec4>(), occupancy, inletUx_);
+  aero_.cpMin = paint.cpMin;
+  aero_.cpMax = paint.cpMax;
+  uploadMesh();
 }
 
 void WindSolver::push(VkCommandBuffer commandBuffer, bool collide) const {
@@ -335,6 +345,13 @@ void WindSolver::step(std::uint32_t steps) {
 void WindSolver::downloadMacro(std::span<glm::vec4> dest) const {
   macro_.invalidate();
   const auto src = macro_.mapped<const glm::vec4>();
+  const std::size_t count = std::min(dest.size(), src.size());
+  std::copy_n(src.begin(), count, dest.begin());
+}
+
+void WindSolver::downloadOccupancy(std::span<std::uint32_t> dest) const {
+  occupancy_.invalidate();
+  const auto src = occupancy_.mapped<const std::uint32_t>();
   const std::size_t count = std::min(dest.size(), src.size());
   std::copy_n(src.begin(), count, dest.begin());
 }

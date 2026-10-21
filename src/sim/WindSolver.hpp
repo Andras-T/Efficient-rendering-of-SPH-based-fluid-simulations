@@ -25,6 +25,8 @@ struct WindAero {
   float cd = 0.0F;
   float cl = 0.0F;
   float frontalArea = 0.0F;
+  float cpMin = 0.0F;
+  float cpMax = 0.0F;
 };
 
 class WindSolver {
@@ -37,9 +39,11 @@ class WindSolver {
   void record(VkCommandBuffer commandBuffer, std::uint32_t steps = 1);
   void step(std::uint32_t steps = 1);
   void downloadMacro(std::span<glm::vec4> dest) const;
+  void downloadOccupancy(std::span<std::uint32_t> dest) const;
   void downloadTracers(std::span<Particle> dest) const;
   void setObstacleMesh(const std::filesystem::path& path);
   void useFormulaCar();
+  [[nodiscard]] std::span<const MeshVertex> cpuMesh() const { return cpuMesh_; }
 
   [[nodiscard]] VkDeviceAddress meshAddress() const { return mesh_.address(); }
   [[nodiscard]] std::uint32_t meshVertexCount() const { return meshCount_; }
@@ -79,7 +83,6 @@ class WindSolver {
   gpu::Buffer tracers_;
   gpu::Buffer mesh_;
   std::vector<MeshVertex> cpuMesh_;
-  bool importedMesh_ = false;
   float frontalArea_ = 0.0F;
   WindAero aero_{};
 };
