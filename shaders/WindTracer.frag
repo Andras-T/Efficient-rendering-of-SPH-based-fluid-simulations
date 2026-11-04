@@ -37,6 +37,6 @@ void main() {
   }
   const vec3 normal = normalize(hit - center);
   const float rim = pow(1.0 - abs(dot(normal, -ray)), 2.0);
-  const vec3 smoke = mix(vec3(0.90, 0.93, 0.97), vec3(0.42, 0.55, 0.68), rim);
-  outColor = vec4(smoke, 0.55 + 0.25 * rim);
+  const vec3 smoke = mix(vec3(0.98, 0.99, 1.0), vec3(0.08, 0.11, 0.16), rim);
+  outColor = vec4(smoke, 0.92 + 0.06 * rim);
 }

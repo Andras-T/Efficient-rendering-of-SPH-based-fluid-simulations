@@ -18,7 +18,7 @@ void main() {
   const Particle particle = frame.particles.particles[gl_InstanceIndex];
   const vec3 center = (frame.view * vec4(particle.position, 1.0)).xyz;
   const vec2 corner = kCorners[gl_VertexIndex];
-  const vec3 viewPos = center + vec3(corner * (frame.radius * 1.35), 0.0);
+  const vec3 viewPos = center + vec3(corner * (frame.radius * 1.5), 0.0);
   outViewPos = viewPos;
   outViewCenter = center;
   outSpeed = length(particle.velocity);

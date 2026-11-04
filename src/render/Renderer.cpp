@@ -321,7 +321,7 @@ void Renderer::recordWind(VkCommandBuffer commandBuffer, const RenderTarget& tar
   uniforms.inverseView = glm::inverse(uniforms.view);
   uniforms.inverseProjection = glm::inverse(uniforms.projection);
   uniforms.lightDirection = glm::normalize(uniforms.lightDirection);
-  uniforms.radius = 0.0065F;
+  uniforms.radius = 0.011F;
   uniforms.particles = tracers;
   uniforms.count = tracerCount;
   uniforms.debugView = static_cast<std::uint32_t>(settings_.view);
