@@ -552,12 +552,13 @@ HudResult DrawHud(HudState& state) {
         } else {
           state.view = render::DebugView::Final;
           state.windVolume = true;
-          state.windTracers = false;
         }
       }
       ImGui::Checkbox("Car", &state.windCar);
       ImGui::SameLine();
       ImGui::Checkbox("Wake", &state.windVolume);
+      ImGui::SameLine();
+      ImGui::Checkbox("Tracers", &state.windTracers);
       ImGui::SliderFloat("Exposure", &state.exposure, 0.05F, 4.0F, "%.2f");
       std::array<char, 512> pathBuf{};
       const std::size_t copy = std::min(state.meshPath.size(), pathBuf.size() - 1U);

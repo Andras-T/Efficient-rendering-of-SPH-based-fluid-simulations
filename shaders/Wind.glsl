@@ -73,6 +73,14 @@ float LbmFeq(uint k, float density, vec3 velocity) {
 
 bool WindIsBlocked(uint occ) { return occ == WindSolid || occ == WindWall; }
 
+uint WindOccupancyAt(OccupancyRW occupancy, vec3 world, vec3 origin, float cellSize, uvec3 grid) {
+  const ivec3 cell = ivec3(floor((world - origin) / cellSize));
+  if (any(lessThan(cell, ivec3(0))) || any(greaterThanEqual(cell, ivec3(grid)))) {
+    return WindWall;
+  }
+  return occupancy.data[WindCellIndex(uvec3(cell), grid)];
+}
+
 vec4 WindInterpMacro(MacroRW field, OccupancyRW occupancy, vec3 world, vec3 origin, float cellSize,
                      uvec3 grid) {
   const vec3 local = (world - origin) / cellSize - vec3(0.5);
