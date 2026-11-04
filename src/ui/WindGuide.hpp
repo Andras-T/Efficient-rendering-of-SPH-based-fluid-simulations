@@ -37,8 +37,8 @@ inline constexpr std::array WindGuideSteps{
                   "moments is the wake field around the car.",
                   render::DebugView::Velocity, true, false, true},
     WindGuideStep{"Tracers",
-                  "Optional rake particles spawn at the inlet and advect with the interpolated "
-                  "velocity field. They sketch streamlines; they are not the solver.",
+                  "Tiny tracers seed the whole inlet face and follow the live LBM velocity. They "
+                  "bounce-back on the solid mesh, then wrap through the vortical wake.",
                   render::DebugView::Final, true, true, false},
     WindGuideStep{"Final",
                   "Cp on the body (blue suction, red high pressure), ground, HDRI, and a volume "

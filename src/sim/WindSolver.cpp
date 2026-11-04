@@ -6,6 +6,7 @@
 #include "gpu/Pipeline.hpp"
 #include "sim/Mesh.hpp"
 
+#include <glm/common.hpp>
 #include <glm/vec3.hpp>
 
 #include <algorithm>
@@ -174,17 +175,34 @@ void WindSolver::initState() {
 
   auto tracers = tracers_.mapped<Particle>();
   const glm::vec3 extent = domain_.cellSize * glm::vec3(domain_.grid);
+  const auto hash = [](std::uint32_t x) {
+    x ^= x >> 16U;
+    x *= 0x7feb352dU;
+    x ^= x >> 15U;
+    x *= 0x846ca68bU;
+    x ^= x >> 16U;
+    return x;
+  };
   for (std::uint32_t i = 0; i < TracerCount; ++i) {
     Particle particle{};
-    const std::uint32_t ix = i % 4U;
-    const std::uint32_t iy = (i / 4U) % 32U;
-    const std::uint32_t iz = i / 128U;
-    const float tx = 0.05F + 0.03F * (static_cast<float>(ix) / 3.0F);
-    const float ty = 0.14F + 0.52F * (static_cast<float>(iy) / 31.0F);
-    const float tz = 0.14F + 0.72F * (static_cast<float>(iz) / 63.0F);
-    particle.position = domain_.origin + glm::vec3(tx * extent.x, ty * extent.y, tz * extent.z);
+    std::uint32_t state = hash(i * 747796405U + 18U);
+    const auto rand01 = [&] {
+      state = hash(state);
+      return static_cast<float>(state) * (1.0F / 4294967296.0F);
+    };
+    const std::uint32_t nz = std::max(TracerCount / TracerInletY, 1U);
+    const std::uint32_t iy = i % TracerInletY;
+    const std::uint32_t iz = (i / TracerInletY) % nz;
+    const float y01 = std::clamp(
+        (static_cast<float>(iy) + 0.15F + 0.70F * rand01()) / static_cast<float>(TracerInletY),
+        0.0F, 1.0F);
+    const float z01 = std::clamp(
+        (static_cast<float>(iz) + 0.15F + 0.70F * rand01()) / static_cast<float>(nz), 0.0F, 1.0F);
+    const float y = glm::mix(domain_.cellSize * 1.12F, extent.y - domain_.cellSize * 1.12F, y01);
+    const float z = glm::mix(domain_.cellSize * 1.12F, extent.z - domain_.cellSize * 1.12F, z01);
+    particle.position = domain_.origin + glm::vec3(domain_.cellSize * 1.55F, y, z);
     particle.velocity = {inletUx_, 0.0F, 0.0F};
-    particle.alpha = 0.3F + 1.4F * (static_cast<float>(i % 17) / 16.0F);
+    particle.alpha = 0.55F + 1.8F * rand01();
     tracers[i] = particle;
   }
   tracers_.flush();
@@ -326,11 +344,14 @@ void WindSolver::record(VkCommandBuffer commandBuffer, std::uint32_t steps) {
     gpu::GlobalBarrier(commandBuffer, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                        VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                        VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT);
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, tracersCompute_.get());
+    push(commandBuffer, true);
+    vkCmdDispatch(commandBuffer, tracerGroups, 1, 1);
+    gpu::GlobalBarrier(commandBuffer, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                       VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                       VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT);
     ++seed_;
   }
-  vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, tracersCompute_.get());
-  push(commandBuffer, true);
-  vkCmdDispatch(commandBuffer, tracerGroups, 1, 1);
   gpu::GlobalBarrier(
       commandBuffer, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
       VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
