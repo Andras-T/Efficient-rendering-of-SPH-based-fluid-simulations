@@ -41,6 +41,7 @@ struct OffscreenRequest {
   SimulationKind simulation = SimulationKind::Fluid;
   bool windCar = true;
   bool windTracers = false;
+  bool windParticles = false;
   bool windVolume = true;
   std::filesystem::path meshPath;
   bool smokeVolume = true;

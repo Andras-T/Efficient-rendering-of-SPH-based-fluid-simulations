@@ -51,6 +51,7 @@ struct HudState {
   float smokeStrength = 1.0F;
   bool windCar = true;
   bool windTracers = false;
+  bool windParticles = false;
   bool windVolume = true;
   std::string meshPath;
   std::string meshStatus;

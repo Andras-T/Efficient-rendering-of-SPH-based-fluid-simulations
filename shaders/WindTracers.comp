@@ -20,13 +20,13 @@ layout(push_constant, scalar) uniform PushConstants {
   uint seed;
   vec3 origin;
   float cellSize;
+  uint inletNy;
+  uint inletNz;
+  float trailMix;
 };
 
-const uint kInletNy = 24;
-const uint kInletNz = 32;
 const int kSubsteps = 8;
 const float kRestitution = 0.22;
-const float kTrailMix = 0.055;
 
 uint Hash(uint x) {
   x ^= x >> 16;
@@ -62,12 +62,14 @@ float SampleVorticity(vec3 world) {
 
 void Respawn(inout Particle particle, uint id) {
   uint state = Hash(id * 747796405u + seed + 17u);
-  const uint rake = id % (kInletNy * kInletNz);
-  const uint iy = rake % kInletNy;
-  const uint iz = rake / kInletNy;
+  const uint ny = max(inletNy, 1u);
+  const uint nz = max(inletNz, 1u);
+  const uint rake = id % (ny * nz);
+  const uint iy = rake % ny;
+  const uint iz = rake / ny;
   const vec3 extent = vec3(grid) * cellSize;
-  const float y01 = clamp((float(iy) + 0.20 + 0.60 * Rand01(state)) / float(kInletNy), 0.0, 1.0);
-  const float z01 = clamp((float(iz) + 0.20 + 0.60 * Rand01(state)) / float(kInletNz), 0.0, 1.0);
+  const float y01 = clamp((float(iy) + 0.20 + 0.60 * Rand01(state)) / float(ny), 0.0, 1.0);
+  const float z01 = clamp((float(iz) + 0.20 + 0.60 * Rand01(state)) / float(nz), 0.0, 1.0);
   const float y = mix(cellSize * 1.12, extent.y - cellSize * 1.12, y01);
   const float z = mix(cellSize * 1.12, extent.z - cellSize * 1.12, z01);
   particle.position = origin + vec3(cellSize * 1.55, y, z);
@@ -140,7 +142,7 @@ void main() {
   for (int s = 0; s < kSubsteps; ++s) {
     AdvectWithBounce(particle, dt);
   }
-  particle.force = mix(particle.force, particle.position, kTrailMix);
+  particle.force = mix(particle.force, particle.position, trailMix);
   particle.kappa = SampleVorticity(particle.position);
   particle.alpha -= 0.0032;
   const bool leftOutlet = particle.position.x > maxP.x - cellSize * 1.2;
