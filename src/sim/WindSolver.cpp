@@ -190,19 +190,21 @@ void WindSolver::initState() {
       state = hash(state);
       return static_cast<float>(state) * (1.0F / 4294967296.0F);
     };
-    const std::uint32_t nz = std::max(TracerCount / TracerInletY, 1U);
-    const std::uint32_t iy = i % TracerInletY;
-    const std::uint32_t iz = (i / TracerInletY) % nz;
+    const std::uint32_t rake = i % (TracerInletY * TracerInletZ);
+    const std::uint32_t iy = rake % TracerInletY;
+    const std::uint32_t iz = rake / TracerInletY;
     const float y01 = std::clamp(
-        (static_cast<float>(iy) + 0.15F + 0.70F * rand01()) / static_cast<float>(TracerInletY),
+        (static_cast<float>(iy) + 0.20F + 0.60F * rand01()) / static_cast<float>(TracerInletY),
         0.0F, 1.0F);
     const float z01 = std::clamp(
-        (static_cast<float>(iz) + 0.15F + 0.70F * rand01()) / static_cast<float>(nz), 0.0F, 1.0F);
+        (static_cast<float>(iz) + 0.20F + 0.60F * rand01()) / static_cast<float>(TracerInletZ),
+        0.0F, 1.0F);
     const float y = glm::mix(domain_.cellSize * 1.12F, extent.y - domain_.cellSize * 1.12F, y01);
     const float z = glm::mix(domain_.cellSize * 1.12F, extent.z - domain_.cellSize * 1.12F, z01);
     particle.position = domain_.origin + glm::vec3(domain_.cellSize * 1.55F, y, z);
     particle.velocity = {inletUx_, 0.0F, 0.0F};
-    particle.alpha = 0.55F + 1.8F * rand01();
+    particle.force = particle.position;
+    particle.alpha = 0.35F + 2.4F * rand01();
     tracers[i] = particle;
   }
   tracers_.flush();

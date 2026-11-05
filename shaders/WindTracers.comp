@@ -22,9 +22,11 @@ layout(push_constant, scalar) uniform PushConstants {
   float cellSize;
 };
 
-const uint kInletNy = 128;
+const uint kInletNy = 24;
+const uint kInletNz = 32;
 const int kSubsteps = 8;
 const float kRestitution = 0.22;
+const float kTrailMix = 0.055;
 
 uint Hash(uint x) {
   x ^= x >> 16;
@@ -44,19 +46,35 @@ vec3 SampleVelocity(vec3 world) {
   return WindInterpMacro(macro, occupancy, world, origin, cellSize, grid).yzw;
 }
 
+float SampleVorticity(vec3 world) {
+  const float h = cellSize;
+  const vec3 uxp = SampleVelocity(world + vec3(h, 0.0, 0.0));
+  const vec3 uxm = SampleVelocity(world - vec3(h, 0.0, 0.0));
+  const vec3 uyp = SampleVelocity(world + vec3(0.0, h, 0.0));
+  const vec3 uym = SampleVelocity(world - vec3(0.0, h, 0.0));
+  const vec3 uzp = SampleVelocity(world + vec3(0.0, 0.0, h));
+  const vec3 uzm = SampleVelocity(world - vec3(0.0, 0.0, h));
+  const vec3 curl =
+      vec3((uyp.z - uym.z - uzp.y + uzm.y) / (2.0 * h), (uzp.x - uzm.x - uxp.z + uxm.z) / (2.0 * h),
+           (uxp.y - uxm.y - uyp.x + uym.x) / (2.0 * h));
+  return length(curl);
+}
+
 void Respawn(inout Particle particle, uint id) {
   uint state = Hash(id * 747796405u + seed + 17u);
-  const uint nz = max(tracerCount / kInletNy, 1u);
-  const uint iy = id % kInletNy;
-  const uint iz = (id / kInletNy) % nz;
+  const uint rake = id % (kInletNy * kInletNz);
+  const uint iy = rake % kInletNy;
+  const uint iz = rake / kInletNy;
   const vec3 extent = vec3(grid) * cellSize;
-  const float y01 = clamp((float(iy) + 0.15 + 0.70 * Rand01(state)) / float(kInletNy), 0.0, 1.0);
-  const float z01 = clamp((float(iz) + 0.15 + 0.70 * Rand01(state)) / float(nz), 0.0, 1.0);
+  const float y01 = clamp((float(iy) + 0.20 + 0.60 * Rand01(state)) / float(kInletNy), 0.0, 1.0);
+  const float z01 = clamp((float(iz) + 0.20 + 0.60 * Rand01(state)) / float(kInletNz), 0.0, 1.0);
   const float y = mix(cellSize * 1.12, extent.y - cellSize * 1.12, y01);
   const float z = mix(cellSize * 1.12, extent.z - cellSize * 1.12, z01);
   particle.position = origin + vec3(cellSize * 1.55, y, z);
   particle.velocity = vec3(inletUx, 0.0, 0.0);
-  particle.alpha = 0.55 + 1.8 * Rand01(state);
+  particle.force = particle.position;
+  particle.alpha = 0.35 + 2.4 * Rand01(state);
+  particle.kappa = 0.0;
   particle.flags = ParticleFlagFluid;
 }
 
@@ -110,8 +128,8 @@ void main() {
   const vec3 maxP = origin + extent;
   const float dt = cellSize * 1.15;
   if (Blocked(particle.position)) {
-    const vec3 back = particle.position - normalize(particle.velocity + vec3(inletUx, 0.0, 0.0)) *
-                                              cellSize * 0.45;
+    const vec3 back = particle.position -
+                      normalize(particle.velocity + vec3(inletUx, 0.0, 0.0)) * cellSize * 0.45;
     if (Blocked(back)) {
       Respawn(particle, i);
     } else {
@@ -122,7 +140,9 @@ void main() {
   for (int s = 0; s < kSubsteps; ++s) {
     AdvectWithBounce(particle, dt);
   }
-  particle.alpha -= 0.0045;
+  particle.force = mix(particle.force, particle.position, kTrailMix);
+  particle.kappa = SampleVorticity(particle.position);
+  particle.alpha -= 0.0032;
   const bool leftOutlet = particle.position.x > maxP.x - cellSize * 1.2;
   const bool outOfTunnel = particle.position.y < origin.y + cellSize * 1.05 ||
                            particle.position.y > maxP.y - cellSize * 1.05 ||

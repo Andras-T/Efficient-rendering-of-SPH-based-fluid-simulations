@@ -107,6 +107,30 @@ TEST(GpuWindTest, TracersSeedTheFullInletFace) {
   EXPECT_GT(onFace, tracers.size() / 2);
   EXPECT_GT(mx.y - mn.y, extent.y * 0.72F);
   EXPECT_GT(mx.z - mn.z, extent.z * 0.72F);
+  EXPECT_EQ(sim::WindSolver::TracerCount,
+            sim::WindSolver::TracerInletY * sim::WindSolver::TracerInletZ * 4U);
+  EXPECT_LT(sim::WindSolver::TracerInletY * sim::WindSolver::TracerInletZ, 1200U);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
+TEST(GpuWindTest, TracersLeaveMotionStreaks) {
+  const gpu::Context context({.validation = true});
+  sim::WindSolver wind(context);
+  wind.step(28);
+  std::vector<sim::Particle> tracers(sim::WindSolver::TracerCount);
+  wind.downloadTracers(tracers);
+  float trail = 0.0F;
+  std::uint32_t counted = 0;
+  for (const sim::Particle& particle : tracers) {
+    const float length = glm::length(particle.position - particle.force);
+    if (length < 1.0e-5F) {
+      continue;
+    }
+    trail += length;
+    ++counted;
+  }
+  ASSERT_GT(counted, tracers.size() / 4);
+  EXPECT_GT(trail / static_cast<float>(counted), 0.03F);
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 
