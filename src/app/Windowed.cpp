@@ -251,6 +251,7 @@ int RunWindowed(const Options& options) {
         .smokeStrength = smokeStrength,
         .windCar = renderer.settings().windCar,
         .windTracers = renderer.settings().windTracers,
+        .windParticles = renderer.settings().windParticles,
         .windVolume = renderer.settings().windVolume,
         .meshPath = meshPath,
         .meshStatus = meshStatus,
@@ -325,6 +326,7 @@ int RunWindowed(const Options& options) {
     renderer.settings().walls = hud.walls;
     renderer.settings().windCar = hud.windCar;
     renderer.settings().windTracers = hud.windTracers;
+    renderer.settings().windParticles = hud.windParticles;
     renderer.settings().windVolume = hud.windVolume;
     renderer.settings().smokeVolume = hud.smokeVolume;
     renderer.settings().smokeClipY = hud.smokeClipY;
@@ -404,9 +406,10 @@ int RunWindowed(const Options& options) {
       }
       renderer.recordWind(commandBuffer, {image, swapchain.view(imageIndex), swapchain.extent()},
                           camera, wind.meshAddress(), wind.meshVertexCount(), wind.tracerAddress(),
-                          wind.tracerCount(), wind.macroAddress(), wind.occupancyAddress(),
-                          wind.domain().grid, wind.domain().origin, wind.domain().cellSize,
-                          wind.inletSpeed(), wind.domainMin(), wind.domainMax(),
+                          wind.tracerCount(), wind.particleAddress(), wind.particleCount(),
+                          wind.macroAddress(), wind.occupancyAddress(), wind.domain().grid,
+                          wind.domain().origin, wind.domain().cellSize, wind.inletSpeed(),
+                          wind.domainMin(), wind.domainMax(),
                           [&](VkCommandBuffer overlay) { imgui.record(overlay); });
     } else if (simulation == SimulationKind::Smoke) {
       if (!paused && !showMenu) {

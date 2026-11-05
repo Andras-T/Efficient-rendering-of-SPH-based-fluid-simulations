@@ -399,6 +399,39 @@ TEST(HeadlessRenderTest, WindVolumeViewDiffersFromTracers) {
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 
+TEST(HeadlessRenderTest, WindParticlesDifferFromTracers) {
+  const gpu::Context context({.validation = true});
+  constexpr VkExtent2D Extent{80, 48};
+  const auto streaks = RenderOffscreen(context, {.extent = Extent,
+                                                 .frames = 24,
+                                                 .simulate = true,
+                                                 .view = render::DebugView::Final,
+                                                 .simulation = SimulationKind::WindTunnel,
+                                                 .windCar = true,
+                                                 .windTracers = true,
+                                                 .windParticles = false,
+                                                 .windVolume = false});
+  const auto particles = RenderOffscreen(context, {.extent = Extent,
+                                                   .frames = 24,
+                                                   .simulate = true,
+                                                   .view = render::DebugView::Final,
+                                                   .simulation = SimulationKind::WindTunnel,
+                                                   .windCar = true,
+                                                   .windTracers = false,
+                                                   .windParticles = true,
+                                                   .windVolume = false});
+  ASSERT_EQ(streaks.size(), particles.size());
+  int changed = 0;
+  for (std::size_t i = 0; i + 3 < streaks.size(); i += 4) {
+    changed += (streaks[i] != particles[i] || streaks[i + 1] != particles[i + 1] ||
+                streaks[i + 2] != particles[i + 2])
+                   ? 1
+                   : 0;
+  }
+  EXPECT_GT(changed, static_cast<int>(streaks.size() / 40));
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
 TEST(HeadlessRenderTest, WindImportedMeshReplacesTheCar) {
   const gpu::Context context({.validation = true});
   constexpr VkExtent2D Extent{80, 48};

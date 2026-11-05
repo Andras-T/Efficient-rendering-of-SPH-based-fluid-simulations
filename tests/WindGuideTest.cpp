@@ -9,7 +9,7 @@ namespace sph::ui {
 namespace {
 
 TEST(WindGuideTest, WalksEveryPipelineStage) {
-  EXPECT_EQ(WindGuideStepCount(), 6U);
+  EXPECT_EQ(WindGuideStepCount(), 7U);
   std::unordered_set<std::string_view> titles;
   std::unordered_set<std::uint32_t> looks;
   for (std::uint32_t i = 0; i < WindGuideStepCount(); ++i) {
@@ -17,8 +17,9 @@ TEST(WindGuideTest, WalksEveryPipelineStage) {
     EXPECT_FALSE(std::string_view(step.title).empty());
     EXPECT_FALSE(std::string_view(step.text).empty());
     titles.insert(step.title);
-    looks.insert((static_cast<std::uint32_t>(step.view) << 3U) | (step.showCar ? 4U : 0U) |
-                 (step.showTracers ? 2U : 0U) | (step.showVolume ? 1U : 0U));
+    looks.insert((static_cast<std::uint32_t>(step.view) << 4U) | (step.showCar ? 8U : 0U) |
+                 (step.showTracers ? 4U : 0U) | (step.showParticles ? 2U : 0U) |
+                 (step.showVolume ? 1U : 0U));
   }
   EXPECT_EQ(titles.size(), WindGuideStepCount());
   EXPECT_EQ(looks.size(), WindGuideStepCount());

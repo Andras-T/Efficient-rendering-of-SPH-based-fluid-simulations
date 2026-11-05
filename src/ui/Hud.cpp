@@ -158,6 +158,7 @@ void CloseGuide(HudState& state) {
   state.view = render::DebugView::Final;
   state.windCar = true;
   state.windTracers = false;
+  state.windParticles = false;
   state.windVolume = true;
   state.smokeVolume = true;
   state.smokeClipY = 0.0F;
@@ -405,6 +406,7 @@ void DrawWindGuide(HudState& state) {
   state.view = current.view;
   state.windCar = current.showCar;
   state.windTracers = current.showTracers;
+  state.windParticles = current.showParticles;
   state.windVolume = current.showVolume;
   ImGui::Separator();
   ImGui::TextUnformatted(current.title);
@@ -537,18 +539,27 @@ HudResult DrawHud(HudState& state) {
       int windView = 0;
       if (state.view == render::DebugView::Velocity) {
         windView = 1;
-      } else if (state.windTracers && !state.windVolume) {
+      } else if (state.windTracers && !state.windVolume && !state.windParticles) {
         windView = 2;
+      } else if (state.windParticles && !state.windVolume && !state.windTracers) {
+        windView = 3;
       }
-      if (ImGui::Combo("View", &windView, "Final\0Velocity\0Tracers\0")) {
+      if (ImGui::Combo("View", &windView, "Final\0Velocity\0Tracers\0Particles\0")) {
         if (windView == 1) {
           state.view = render::DebugView::Velocity;
           state.windVolume = true;
           state.windTracers = false;
+          state.windParticles = false;
         } else if (windView == 2) {
           state.view = render::DebugView::Final;
           state.windVolume = false;
           state.windTracers = true;
+          state.windParticles = false;
+        } else if (windView == 3) {
+          state.view = render::DebugView::Final;
+          state.windVolume = false;
+          state.windTracers = false;
+          state.windParticles = true;
         } else {
           state.view = render::DebugView::Final;
           state.windVolume = true;
@@ -559,6 +570,8 @@ HudResult DrawHud(HudState& state) {
       ImGui::Checkbox("Wake", &state.windVolume);
       ImGui::SameLine();
       ImGui::Checkbox("Tracers", &state.windTracers);
+      ImGui::SameLine();
+      ImGui::Checkbox("Particles", &state.windParticles);
       ImGui::SliderFloat("Exposure", &state.exposure, 0.05F, 4.0F, "%.2f");
       std::array<char, 512> pathBuf{};
       const std::size_t copy = std::min(state.meshPath.size(), pathBuf.size() - 1U);

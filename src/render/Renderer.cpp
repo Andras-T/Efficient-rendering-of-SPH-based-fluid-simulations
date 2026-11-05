@@ -110,7 +110,15 @@ Renderer::Renderer(const gpu::Context& context, VkFormat colorFormat)
                              VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
                     .allocationFlags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
                                        VMA_ALLOCATION_CREATE_MAPPED_BIT,
-                }) {}
+                }),
+      overlayUniforms_(
+          context, {
+                       .size = sizeof(sim::FrameUniforms),
+                       .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                                VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+                       .allocationFlags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
+                                          VMA_ALLOCATION_CREATE_MAPPED_BIT,
+                   }) {}
 
 void Renderer::resize(VkExtent2D extent) {
   if (extent.width == 0 || extent.height == 0) {
@@ -309,10 +317,11 @@ void Renderer::record(VkCommandBuffer commandBuffer, const RenderTarget& target,
 
 void Renderer::recordWind(VkCommandBuffer commandBuffer, const RenderTarget& target,
                           const Camera& camera, VkDeviceAddress mesh, std::uint32_t meshVertices,
-                          VkDeviceAddress tracers, std::uint32_t tracerCount, VkDeviceAddress macro,
-                          VkDeviceAddress occupancy, glm::uvec3 grid, glm::vec3 origin,
-                          float cellSize, float inletUx, glm::vec3 domainMin, glm::vec3 domainMax,
-                          const OverlayCallback& overlay) {
+                          VkDeviceAddress tracers, std::uint32_t tracerCount,
+                          VkDeviceAddress particles, std::uint32_t particleCount,
+                          VkDeviceAddress macro, VkDeviceAddress occupancy, glm::uvec3 grid,
+                          glm::vec3 origin, float cellSize, float inletUx, glm::vec3 domainMin,
+                          glm::vec3 domainMax, const OverlayCallback& overlay) {
   resize(target.extent);
 
   sim::FrameUniforms uniforms;
@@ -383,9 +392,18 @@ void Renderer::recordWind(VkCommandBuffer commandBuffer, const RenderTarget& tar
   if (settings_.windCar) {
     carPass_.record(commandBuffer, frameAddress, mesh, meshVertices);
   }
+  const bool velocityView = settings_.view == DebugView::Velocity;
   if (settings_.windTracers) {
-    const bool velocityView = settings_.view == DebugView::Velocity;
     windTracerPass_.record(commandBuffer, frameAddress, tracerCount, velocityView);
+  }
+  if (settings_.windParticles) {
+    uniforms.radius = 0.0031F;
+    uniforms.particles = particles;
+    uniforms.count = particleCount;
+    overlayUniforms_.mapped<sim::FrameUniforms>().front() = uniforms;
+    overlayUniforms_.flush();
+    windTracerPass_.recordParticles(commandBuffer, overlayUniforms_.address(), particleCount,
+                                    velocityView);
   }
   vkCmdEndRendering(commandBuffer);
 

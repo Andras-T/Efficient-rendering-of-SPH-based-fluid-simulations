@@ -34,6 +34,9 @@ class WindSolver {
   static constexpr std::uint32_t TracerInletY = 24;
   static constexpr std::uint32_t TracerInletZ = 32;
   static constexpr std::uint32_t TracerCount = TracerInletY * TracerInletZ * 4;
+  static constexpr std::uint32_t ParticleInletY = 80;
+  static constexpr std::uint32_t ParticleInletZ = 108;
+  static constexpr std::uint32_t ParticleCount = ParticleInletY * ParticleInletZ;
 
   explicit WindSolver(const gpu::Context& context);
 
@@ -43,6 +46,7 @@ class WindSolver {
   void downloadMacro(std::span<glm::vec4> dest) const;
   void downloadOccupancy(std::span<std::uint32_t> dest) const;
   void downloadTracers(std::span<Particle> dest) const;
+  void downloadParticles(std::span<Particle> dest) const;
   void setObstacleMesh(const std::filesystem::path& path);
   void useFormulaCar();
   [[nodiscard]] std::span<const MeshVertex> cpuMesh() const { return cpuMesh_; }
@@ -51,6 +55,8 @@ class WindSolver {
   [[nodiscard]] std::uint32_t meshVertexCount() const { return meshCount_; }
   [[nodiscard]] VkDeviceAddress tracerAddress() const { return tracers_.address(); }
   [[nodiscard]] std::uint32_t tracerCount() const { return TracerCount; }
+  [[nodiscard]] VkDeviceAddress particleAddress() const { return particles_.address(); }
+  [[nodiscard]] std::uint32_t particleCount() const { return ParticleCount; }
   [[nodiscard]] VkDeviceAddress macroAddress() const { return macro_.address(); }
   [[nodiscard]] VkDeviceAddress occupancyAddress() const { return occupancy_.address(); }
   [[nodiscard]] const CarDomain& domain() const { return domain_; }
@@ -62,8 +68,12 @@ class WindSolver {
   void refreshAero();
 
  private:
-  void push(VkCommandBuffer commandBuffer, bool collide) const;
+  void push(VkCommandBuffer commandBuffer, bool collide, VkDeviceAddress tracers,
+            std::uint32_t tracerCount, std::uint32_t inletNy, std::uint32_t inletNz,
+            float trailMix) const;
   void initState();
+  void seedInlet(gpu::Buffer& dest, std::uint32_t count, std::uint32_t inletY, std::uint32_t inletZ,
+                 std::uint32_t salt) const;
   void uploadMesh();
   void cacheFrontalArea(std::span<const std::uint32_t> occupancy);
 
@@ -83,6 +93,7 @@ class WindSolver {
   gpu::Buffer occupancy_;
   gpu::Buffer macro_;
   gpu::Buffer tracers_;
+  gpu::Buffer particles_;
   gpu::Buffer mesh_;
   std::vector<MeshVertex> cpuMesh_;
   float frontalArea_ = 0.0F;

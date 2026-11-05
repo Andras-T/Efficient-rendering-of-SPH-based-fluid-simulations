@@ -46,6 +46,7 @@ struct RenderSettings {
   bool block = false;
   bool windCar = true;
   bool windTracers = false;
+  bool windParticles = false;
   bool windVolume = true;
   bool smokeVolume = true;
   float smokeClipY = 0.0F;
@@ -73,9 +74,10 @@ class Renderer {
               const OverlayCallback& overlay = {});
   void recordWind(VkCommandBuffer commandBuffer, const RenderTarget& target, const Camera& camera,
                   VkDeviceAddress mesh, std::uint32_t meshVertices, VkDeviceAddress tracers,
-                  std::uint32_t tracerCount, VkDeviceAddress macro, VkDeviceAddress occupancy,
-                  glm::uvec3 grid, glm::vec3 origin, float cellSize, float inletUx,
-                  glm::vec3 domainMin, glm::vec3 domainMax, const OverlayCallback& overlay = {});
+                  std::uint32_t tracerCount, VkDeviceAddress particles, std::uint32_t particleCount,
+                  VkDeviceAddress macro, VkDeviceAddress occupancy, glm::uvec3 grid,
+                  glm::vec3 origin, float cellSize, float inletUx, glm::vec3 domainMin,
+                  glm::vec3 domainMax, const OverlayCallback& overlay = {});
   void recordSmoke(VkCommandBuffer commandBuffer, const RenderTarget& target, const Camera& camera,
                    VkDeviceAddress scalar, VkDeviceAddress velocity, glm::uvec3 grid,
                    glm::vec3 origin, float cellSize, glm::vec3 domainMin, glm::vec3 domainMax,
@@ -100,6 +102,7 @@ class Renderer {
   gpu::Image hdr_;
   gpu::Image depth_;
   gpu::Buffer uniforms_;
+  gpu::Buffer overlayUniforms_;
   RenderSettings settings_;
 };
 

@@ -80,6 +80,7 @@ std::vector<std::uint8_t> RenderWindOffscreen(const gpu::Context& context,
   renderer.settings().view = request.view;
   renderer.settings().windCar = request.windCar;
   renderer.settings().windTracers = request.windTracers;
+  renderer.settings().windParticles = request.windParticles;
   renderer.settings().windVolume = request.windVolume;
   renderer.resize(extent);
   const render::RenderTarget renderTarget{target.handle(), target.view(), extent};
@@ -96,11 +97,11 @@ std::vector<std::uint8_t> RenderWindOffscreen(const gpu::Context& context,
       wind.refreshAero();
     }
     gpu::ImmediateSubmit(context, [&](VkCommandBuffer commandBuffer) {
-      renderer.recordWind(commandBuffer, renderTarget, camera, wind.meshAddress(),
-                          wind.meshVertexCount(), wind.tracerAddress(), wind.tracerCount(),
-                          wind.macroAddress(), wind.occupancyAddress(), wind.domain().grid,
-                          wind.domain().origin, wind.domain().cellSize, wind.inletSpeed(),
-                          wind.domainMin(), wind.domainMax());
+      renderer.recordWind(
+          commandBuffer, renderTarget, camera, wind.meshAddress(), wind.meshVertexCount(),
+          wind.tracerAddress(), wind.tracerCount(), wind.particleAddress(), wind.particleCount(),
+          wind.macroAddress(), wind.occupancyAddress(), wind.domain().grid, wind.domain().origin,
+          wind.domain().cellSize, wind.inletSpeed(), wind.domainMin(), wind.domainMax());
       if (needPixels) {
         CopyTargetToBuffer(commandBuffer, target.handle(), readback.handle(), extent);
       }

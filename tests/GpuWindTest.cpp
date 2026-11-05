@@ -113,6 +113,87 @@ TEST(GpuWindTest, TracersSeedTheFullInletFace) {
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 
+TEST(GpuWindTest, ParticlesSeedTheFullInletFace) {
+  const gpu::Context context({.validation = true});
+  const sim::WindSolver wind(context);
+  std::vector<sim::Particle> particles(sim::WindSolver::ParticleCount);
+  wind.downloadParticles(particles);
+  const glm::vec3 origin = wind.domain().origin;
+  const float cell = wind.domain().cellSize;
+  const glm::vec3 extent = glm::vec3(wind.domain().grid) * cell;
+  glm::vec3 mn{1.0e9F};
+  glm::vec3 mx{-1.0e9F};
+  std::uint32_t onFace = 0;
+  for (const sim::Particle& particle : particles) {
+    if (particle.position.x > origin.x + cell * 4.0F) {
+      continue;
+    }
+    ++onFace;
+    mn = glm::min(mn, particle.position);
+    mx = glm::max(mx, particle.position);
+  }
+  EXPECT_EQ(sim::WindSolver::ParticleCount,
+            sim::WindSolver::ParticleInletY * sim::WindSolver::ParticleInletZ);
+  EXPECT_GT(sim::WindSolver::ParticleCount, sim::WindSolver::TracerCount);
+  EXPECT_GT(onFace, particles.size() / 2);
+  EXPECT_GT(mx.y - mn.y, extent.y * 0.72F);
+  EXPECT_GT(mx.z - mn.z, extent.z * 0.72F);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
+TEST(GpuWindTest, ParticlesBounceOnTheSolidMesh) {
+  const gpu::Context context({.validation = true});
+  sim::WindSolver wind(context);
+  wind.step(64);
+  std::vector<sim::Particle> particles(sim::WindSolver::ParticleCount);
+  wind.downloadParticles(particles);
+  const auto cellCount = static_cast<std::size_t>(wind.domain().grid.x) *
+                         static_cast<std::size_t>(wind.domain().grid.y) *
+                         static_cast<std::size_t>(wind.domain().grid.z);
+  std::vector<std::uint32_t> occupancy(cellCount);
+  wind.downloadOccupancy(occupancy);
+  const glm::uvec3 grid = wind.domain().grid;
+  std::uint32_t inSolid = 0;
+  std::uint32_t againstBody = 0;
+  const auto occupancyAt = [&](int x, int y, int z) -> std::uint32_t {
+    if (x < 0 || y < 0 || z < 0 || x >= static_cast<int>(grid.x) || y >= static_cast<int>(grid.y) ||
+        z >= static_cast<int>(grid.z)) {
+      return static_cast<std::uint32_t>(sim::WindCell::Wall);
+    }
+    return occupancy[static_cast<std::uint32_t>(x) + static_cast<std::uint32_t>(y) * grid.x +
+                     static_cast<std::uint32_t>(z) * grid.x * grid.y];
+  };
+  for (const sim::Particle& particle : particles) {
+    const glm::ivec3 cell =
+        glm::clamp(glm::ivec3((particle.position - wind.domain().origin) / wind.domain().cellSize),
+                   glm::ivec3(0), glm::ivec3(grid) - 1);
+    const std::uint32_t here = occupancyAt(cell.x, cell.y, cell.z);
+    if (here == static_cast<std::uint32_t>(sim::WindCell::Solid) ||
+        here == static_cast<std::uint32_t>(sim::WindCell::Wall)) {
+      ++inSolid;
+      continue;
+    }
+    const bool nextToSolid =
+        occupancyAt(cell.x + 1, cell.y, cell.z) ==
+            static_cast<std::uint32_t>(sim::WindCell::Solid) ||
+        occupancyAt(cell.x - 1, cell.y, cell.z) ==
+            static_cast<std::uint32_t>(sim::WindCell::Solid) ||
+        occupancyAt(cell.x, cell.y + 1, cell.z) ==
+            static_cast<std::uint32_t>(sim::WindCell::Solid) ||
+        occupancyAt(cell.x, cell.y - 1, cell.z) ==
+            static_cast<std::uint32_t>(sim::WindCell::Solid) ||
+        occupancyAt(cell.x, cell.y, cell.z + 1) ==
+            static_cast<std::uint32_t>(sim::WindCell::Solid) ||
+        occupancyAt(cell.x, cell.y, cell.z - 1) == static_cast<std::uint32_t>(sim::WindCell::Solid);
+    if (nextToSolid) {
+      ++againstBody;
+    }
+  }
+  EXPECT_LT(inSolid, particles.size() / 200);
+  EXPECT_GT(againstBody, 40U);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
 TEST(GpuWindTest, TracersLeaveMotionStreaks) {
   const gpu::Context context({.validation = true});
   sim::WindSolver wind(context);
