@@ -31,8 +31,9 @@ struct WindAero {
 
 class WindSolver {
  public:
-  static constexpr std::uint32_t TracerCount = 16384;
-  static constexpr std::uint32_t TracerInletY = 128;
+  static constexpr std::uint32_t TracerInletY = 24;
+  static constexpr std::uint32_t TracerInletZ = 32;
+  static constexpr std::uint32_t TracerCount = TracerInletY * TracerInletZ * 4;
 
   explicit WindSolver(const gpu::Context& context);
 

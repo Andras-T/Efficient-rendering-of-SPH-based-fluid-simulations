@@ -8,35 +8,27 @@ layout(push_constant, scalar) uniform PushConstants {
   FrameBuffer frame;
 };
 
-layout(location = 0) in vec3 inViewPos;
-layout(location = 1) in vec3 inViewCenter;
-layout(location = 2) flat in float inSpeed;
+layout(location = 0) in vec2 inCorner;
+layout(location = 1) flat in float inSpeed;
+layout(location = 2) flat in float inVorticity;
 layout(location = 0) out vec4 outColor;
 
 void main() {
-  const vec3 ray = normalize(inViewPos);
-  const vec3 center = inViewCenter;
-  const float radius = frame.radius;
-  const float b = dot(center, ray);
-  const float c = dot(center, center) - radius * radius;
-  const float disc = b * b - c;
-  if (disc < 0.0) {
+  const float across = inCorner.y;
+  const float along = inCorner.x;
+  const float envelope = smoothstep(-1.0, -0.55, along) * (1.0 - smoothstep(0.55, 1.0, along));
+  const float alpha = exp(-4.2 * across * across) * envelope;
+  if (alpha < 0.02) {
     discard;
   }
-  const float t = b - sqrt(disc);
-  if (t < 0.0) {
-    discard;
-  }
-  const vec3 hit = ray * t;
-  const vec4 clip = frame.projection * vec4(hit, 1.0);
-  gl_FragDepth = clip.z / clip.w;
 
+  const float speedT = clamp(inSpeed / 0.11, 0.0, 1.0);
+  const float vortT = clamp(inVorticity * 0.42, 0.0, 1.0);
+  const float t = clamp(max(speedT, vortT * 0.85), 0.0, 1.0);
+  const vec3 color = Heatmap(t);
   if (frame.debugView == DebugViewVelocity) {
-    outColor = vec4(Heatmap(clamp(inSpeed / 0.12, 0.0, 1.0)), 1.0);
+    outColor = vec4(color, 1.0);
     return;
   }
-  const vec3 normal = normalize(hit - center);
-  const float rim = pow(1.0 - abs(dot(normal, -ray)), 2.0);
-  const vec3 smoke = mix(vec3(0.98, 0.99, 1.0), vec3(0.08, 0.11, 0.16), rim);
-  outColor = vec4(smoke, 0.92 + 0.06 * rim);
+  outColor = vec4(color, mix(0.42, 0.82, t) * alpha);
 }
