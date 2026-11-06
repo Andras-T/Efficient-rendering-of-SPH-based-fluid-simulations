@@ -405,6 +405,9 @@ void Renderer::recordWind(VkCommandBuffer commandBuffer, const RenderTarget& tar
     windTracerPass_.recordParticles(commandBuffer, overlayUniforms_.address(), particleCount,
                                     velocityView);
   }
+  if (settings_.paddleRadius > 0.0F) {
+    paddlePass_.record(commandBuffer, frameAddress, settings_.paddleCenter, settings_.paddleRadius);
+  }
   vkCmdEndRendering(commandBuffer);
 
   gpu::TransitionImage(commandBuffer,

@@ -9,7 +9,7 @@ namespace sph::ui {
 namespace {
 
 TEST(WindGuideTest, WalksEveryPipelineStage) {
-  EXPECT_EQ(WindGuideStepCount(), 7U);
+  EXPECT_EQ(WindGuideStepCount(), 8U);
   std::unordered_set<std::string_view> titles;
   std::unordered_set<std::uint32_t> looks;
   for (std::uint32_t i = 0; i < WindGuideStepCount(); ++i) {

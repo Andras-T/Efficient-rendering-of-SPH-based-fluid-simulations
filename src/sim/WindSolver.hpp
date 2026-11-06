@@ -4,6 +4,7 @@
 #include "gpu/Handles.hpp"
 #include "sim/Car.hpp"
 #include "sim/Particle.hpp"
+#include "sim/WindUnits.hpp"
 
 #include <glm/vec4.hpp>
 
@@ -62,6 +63,7 @@ class WindSolver {
   [[nodiscard]] const CarDomain& domain() const { return domain_; }
   [[nodiscard]] glm::vec3 domainMin() const { return domain_.origin; }
   [[nodiscard]] glm::vec3 domainMax() const { return CarDomainMax(domain_); }
+  [[nodiscard]] std::uint32_t cellCount() const { return cellCount_; }
   [[nodiscard]] float inletSpeed() const { return inletUx_; }
   [[nodiscard]] const WindAero& aero() const { return aero_; }
   void setInletSpeed(float latticeSpeed);
@@ -80,7 +82,7 @@ class WindSolver {
   const gpu::Context* context_ = nullptr;
   CarDomain domain_{};
   float tau_ = 0.60F;
-  float inletUx_ = 0.08F;
+  float inletUx_ = DefaultLatticeSpeed;
   std::uint32_t cellCount_ = 0;
   std::uint32_t meshCount_ = 0;
   mutable std::uint32_t seed_ = 1;

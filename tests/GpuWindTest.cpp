@@ -2,7 +2,9 @@
 #include "gpu/Context.hpp"
 #include "sim/Car.hpp"
 #include "sim/Mesh.hpp"
+#include "sim/WindProbe.hpp"
 #include "sim/WindSolver.hpp"
+#include "sim/WindUnits.hpp"
 
 #include <glm/common.hpp>
 #include <glm/geometric.hpp>
@@ -359,6 +361,56 @@ TEST(GpuWindTest, ImportedCubeOccupiesTheTunnel) {
   ASSERT_GT(inletCount, 0U);
   inletUx /= static_cast<float>(inletCount);
   EXPECT_GT(inletUx, 0.4F * wind.inletSpeed());
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
+TEST(GpuWindTest, ProbeReadsInletAndBody) {
+  const gpu::Context context({.validation = true});
+  sim::WindSolver wind(context);
+  wind.setInletSpeed(sim::KmhToLattice(180.0F));
+  wind.step(32);
+  const auto cellCount = static_cast<std::size_t>(wind.cellCount());
+  std::vector<glm::vec4> macros(cellCount);
+  std::vector<std::uint32_t> occupancy(cellCount);
+  wind.downloadMacro(macros);
+  wind.downloadOccupancy(occupancy);
+  const glm::vec3 inlet =
+      wind.domain().origin + wind.domain().cellSize * glm::vec3(3.5F, 12.5F, 16.5F);
+  const sim::WindProbe air =
+      sim::SampleWindPoint(wind.domain(), macros, occupancy, wind.inletSpeed(), inlet);
+  ASSERT_TRUE(air.hit);
+  EXPECT_FALSE(air.onBody);
+  EXPECT_GT(air.speedMs, 0.45F * sim::LatticeToMs(wind.inletSpeed()));
+  EXPECT_NEAR(air.speedKmh, air.speedMs * sim::MetersPerSecondToKmh, 0.5F);
+  EXPECT_TRUE(std::isfinite(air.cp));
+  EXPECT_TRUE(std::isfinite(air.pressure));
+
+  glm::vec3 solidCenter = wind.domain().origin;
+  bool foundSolid = false;
+  const glm::uvec3 grid = wind.domain().grid;
+  for (std::uint32_t z = 1; z + 1 < grid.z && !foundSolid; ++z) {
+    for (std::uint32_t y = 1; y + 1 < grid.y && !foundSolid; ++y) {
+      for (std::uint32_t x = 8; x + 8 < grid.x; ++x) {
+        const std::uint32_t index = x + y * grid.x + z * grid.x * grid.y;
+        if (occupancy[index] != static_cast<std::uint32_t>(sim::WindCell::Solid)) {
+          continue;
+        }
+        solidCenter =
+            wind.domain().origin + wind.domain().cellSize * (glm::vec3(x, y, z) + glm::vec3(0.5F));
+        foundSolid = true;
+        break;
+      }
+    }
+  }
+  ASSERT_TRUE(foundSolid);
+  const glm::vec3 origin = solidCenter - glm::vec3(0.55F, 0.0F, 0.0F);
+  const sim::WindProbe body = sim::ProbeWindRay(wind.domain(), macros, occupancy, wind.inletSpeed(),
+                                                origin, glm::vec3{1.0F, 0.0F, 0.0F});
+  ASSERT_TRUE(body.hit);
+  EXPECT_TRUE(body.onBody);
+  EXPECT_TRUE(std::isfinite(body.cp));
+  EXPECT_TRUE(std::isfinite(body.pressure));
+  EXPECT_TRUE(std::isfinite(body.speedKmh));
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 

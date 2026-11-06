@@ -1,6 +1,8 @@
 #include "ui/Hud.hpp"
 
 #include "sim/Mesh.hpp"
+#include "sim/WindProbe.hpp"
+#include "sim/WindUnits.hpp"
 #include "ui/FluidGuide.hpp"
 #include "ui/SmokeGuide.hpp"
 #include "ui/WindGuide.hpp"
@@ -300,6 +302,72 @@ void ApplyCameraInput(render::Camera& camera, glm::vec3 domainMin, glm::vec3 dom
   }
 }
 
+std::optional<sim::WindProbe> SampleWindCursor(const render::Camera& camera,
+                                               const sim::CarDomain& domain,
+                                               std::span<const glm::vec4> macros,
+                                               std::span<const std::uint32_t> occupancy,
+                                               float inletUx, bool pinned, glm::vec3 pin) {
+  const ImGuiIO& io = ImGui::GetIO();
+  if (io.DisplaySize.x <= 0.0F || io.DisplaySize.y <= 0.0F) {
+    return std::nullopt;
+  }
+  if (pinned) {
+    return sim::SampleWindPoint(domain, macros, occupancy, inletUx, pin);
+  }
+  if (io.WantCaptureMouse) {
+    return std::nullopt;
+  }
+  return sim::ProbeWindRay(domain, macros, occupancy, inletUx, camera.position(),
+                           camera.worldDirection(MouseNdc()));
+}
+
+namespace {
+
+void DrawWindProbe(HudState& state) {
+  if (state.simulation != SimulationKind::WindTunnel || state.showMenu) {
+    return;
+  }
+  const ImGuiIO& io = ImGui::GetIO();
+  const bool shift = ImGui::IsKeyDown(ImGuiKey_LeftShift) || ImGui::IsKeyDown(ImGuiKey_RightShift);
+  if (!io.WantCaptureMouse && !shift && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+    if (state.windProbePinned) {
+      state.windProbePinned = false;
+    } else if (state.windProbe.hit) {
+      state.windProbePinned = true;
+    }
+  }
+  if (!state.windProbe.hit) {
+    return;
+  }
+  ImVec2 pos = io.MousePos;
+  pos.x += 18.0F;
+  pos.y += 18.0F;
+  ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
+  ImGui::SetNextWindowBgAlpha(0.88F);
+  ImGui::Begin("Probe", nullptr,
+               ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
+                   ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNav |
+                   ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoFocusOnAppearing);
+  if (state.windProbe.onBody) {
+    ImGui::TextUnformatted("On body");
+  } else if (state.windProbe.onGround) {
+    ImGui::TextUnformatted("Ground");
+  } else {
+    ImGui::TextUnformatted("Air");
+  }
+  if (state.windProbePinned) {
+    ImGui::SameLine();
+    ImGui::TextDisabled("pinned");
+  }
+  ImGui::Text("Cp   %+.2f", static_cast<double>(state.windProbe.cp));
+  ImGui::Text("p    %.4f  lattice", static_cast<double>(state.windProbe.pressure));
+  ImGui::Text("U    %.1f m/s   %.0f km/h", static_cast<double>(state.windProbe.speedMs),
+              static_cast<double>(state.windProbe.speedKmh));
+  ImGui::End();
+}
+
+}  // namespace
+
 CursorForce SamplePaddle(const render::Camera& camera, glm::vec3 domainMin, glm::vec3 domainMax,
                          bool paused, CursorDrag& drag, float radius, float swirl) {
   const ImGuiIO& io = ImGui::GetIO();
@@ -514,7 +582,13 @@ HudResult DrawHud(HudState& state) {
   }
   if (state.simulation == SimulationKind::WindTunnel) {
     ImGui::TextUnformatted("Wind tunnel  D3Q19 lattice Boltzmann");
-    ImGui::SliderFloat("Inlet speed", &state.windSpeed, 0.03F, 0.12F, "%.3f");
+    float inletKmh = sim::LatticeToKmh(state.windSpeed);
+    if (ImGui::SliderFloat("Inlet", &inletKmh, sim::WindKmhMin, sim::WindKmhMax, "%.0f km/h")) {
+      state.windSpeed = sim::ClampLatticeSpeed(sim::KmhToLattice(inletKmh));
+    }
+    ImGui::TextDisabled("lattice ux  %.3f   %.1f m/s", static_cast<double>(state.windSpeed),
+                        static_cast<double>(sim::LatticeToMs(state.windSpeed)));
+    ImGui::TextUnformatted("Hover the tunnel for Cp, pressure, speed. Click pins.");
     if (ImGui::Button("Reset")) {
       result.resetScene = true;
     }
@@ -731,6 +805,20 @@ HudResult DrawHud(HudState& state) {
     ImGui::Text("Cl    %.3f", static_cast<double>(state.windCl));
     ImGui::Text("Area  %.3f m^2", static_cast<double>(state.windArea));
     ImGui::TextUnformatted("Momentum exchange on the solid");
+    if (state.windProbe.hit) {
+      ImGui::Separator();
+      const char* probeWhere = "Probe  air";
+      if (state.windProbe.onBody) {
+        probeWhere = "Probe  on body";
+      } else if (state.windProbe.onGround) {
+        probeWhere = "Probe  ground";
+      }
+      ImGui::TextUnformatted(probeWhere);
+      ImGui::Text("Cp   %+.2f", static_cast<double>(state.windProbe.cp));
+      ImGui::Text("p    %.4f", static_cast<double>(state.windProbe.pressure));
+      ImGui::Text("U    %.1f m/s  %.0f km/h", static_cast<double>(state.windProbe.speedMs),
+                  static_cast<double>(state.windProbe.speedKmh));
+    }
     ImGui::Spacing();
     DrawCpLegend(state.windCpMin, state.windCpMax);
     ImGui::End();
@@ -751,6 +839,7 @@ HudResult DrawHud(HudState& state) {
     }
   }
   ImGui::End();
+  DrawWindProbe(state);
   return result;
 }
 

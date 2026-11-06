@@ -16,13 +16,16 @@
 #include "sim/SmokeSolver.hpp"
 #include "sim/SphSolver.hpp"
 #include "sim/Tank.hpp"
+#include "sim/WindProbe.hpp"
 #include "sim/WindSolver.hpp"
+#include "sim/WindUnits.hpp"
 #include "ui/Hud.hpp"
 
 #include <GLFW/glfw3.h>
 #include <glm/common.hpp>
 #include <glm/geometric.hpp>
 #include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 
 #include <array>
 #include <exception>
@@ -132,7 +135,12 @@ int RunWindowed(const Options& options) {
   bool showGuide = options.guide;
   std::uint32_t guideStep = 0;
   SimulationKind simulation = options.simulation;
-  float windSpeed = 0.08F;
+  float windSpeed = sim::DefaultLatticeSpeed;
+  sim::WindProbe windProbe{};
+  bool windProbePinned = false;
+  glm::vec3 windProbePin{0.0F};
+  std::vector<glm::vec4> windMacros;
+  std::vector<std::uint32_t> windOccupancy;
   float smokeStrength = 1.0F;
   ui::CursorDrag cursorDrag;
   const glm::vec3 blockHalf = sim::WoodenBlockHalf;
@@ -210,6 +218,26 @@ int RunWindowed(const Options& options) {
                "vkResetCommandPool");
 
     imgui.beginFrame();
+    if (!showMenu && simulation == SimulationKind::WindTunnel) {
+      const auto cells = static_cast<std::size_t>(wind.cellCount());
+      if (windMacros.size() != cells) {
+        windMacros.resize(cells);
+        windOccupancy.resize(cells);
+      }
+      wind.downloadMacro(windMacros);
+      wind.downloadOccupancy(windOccupancy);
+      if (const auto next =
+              ui::SampleWindCursor(camera, wind.domain(), windMacros, windOccupancy,
+                                   wind.inletSpeed(), windProbePinned, windProbePin)) {
+        windProbe = *next;
+      }
+      if (windProbePinned && windProbe.hit) {
+        windProbe.position = windProbePin;
+      }
+    } else if (simulation != SimulationKind::WindTunnel) {
+      windProbe = {};
+      windProbePinned = false;
+    }
     std::uint32_t hudCount = solver.count();
     if (simulation == SimulationKind::WindTunnel) {
       hudCount = wind.tracerCount();
@@ -241,6 +269,8 @@ int RunWindowed(const Options& options) {
         .guideStep = guideStep,
         .simulation = simulation,
         .windSpeed = windSpeed,
+        .windProbe = windProbe,
+        .windProbePinned = windProbePinned,
         .windDrag = wind.aero().drag,
         .windLift = wind.aero().lift,
         .windCd = wind.aero().cd,
@@ -269,6 +299,10 @@ int RunWindowed(const Options& options) {
     guideStep = hud.guideStep;
     simulation = hud.simulation;
     windSpeed = hud.windSpeed;
+    if (hud.windProbePinned && !windProbePinned && windProbe.hit) {
+      windProbePin = windProbe.position;
+    }
+    windProbePinned = hud.windProbePinned;
     smokeStrength = hud.smokeStrength;
     meshPath = hud.meshPath;
     meshStatus = hud.meshStatus;
@@ -358,8 +392,13 @@ int RunWindowed(const Options& options) {
     }
     sim::ClampAabbToTank(blockCenter, blockHalf, solver.params());
     solver.setBlock(blockCenter - blockHalf, blockCenter + blockHalf, showBlock);
-    renderer.settings().paddleCenter = cursor.position;
-    renderer.settings().paddleRadius = cursor.visible ? cursor.radius : 0.0F;
+    if (simulation == SimulationKind::WindTunnel && windProbe.hit) {
+      renderer.settings().paddleCenter = windProbe.position;
+      renderer.settings().paddleRadius = 0.016F;
+    } else {
+      renderer.settings().paddleCenter = cursor.position;
+      renderer.settings().paddleRadius = cursor.visible ? cursor.radius : 0.0F;
+    }
     renderer.settings().blockMin = blockCenter - blockHalf;
     renderer.settings().blockMax = blockCenter + blockHalf;
     renderer.settings().block = showBlock;

@@ -13,6 +13,7 @@
 #include "sim/SmokeSolver.hpp"
 #include "sim/SphSolver.hpp"
 #include "sim/WindSolver.hpp"
+#include "sim/WindUnits.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -67,6 +68,9 @@ std::vector<std::uint8_t> RenderWindOffscreen(const gpu::Context& context,
                                                     VMA_ALLOCATION_CREATE_MAPPED_BIT,
                              });
   sim::WindSolver wind(context);
+  if (request.windKmh > 0.0F) {
+    wind.setInletSpeed(sim::KmhToLattice(request.windKmh));
+  }
   if (!request.meshPath.empty()) {
     wind.setObstacleMesh(request.meshPath);
   }
@@ -82,6 +86,8 @@ std::vector<std::uint8_t> RenderWindOffscreen(const gpu::Context& context,
   renderer.settings().windTracers = request.windTracers;
   renderer.settings().windParticles = request.windParticles;
   renderer.settings().windVolume = request.windVolume;
+  renderer.settings().paddleCenter = request.paddleCenter;
+  renderer.settings().paddleRadius = request.paddleRadius;
   renderer.resize(extent);
   const render::RenderTarget renderTarget{target.handle(), target.view(), extent};
   if (!request.sequenceDirectory.empty()) {

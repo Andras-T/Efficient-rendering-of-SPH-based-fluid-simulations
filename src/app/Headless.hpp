@@ -43,6 +43,7 @@ struct OffscreenRequest {
   bool windTracers = false;
   bool windParticles = false;
   bool windVolume = true;
+  float windKmh = 0.0F;
   std::filesystem::path meshPath;
   bool smokeVolume = true;
   float smokeClipY = 0.0F;

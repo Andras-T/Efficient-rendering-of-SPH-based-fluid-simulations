@@ -30,8 +30,9 @@ inline constexpr std::array WindGuideSteps{
                   "pressure coefficient, not paint.",
                   render::DebugView::Final, true, false, false, false},
     WindGuideStep{"Inlet",
-                  "The left face injects equilibrium flow at the inlet speed. A volume heatmap of "
-                  "the lattice velocity shows that stream before the body disturbs it.",
+                  "The left face injects equilibrium flow. Set inlet wind in km/h; lattice ux is "
+                  "shown beside the slider. A volume heatmap of the lattice velocity shows that "
+                  "stream before the body disturbs it.",
                   render::DebugView::Velocity, false, false, false, true},
     WindGuideStep{"Velocity",
                   "Collide and stream update D3Q19 populations. Macroscopic speed from those "
@@ -45,9 +46,15 @@ inline constexpr std::array WindGuideSteps{
                   "Dense PIV markers cover the same inlet as tiny speed-colored dashes. They "
                   "bounce-back on the mesh and follow the live LBM, including the vortical wake.",
                   render::DebugView::Final, true, false, true, false},
+    WindGuideStep{"Probe",
+                  "Aim at the tunnel: hover reads live Cp, lattice pressure, and speed in m/s and "
+                  "km/h. If the ray hits the mesh the reading is on-body; otherwise it is the air "
+                  "(or the floor). Click pins the sample. Inlet wind is set in km/h.",
+                  render::DebugView::Final, true, true, false, true},
     WindGuideStep{"Final",
                   "Cp on the body (blue suction, red high pressure), ground, HDRI, and a volume "
-                  "raymarch of the lattice wake. This is D3Q19 LBM, not a particle spray.",
+                  "raymarch of the lattice wake. Hover still probes the lattice. This is D3Q19 "
+                  "LBM, not a particle spray.",
                   render::DebugView::Final, true, false, false, true},
 };
 

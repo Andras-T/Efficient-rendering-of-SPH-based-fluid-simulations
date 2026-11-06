@@ -4,7 +4,7 @@ include(GoogleTest)
 add_executable(sph_cpu_tests OptionsTest.cpp CameraTest.cpp CaptureTest.cpp SceneTest.cpp
                KernelTest.cpp GridTest.cpp CpuSolverTest.cpp DebugViewTest.cpp CarTest.cpp
                SmokeTest.cpp FluidGuideTest.cpp WindGuideTest.cpp SmokeGuideTest.cpp
-               MeshTest.cpp)
+               MeshTest.cpp WindProbeTest.cpp)
 target_link_libraries(sph_cpu_tests PRIVATE sph_engine GTest::gtest_main)
 sph_set_warnings(sph_cpu_tests)
 # Windows AV/cold-start can exceed the default 5s discovery timeout.
