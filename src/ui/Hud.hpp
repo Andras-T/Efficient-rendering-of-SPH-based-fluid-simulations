@@ -6,10 +6,13 @@
 #include "render/Camera.hpp"
 #include "render/DebugView.hpp"
 #include "sim/Scene.hpp"
+#include "sim/WindProbe.hpp"
+#include "sim/WindUnits.hpp"
 
 #include <glm/vec3.hpp>
 
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -40,7 +43,9 @@ struct HudState {
   bool showGuide = false;
   std::uint32_t guideStep = 0;
   SimulationKind simulation = SimulationKind::Fluid;
-  float windSpeed = 0.08F;
+  float windSpeed = sim::DefaultLatticeSpeed;
+  sim::WindProbe windProbe{};
+  bool windProbePinned = false;
   float windDrag = 0.0F;
   float windLift = 0.0F;
   float windCd = 0.0F;
@@ -90,6 +95,11 @@ void ApplyCameraInput(render::Camera& camera, glm::vec3 domainMin, glm::vec3 dom
 [[nodiscard]] CursorForce SamplePaddle(const render::Camera& camera, glm::vec3 domainMin,
                                        glm::vec3 domainMax, bool paused, CursorDrag& drag,
                                        float radius, float swirl);
+
+// Hover samples the lattice along the mouse ray. A pinned probe keeps `pin`.
+[[nodiscard]] std::optional<sim::WindProbe> SampleWindCursor(
+    const render::Camera& camera, const sim::CarDomain& domain, std::span<const glm::vec4> macros,
+    std::span<const std::uint32_t> occupancy, float inletUx, bool pinned, glm::vec3 pin);
 
 HudResult DrawHud(HudState& state);
 

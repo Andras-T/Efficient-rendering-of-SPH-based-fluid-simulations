@@ -44,6 +44,7 @@ add_library(sph_engine STATIC
   sim/SmokeSolver.cpp
   sim/SphSolver.cpp
   sim/Tank.cpp
+  sim/WindProbe.cpp
   sim/WindSolver.cpp
   ui/Hud.cpp)
 target_include_directories(sph_engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

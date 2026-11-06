@@ -5,6 +5,7 @@
 #include "gpu/Context.hpp"
 #include "gpu/Pipeline.hpp"
 #include "sim/Mesh.hpp"
+#include "sim/WindUnits.hpp"
 
 #include <glm/common.hpp>
 #include <glm/vec3.hpp>
@@ -143,9 +144,7 @@ void WindSolver::useFormulaCar() {
   initState();
 }
 
-void WindSolver::setInletSpeed(float latticeSpeed) {
-  inletUx_ = std::clamp(latticeSpeed, 0.02F, 0.14F);
-}
+void WindSolver::setInletSpeed(float latticeSpeed) { inletUx_ = ClampLatticeSpeed(latticeSpeed); }
 
 void WindSolver::initState() {
   const auto occupancy = BuildWindOccupancy(domain_, cpuMesh_);
