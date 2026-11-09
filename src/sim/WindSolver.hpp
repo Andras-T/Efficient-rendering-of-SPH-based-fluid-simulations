@@ -30,6 +30,15 @@ struct WindAero {
   float cpMax = 0.0F;
 };
 
+// Test-only lattice. The interactive tunnel keeps CarDomain{} and tau = 0.60.
+struct WindSolverConfig {
+  CarDomain domain{};
+  float tau = 0.60F;
+  float inletUx = DefaultLatticeSpeed;
+  bool loadDefaultCar = true;
+  bool advectOverlays = true;
+};
+
 class WindSolver {
  public:
   static constexpr std::uint32_t TracerInletY = 24;
@@ -40,6 +49,7 @@ class WindSolver {
   static constexpr std::uint32_t ParticleCount = ParticleInletY * ParticleInletZ;
 
   explicit WindSolver(const gpu::Context& context);
+  WindSolver(const gpu::Context& context, WindSolverConfig config);
 
   void reset();
   void record(VkCommandBuffer commandBuffer, std::uint32_t steps = 1);
@@ -50,6 +60,7 @@ class WindSolver {
   void downloadParticles(std::span<Particle> dest) const;
   void setObstacleMesh(const std::filesystem::path& path);
   void setObstacle(std::vector<MeshVertex> mesh);
+  void setOccupancy(std::span<const std::uint32_t> occupancy);
   void useFormulaCar();
   [[nodiscard]] std::span<const MeshVertex> cpuMesh() const { return cpuMesh_; }
 
@@ -76,6 +87,7 @@ class WindSolver {
             std::uint32_t tracerCount, std::uint32_t inletNy, std::uint32_t inletNz,
             float trailMix) const;
   void initState();
+  void applyOccupancy(std::span<const std::uint32_t> occupancy);
   void seedInlet(gpu::Buffer& dest, std::uint32_t count, std::uint32_t inletY, std::uint32_t inletZ,
                  std::uint32_t salt) const;
   void uploadMesh();
@@ -85,6 +97,7 @@ class WindSolver {
   CarDomain domain_{};
   float tau_ = 0.60F;
   float inletUx_ = DefaultLatticeSpeed;
+  bool advectOverlays_ = true;
   std::uint32_t cellCount_ = 0;
   std::uint32_t meshCount_ = 0;
   mutable std::uint32_t seed_ = 1;
