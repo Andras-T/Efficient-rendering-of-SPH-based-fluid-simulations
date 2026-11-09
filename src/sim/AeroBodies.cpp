@@ -136,6 +136,11 @@ std::vector<MeshVertex> BuildBenchmarkAhmed() {
 }
 
 void PlaceBluffBody(std::vector<MeshVertex>& mesh, const CarDomain& domain) {
+  PlaceBluffBody(mesh, domain, {});
+}
+
+void PlaceBluffBody(std::vector<MeshVertex>& mesh, const CarDomain& domain,
+                    const BluffPlacement& placement) {
   if (mesh.empty()) {
     return;
   }
@@ -147,18 +152,66 @@ void PlaceBluffBody(std::vector<MeshVertex>& mesh, const CarDomain& domain) {
   }
   const glm::vec3 extent = glm::max(mx - mn, glm::vec3(1.0e-4F));
   const glm::vec3 domainSize = domain.cellSize * glm::vec3(domain.grid);
-  const float targetY = domain.cellSize * 9.0F;
-  const float targetX = domain.cellSize * 20.0F;
-  const float targetZ = domain.cellSize * 12.0F;
+  const float targetY = domain.cellSize * placement.heightCells;
+  const float targetX = domain.cellSize * placement.lengthCells;
+  const float targetZ = domain.cellSize * placement.widthCells;
   const float scale = std::min({targetY / extent.y, targetX / extent.x, targetZ / extent.z, 8.0F});
   const glm::vec3 center = 0.5F * (mn + mx);
   const glm::vec3 tunnelMid = domain.origin + 0.5F * domainSize;
-  const float floorY = domain.origin.y + domain.cellSize * 1.25F;
   const glm::vec3 scaledMin = (mn - center) * scale;
-  const glm::vec3 translation{domain.origin.x + domain.cellSize * 36.0F, floorY - scaledMin.y,
+  const float ride =
+      placement.sit == BluffSit::Ground ? placement.rideHeightOverBody * scale * extent.y : 0.0F;
+  const float floorY = domain.origin.y + domain.cellSize * 1.25F + ride;
+  const float y = placement.sit == BluffSit::Ground ? floorY - scaledMin.y : tunnelMid.y;
+  const glm::vec3 translation{domain.origin.x + domain.cellSize * placement.stationCells, y,
                               tunnelMid.z};
   for (MeshVertex& vertex : mesh) {
     vertex.position = (vertex.position - center) * scale + translation;
+  }
+}
+
+void PaintSolidSphere(const CarDomain& domain, std::span<std::uint32_t> occupancy, glm::vec3 center,
+                      float radiusCells) {
+  const float radius = radiusCells * domain.cellSize;
+  const float radiusSq = radius * radius;
+  for (std::uint32_t z = 0; z < domain.grid.z; ++z) {
+    for (std::uint32_t y = 0; y < domain.grid.y; ++y) {
+      for (std::uint32_t x = 0; x < domain.grid.x; ++x) {
+        const std::uint32_t index = x + y * domain.grid.x + z * domain.grid.x * domain.grid.y;
+        if (index >= occupancy.size() ||
+            occupancy[index] != static_cast<std::uint32_t>(WindCell::Fluid)) {
+          continue;
+        }
+        const glm::vec3 point = domain.origin + domain.cellSize * (glm::vec3(x, y, z) + 0.5F);
+        const glm::vec3 delta = point - center;
+        if (glm::dot(delta, delta) <= radiusSq) {
+          occupancy[index] = static_cast<std::uint32_t>(WindCell::Solid);
+        }
+      }
+    }
+  }
+}
+
+void PaintSolidCube(const CarDomain& domain, std::span<std::uint32_t> occupancy, glm::vec3 center,
+                    float sideCells) {
+  const float half = 0.5F * sideCells * domain.cellSize;
+  const glm::vec3 mn = center - glm::vec3(half);
+  const glm::vec3 mx = center + glm::vec3(half);
+  for (std::uint32_t z = 0; z < domain.grid.z; ++z) {
+    for (std::uint32_t y = 0; y < domain.grid.y; ++y) {
+      for (std::uint32_t x = 0; x < domain.grid.x; ++x) {
+        const std::uint32_t index = x + y * domain.grid.x + z * domain.grid.x * domain.grid.y;
+        if (index >= occupancy.size() ||
+            occupancy[index] != static_cast<std::uint32_t>(WindCell::Fluid)) {
+          continue;
+        }
+        const glm::vec3 point = domain.origin + domain.cellSize * (glm::vec3(x, y, z) + 0.5F);
+        if (point.x >= mn.x && point.x <= mx.x && point.y >= mn.y && point.y <= mx.y &&
+            point.z >= mn.z && point.z <= mx.z) {
+          occupancy[index] = static_cast<std::uint32_t>(WindCell::Solid);
+        }
+      }
+    }
   }
 }
 
@@ -216,6 +269,9 @@ BodyOccupancy MeasureSolidOccupancy(const CarDomain& domain,
   measured.extentX = maxX - minX + 1;
   measured.extentY = maxY - minY + 1;
   measured.extentZ = maxZ - minZ + 1;
+  measured.minX = minX;
+  measured.minY = minY;
+  measured.minZ = minZ;
   return measured;
 }
 

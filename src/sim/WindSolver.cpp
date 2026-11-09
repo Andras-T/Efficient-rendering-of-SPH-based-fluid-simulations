@@ -15,6 +15,7 @@
 #include <cmath>
 #include <cstring>
 #include <span>
+#include <stdexcept>
 #include <vector>
 
 namespace sph::sim {
@@ -91,8 +92,15 @@ std::array<float, 19> Equilibrium(float density, glm::vec3 velocity) {
 
 }  // namespace
 
-WindSolver::WindSolver(const gpu::Context& context)
-    : context_(&context), cellCount_(domain_.grid.x * domain_.grid.y * domain_.grid.z) {
+WindSolver::WindSolver(const gpu::Context& context) : WindSolver(context, {}) {}
+
+WindSolver::WindSolver(const gpu::Context& context, WindSolverConfig config)
+    : context_(&context),
+      domain_(config.domain),
+      tau_(config.tau),
+      inletUx_(config.inletUx),
+      advectOverlays_(config.advectOverlays),
+      cellCount_(domain_.grid.x * domain_.grid.y * domain_.grid.z) {
   const std::array pushConstants{VkPushConstantRange{
       .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
       .size = sizeof(WindPush),
@@ -108,8 +116,10 @@ WindSolver::WindSolver(const gpu::Context& context)
   macro_ = MakeStorage(context, static_cast<VkDeviceSize>(cellCount_) * sizeof(glm::vec4));
   tracers_ = MakeStorage(context, static_cast<VkDeviceSize>(TracerCount) * sizeof(Particle));
   particles_ = MakeStorage(context, static_cast<VkDeviceSize>(ParticleCount) * sizeof(Particle));
-  cpuMesh_ = LoadDefaultFormulaCar(domain_);
-  uploadMesh();
+  if (config.loadDefaultCar) {
+    cpuMesh_ = LoadDefaultFormulaCar(domain_);
+    uploadMesh();
+  }
   initState();
 }
 
@@ -152,14 +162,23 @@ void WindSolver::useFormulaCar() {
 
 void WindSolver::setInletSpeed(float latticeSpeed) { inletUx_ = ClampLatticeSpeed(latticeSpeed); }
 
-void WindSolver::initState() {
+void WindSolver::initState() { applyOccupancy(BuildWindOccupancy(domain_, cpuMesh_)); }
+
+void WindSolver::setOccupancy(std::span<const std::uint32_t> occupancy) {
+  cpuMesh_.clear();
+  uploadMesh();
+  applyOccupancy(occupancy);
+}
+
+void WindSolver::applyOccupancy(std::span<const std::uint32_t> occupancy) {
+  if (occupancy.size() != cellCount_) {
+    throw std::invalid_argument("occupancy does not match the lattice");
+  }
   aero_ = {};
-  const auto occupancy = BuildWindOccupancy(domain_, cpuMesh_);
   std::memcpy(occupancy_.mapped<std::uint8_t>().data(), occupancy.data(),
               occupancy.size() * sizeof(std::uint32_t));
   occupancy_.flush();
   cacheFrontalArea(occupancy);
-  aero_ = {};
 
   const auto feqRest = Equilibrium(1.0F, {});
   const auto feqInlet = Equilibrium(1.0F, {inletUx_, 0.0F, 0.0F});
@@ -183,8 +202,10 @@ void WindSolver::initState() {
               current_.size());
   scratch_.flush();
 
-  seedInlet(tracers_, TracerCount, TracerInletY, TracerInletZ, 18);
-  seedInlet(particles_, ParticleCount, ParticleInletY, ParticleInletZ, 91);
+  if (advectOverlays_) {
+    seedInlet(tracers_, TracerCount, TracerInletY, TracerInletZ, 18);
+    seedInlet(particles_, ParticleCount, ParticleInletY, ParticleInletZ, 91);
+  }
   seed_ = 1;
   const auto paint = ColorMeshByPressure(cpuMesh_, domain_, macros, occupancy, inletUx_);
   aero_.cpMin = paint.cpMin;
@@ -368,18 +389,23 @@ void WindSolver::record(VkCommandBuffer commandBuffer, std::uint32_t steps) {
     gpu::GlobalBarrier(commandBuffer, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                        VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                        VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT);
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, tracersCompute_.get());
-    push(commandBuffer, true, tracers_.address(), TracerCount, TracerInletY, TracerInletZ, 0.055F);
-    vkCmdDispatch(commandBuffer, tracerGroups, 1, 1);
-    gpu::GlobalBarrier(commandBuffer, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                       VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                       VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT);
-    push(commandBuffer, true, particles_.address(), ParticleCount, ParticleInletY, ParticleInletZ,
-         0.22F);
-    vkCmdDispatch(commandBuffer, particleGroups, 1, 1);
-    gpu::GlobalBarrier(commandBuffer, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                       VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                       VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT);
+    if (advectOverlays_) {
+      vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, tracersCompute_.get());
+      push(commandBuffer, true, tracers_.address(), TracerCount, TracerInletY, TracerInletZ,
+           0.055F);
+      vkCmdDispatch(commandBuffer, tracerGroups, 1, 1);
+      gpu::GlobalBarrier(
+          commandBuffer, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+          VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+          VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT);
+      push(commandBuffer, true, particles_.address(), ParticleCount, ParticleInletY, ParticleInletZ,
+           0.22F);
+      vkCmdDispatch(commandBuffer, particleGroups, 1, 1);
+      gpu::GlobalBarrier(
+          commandBuffer, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+          VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+          VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT);
+    }
     ++seed_;
   }
   gpu::GlobalBarrier(

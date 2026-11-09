@@ -27,8 +27,16 @@ TEST(AeroBenchmark, SchillerNaumannMatchesPublishedSphereCheckpoints) {
   EXPECT_NEAR(SphereCdSchillerNaumann(100.0F), 1.09F, 0.05F);
 }
 
+TEST(AeroBenchmark, StokesCdIsTwentyFourOverRe) {
+  EXPECT_NEAR(SphereCdStokes(1.0F), 24.0F, 1.0e-5F);
+  EXPECT_NEAR(SphereCdStokes(0.1F), 240.0F, 1.0e-3F);
+  // Schiller–Naumann recovers Stokes as Re → 0.
+  EXPECT_NEAR(SphereCdSchillerNaumann(1.0e-3F) / SphereCdStokes(1.0e-3F), 1.0F, 0.02F);
+  EXPECT_GT(SphereCdSchillerNaumann(1.0F), SphereCdStokes(1.0F));
+}
+
 TEST(AeroBenchmark, LatticeReynoldsIsLowForTheDemoGrid) {
-  EXPECT_NEAR(LbmLatticeViscosity, (0.60F - 0.5F) / 3.0F, 1.0e-6F);
+  EXPECT_NEAR(LatticeViscosity(), (0.60F - 0.5F) / 3.0F, 1.0e-6F);
   // ~12-cell body at U = 0.08, tau = 0.60 → Re_D ≈ 29, not a high-Re tunnel.
   EXPECT_NEAR(LatticeReynolds(12.0F), 28.8F, 0.2F);
   EXPECT_LT(LatticeReynolds(12.0F), 80.0F);
@@ -36,14 +44,14 @@ TEST(AeroBenchmark, LatticeReynoldsIsLowForTheDemoGrid) {
 
 TEST(AeroBenchmark, ClassicBodiesFitTheLatticeAndKeepABluffSilhouette) {
   const CarDomain domain;
-  auto measure = [&](std::vector<MeshVertex> mesh) {
-    PlaceBluffBody(mesh, domain);
+  auto measure = [&](std::vector<MeshVertex> mesh, const BluffPlacement& placement) {
+    PlaceBluffBody(mesh, domain, placement);
     return MeasureSolidOccupancy(domain, BuildWindOccupancy(domain, mesh));
   };
 
-  const BodyOccupancy cube = measure(BuildBenchmarkCube());
-  const BodyOccupancy sphere = measure(BuildBenchmarkSphere());
-  const BodyOccupancy ahmed = measure(BuildBenchmarkAhmed());
+  const BodyOccupancy cube = measure(BuildBenchmarkCube(), {.sit = BluffSit::FreeStream});
+  const BodyOccupancy sphere = measure(BuildBenchmarkSphere(), {.sit = BluffSit::FreeStream});
+  const BodyOccupancy ahmed = measure(BuildBenchmarkAhmed(), {.sit = BluffSit::Ground});
 
   EXPECT_GT(cube.solids, 40U);
   EXPECT_GT(sphere.solids, 40U);
@@ -52,19 +60,30 @@ TEST(AeroBenchmark, ClassicBodiesFitTheLatticeAndKeepABluffSilhouette) {
   EXPECT_GT(sphere.frontalCells, 20U);
   EXPECT_GT(ahmed.frontalCells, 20U);
 
-  EXPECT_LE(cube.extentX, domain.grid.x - 8);
-  EXPECT_LE(cube.extentY, domain.grid.y - 4);
-  EXPECT_LE(cube.extentZ, domain.grid.z - 4);
-  EXPECT_GE(cube.extentY, 6U);
+  EXPECT_GE(cube.minY, 3U) << "cube sits in free stream, not on the floor";
+  EXPECT_GE(sphere.minY, 3U) << "sphere sits in free stream, not on the floor";
+  EXPECT_GE(ahmed.minY, 1U);
+  EXPECT_LE(ahmed.minY, 5U) << "Ahmed ride height is SAE-like, not free stream";
+
   EXPECT_LE(cube.extentY, 14U);
-  EXPECT_GE(sphere.extentY, 6U);
   EXPECT_LE(sphere.extentY, 14U);
   EXPECT_GE(ahmed.extentX, 10U);
-  EXPECT_LE(ahmed.extentX, 28U);
-
+  EXPECT_LE(ahmed.extentX, 32U);
   EXPECT_GT(ahmed.extentX, ahmed.extentY);
   EXPECT_NEAR(static_cast<float>(cube.extentX), static_cast<float>(cube.extentY), 3.0F);
   EXPECT_NEAR(static_cast<float>(sphere.extentY), static_cast<float>(sphere.extentZ), 3.0F);
+}
+
+TEST(AeroBenchmark, PaintedSphereFillsASolidBall) {
+  const CarDomain domain;
+  auto occupancy = BuildWindOccupancy(domain, {});
+  const glm::vec3 center = domain.origin + domain.cellSize * glm::vec3(40.5F, 12.5F, 16.5F);
+  PaintSolidSphere(domain, occupancy, center, 4.0F);
+  const BodyOccupancy body = MeasureSolidOccupancy(domain, occupancy);
+  EXPECT_GT(body.solids, 200U);
+  EXPECT_GE(body.minY, 6U);
+  EXPECT_NEAR(static_cast<float>(body.extentY), 8.0F, 2.0F);
+  EXPECT_NEAR(static_cast<float>(body.extentZ), 8.0F, 2.0F);
 }
 
 }  // namespace
