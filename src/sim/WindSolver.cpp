@@ -117,10 +117,10 @@ WindSolver::WindSolver(const gpu::Context& context, WindSolverConfig config)
   tracers_ = MakeStorage(context, static_cast<VkDeviceSize>(TracerCount) * sizeof(Particle));
   particles_ = MakeStorage(context, static_cast<VkDeviceSize>(ParticleCount) * sizeof(Particle));
   if (config.loadDefaultCar) {
-    cpuMesh_ = LoadDefaultFormulaCar(domain_);
-    uploadMesh();
+    adoptRestMesh(LoadDefaultFormulaCar(domain_));
+  } else {
+    initState();
   }
-  initState();
 }
 
 void WindSolver::uploadMesh() {
@@ -140,24 +140,35 @@ void WindSolver::uploadMesh() {
   }
 }
 
+void WindSolver::adoptRestMesh(std::vector<MeshVertex> mesh) {
+  restMesh_ = std::move(mesh);
+  pose_ = {};
+  rebuildFromRest();
+}
+
+void WindSolver::rebuildFromRest() {
+  cpuMesh_ = restMesh_;
+  ApplyObstaclePose(cpuMesh_, pose_, domain_);
+  uploadMesh();
+  initState();
+}
+
 void WindSolver::setObstacleMesh(const std::filesystem::path& path) {
   auto mesh = LoadObstacleMesh(path);
   FitMeshToTunnel(mesh, domain_);
-  cpuMesh_ = std::move(mesh);
-  uploadMesh();
-  initState();
+  adoptRestMesh(std::move(mesh));
 }
 
-void WindSolver::setObstacle(std::vector<MeshVertex> mesh) {
-  cpuMesh_ = std::move(mesh);
-  uploadMesh();
-  initState();
-}
+void WindSolver::setObstacle(std::vector<MeshVertex> mesh) { adoptRestMesh(std::move(mesh)); }
 
-void WindSolver::useFormulaCar() {
-  cpuMesh_ = LoadDefaultFormulaCar(domain_);
-  uploadMesh();
-  initState();
+void WindSolver::useFormulaCar() { adoptRestMesh(LoadDefaultFormulaCar(domain_)); }
+
+void WindSolver::setPose(const ObstaclePose& pose) {
+  pose_ = pose;
+  if (restMesh_.empty()) {
+    return;
+  }
+  rebuildFromRest();
 }
 
 void WindSolver::setInletSpeed(float latticeSpeed) { inletUx_ = ClampLatticeSpeed(latticeSpeed); }
@@ -165,7 +176,9 @@ void WindSolver::setInletSpeed(float latticeSpeed) { inletUx_ = ClampLatticeSpee
 void WindSolver::initState() { applyOccupancy(BuildWindOccupancy(domain_, cpuMesh_)); }
 
 void WindSolver::setOccupancy(std::span<const std::uint32_t> occupancy) {
+  restMesh_.clear();
   cpuMesh_.clear();
+  pose_ = {};
   uploadMesh();
   applyOccupancy(occupancy);
 }
