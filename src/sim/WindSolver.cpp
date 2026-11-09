@@ -138,6 +138,12 @@ void WindSolver::setObstacleMesh(const std::filesystem::path& path) {
   initState();
 }
 
+void WindSolver::setObstacle(std::vector<MeshVertex> mesh) {
+  cpuMesh_ = std::move(mesh);
+  uploadMesh();
+  initState();
+}
+
 void WindSolver::useFormulaCar() {
   cpuMesh_ = LoadDefaultFormulaCar(domain_);
   uploadMesh();
@@ -147,6 +153,7 @@ void WindSolver::useFormulaCar() {
 void WindSolver::setInletSpeed(float latticeSpeed) { inletUx_ = ClampLatticeSpeed(latticeSpeed); }
 
 void WindSolver::initState() {
+  aero_ = {};
   const auto occupancy = BuildWindOccupancy(domain_, cpuMesh_);
   std::memcpy(occupancy_.mapped<std::uint8_t>().data(), occupancy.data(),
               occupancy.size() * sizeof(std::uint32_t));

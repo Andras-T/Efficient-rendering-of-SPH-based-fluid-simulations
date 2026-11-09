@@ -34,6 +34,7 @@ add_library(sph_engine STATIC
   render/TonemapPass.cpp
   render/WindTracerPass.cpp
   render/WindVolumePass.cpp
+  sim/AeroBodies.cpp
   sim/Car.cpp
   sim/Mesh.cpp
   sim/CpuSolver.cpp
