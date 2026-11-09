@@ -49,6 +49,7 @@ class WindSolver {
   void downloadTracers(std::span<Particle> dest) const;
   void downloadParticles(std::span<Particle> dest) const;
   void setObstacleMesh(const std::filesystem::path& path);
+  void setObstacle(std::vector<MeshVertex> mesh);
   void useFormulaCar();
   [[nodiscard]] std::span<const MeshVertex> cpuMesh() const { return cpuMesh_; }
 
@@ -65,6 +66,7 @@ class WindSolver {
   [[nodiscard]] glm::vec3 domainMax() const { return CarDomainMax(domain_); }
   [[nodiscard]] std::uint32_t cellCount() const { return cellCount_; }
   [[nodiscard]] float inletSpeed() const { return inletUx_; }
+  [[nodiscard]] float relaxationTime() const { return tau_; }
   [[nodiscard]] const WindAero& aero() const { return aero_; }
   void setInletSpeed(float latticeSpeed);
   void refreshAero();
