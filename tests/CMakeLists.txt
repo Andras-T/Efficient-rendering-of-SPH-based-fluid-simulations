@@ -21,5 +21,8 @@ target_compile_definitions(sph_gpu_tests PRIVATE
 if(SPH_WRITE_GOLDENS)
   target_compile_definitions(sph_gpu_tests PRIVATE SPH_WRITE_GOLDENS)
 endif()
+if(SPH_M32_MEDIA)
+  target_compile_definitions(sph_gpu_tests PRIVATE "SPH_M32_MEDIA=\"${SPH_M32_MEDIA}\"")
+endif()
 gtest_discover_tests(sph_gpu_tests DISCOVERY_MODE PRE_TEST DISCOVERY_TIMEOUT 60
                      PROPERTIES LABELS gpu)

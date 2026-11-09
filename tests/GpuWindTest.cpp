@@ -18,10 +18,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
-#include <cstdlib>
 #include <filesystem>
 #include <numbers>
-#include <string>
 #include <vector>
 
 namespace sph {
@@ -442,15 +440,9 @@ TEST(GpuWindTest, RotatedBodyKeepsFiniteCd) {
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
 
+#ifdef SPH_M32_MEDIA
 TEST(GpuWindTest, CaptureRotatedBodyStills) {
-  std::string mediaDir;
-  if (const char* directory = std::getenv("SPH_M32_MEDIA"); directory != nullptr) {
-    mediaDir = directory;
-  }
-  if (mediaDir.empty()) {
-    GTEST_SKIP() << "set SPH_M32_MEDIA to write m32 yaw/pitch stills";
-  }
-  const std::filesystem::path media(mediaDir);
+  const std::filesystem::path media(SPH_M32_MEDIA);
   std::filesystem::create_directories(media);
   const gpu::Context context({.validation = true});
   constexpr VkExtent2D Extent{1280, 720};
@@ -470,6 +462,7 @@ TEST(GpuWindTest, CaptureRotatedBodyStills) {
   WritePng(media / "m32-pitch.png", Extent, pitchPixels);
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
+#endif
 
 }  // namespace
 }  // namespace sph
