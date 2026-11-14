@@ -4,6 +4,7 @@
 #include <glm/common.hpp>
 #include <glm/geometric.hpp>
 #include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 #include <gtest/gtest.h>
 
 #include <cmath>
@@ -120,6 +121,56 @@ TEST(ObstaclePoseTest, PositivePitchRaisesTheNose) {
   const float y0 = mesh[nose].position.y;
   ApplyObstaclePose(mesh, {.pitch = 20.0F * std::numbers::pi_v<float> / 180.0F}, domain);
   EXPECT_GT(mesh[nose].position.y, y0 + 0.02F);
+}
+
+TEST(ObstaclePoseTest, CpFollowsTheWindwardFaceAfterYaw) {
+  const CarDomain domain;
+  auto rest = LongBoxInTunnel(domain);
+  const auto occupancy = BuildWindOccupancy(domain, rest);
+  const std::uint32_t cellCount = domain.grid.x * domain.grid.y * domain.grid.z;
+  std::vector<glm::vec4> macros(cellCount, glm::vec4{1.0F, 0.08F, 0.0F, 0.0F});
+  for (std::uint32_t z = 0; z < domain.grid.z; ++z) {
+    for (std::uint32_t y = 0; y < domain.grid.y; ++y) {
+      for (std::uint32_t x = 0; x < domain.grid.x; ++x) {
+        const std::uint32_t index = x + y * domain.grid.x + z * domain.grid.x * domain.grid.y;
+        const glm::vec3 point = domain.origin + domain.cellSize * (glm::vec3(x, y, z) + 0.5F);
+        macros[index].x = 1.0F + 0.001F * (domain.origin.x + 1.5F * domain.cellSize - point.x);
+      }
+    }
+  }
+  auto identity = rest;
+  ColorMeshByPressure(identity, domain, macros, occupancy, 0.08F);
+  auto yawed = rest;
+  ApplyObstaclePose(yawed, {.yaw = std::numbers::pi_v<float>}, domain);
+  ColorMeshByPressure(yawed, domain, macros, BuildWindOccupancy(domain, yawed), 0.08F);
+
+  const float split = 0.5F * (Bounds(rest).min.x + Bounds(rest).max.x);
+  float identityWindward = 0.0F;
+  float identityLee = 0.0F;
+  float yawedWindward = 0.0F;
+  float yawedLee = 0.0F;
+  int windwardCount = 0;
+  int leeCount = 0;
+  const auto redness = [](const MeshVertex& vertex) { return vertex.color.x - vertex.color.z; };
+  for (std::size_t i = 0; i < rest.size(); ++i) {
+    if (rest[i].position.x < split - 0.04F) {
+      identityWindward += redness(identity[i]);
+      yawedWindward += redness(yawed[i]);
+      ++windwardCount;
+    } else if (rest[i].position.x > split + 0.04F) {
+      identityLee += redness(identity[i]);
+      yawedLee += redness(yawed[i]);
+      ++leeCount;
+    }
+  }
+  ASSERT_GT(windwardCount, 4);
+  ASSERT_GT(leeCount, 4);
+  identityWindward /= static_cast<float>(windwardCount);
+  identityLee /= static_cast<float>(leeCount);
+  yawedWindward /= static_cast<float>(windwardCount);
+  yawedLee /= static_cast<float>(leeCount);
+  EXPECT_GT(identityWindward, identityLee + 0.08F);
+  EXPECT_GT(yawedLee, yawedWindward + 0.08F);
 }
 
 TEST(ObstaclePoseTest, YawClampKeepsALongBodyInside) {
