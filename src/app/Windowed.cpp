@@ -24,6 +24,7 @@
 #include <GLFW/glfw3.h>
 #include <glm/common.hpp>
 #include <glm/geometric.hpp>
+#include <glm/trigonometric.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 
@@ -98,6 +99,11 @@ int RunWindowed(const Options& options) {
   sim::WindSolver wind(context);
   std::string meshPath = options.meshPath.string();
   std::string meshStatus;
+  float windYawDeg = 0.0F;
+  float windPitchDeg = 0.0F;
+  float windRollDeg = 0.0F;
+  glm::vec3 windShift{0.0F};
+  float windScale = 1.0F;
   if (!options.meshPath.empty()) {
     try {
       wind.setObstacleMesh(options.meshPath);
@@ -285,6 +291,11 @@ int RunWindowed(const Options& options) {
         .windVolume = renderer.settings().windVolume,
         .meshPath = meshPath,
         .meshStatus = meshStatus,
+        .windYawDeg = windYawDeg,
+        .windPitchDeg = windPitchDeg,
+        .windRollDeg = windRollDeg,
+        .windShift = windShift,
+        .windScale = windScale,
         .exposure = renderer.settings().exposure,
         .absorption = renderer.settings().absorption,
     };
@@ -306,6 +317,11 @@ int RunWindowed(const Options& options) {
     smokeStrength = hud.smokeStrength;
     meshPath = hud.meshPath;
     meshStatus = hud.meshStatus;
+    windYawDeg = hud.windYawDeg;
+    windPitchDeg = hud.windPitchDeg;
+    windRollDeg = hud.windRollDeg;
+    windShift = hud.windShift;
+    windScale = hud.windScale;
     wind.setInletSpeed(windSpeed);
     smoke.setEmitterStrength(smokeStrength);
     if (!showMenu) {
@@ -402,24 +418,44 @@ int RunWindowed(const Options& options) {
     renderer.settings().blockMin = blockCenter - blockHalf;
     renderer.settings().blockMax = blockCenter + blockHalf;
     renderer.settings().block = showBlock;
+    const auto resetPoseSliders = [&] {
+      windYawDeg = 0.0F;
+      windPitchDeg = 0.0F;
+      windRollDeg = 0.0F;
+      windShift = {};
+      windScale = 1.0F;
+    };
+    const auto applyHudPose = [&] {
+      wind.setPose({
+          .yaw = glm::radians(windYawDeg),
+          .pitch = glm::radians(windPitchDeg),
+          .roll = glm::radians(windRollDeg),
+          .translation = windShift,
+          .scale = windScale,
+      });
+    };
     if (hudResult.useBuiltinCar) {
+      resetPoseSliders();
       wind.useFormulaCar();
       meshStatus = "Built-in car";
-    }
-    if (hudResult.loadMesh && !meshPath.empty()) {
+    } else if (hudResult.loadMesh && !meshPath.empty()) {
       try {
+        resetPoseSliders();
         wind.setObstacleMesh(meshPath);
         meshStatus = "Loaded " + meshPath;
       } catch (const std::exception& ex) {
         meshStatus = ex.what();
         LogError("{}", meshStatus);
       }
+    } else if (hudResult.poseChanged) {
+      applyHudPose();
     }
     for (const auto& dropped : window.consumeDrops()) {
       if (!sim::MeshPathLooksSupported(dropped)) {
         continue;
       }
       try {
+        resetPoseSliders();
         wind.setObstacleMesh(dropped);
         meshPath = dropped.string();
         meshStatus = "Loaded " + meshPath;

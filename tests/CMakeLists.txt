@@ -4,7 +4,7 @@ include(GoogleTest)
 add_executable(sph_cpu_tests OptionsTest.cpp CameraTest.cpp CaptureTest.cpp SceneTest.cpp
                KernelTest.cpp GridTest.cpp CpuSolverTest.cpp DebugViewTest.cpp CarTest.cpp
                SmokeTest.cpp FluidGuideTest.cpp WindGuideTest.cpp SmokeGuideTest.cpp
-               MeshTest.cpp WindProbeTest.cpp AeroBenchmarkTest.cpp)
+               MeshTest.cpp ObstaclePoseTest.cpp WindProbeTest.cpp AeroBenchmarkTest.cpp)
 target_link_libraries(sph_cpu_tests PRIVATE sph_engine GTest::gtest_main)
 sph_set_warnings(sph_cpu_tests)
 # Windows AV/cold-start can exceed the default 5s discovery timeout.
@@ -20,6 +20,9 @@ target_compile_definitions(sph_gpu_tests PRIVATE
   "SPH_GOLDEN_DIR=\"${PROJECT_SOURCE_DIR}/tests/goldens\"")
 if(SPH_WRITE_GOLDENS)
   target_compile_definitions(sph_gpu_tests PRIVATE SPH_WRITE_GOLDENS)
+endif()
+if(SPH_M32_MEDIA)
+  target_compile_definitions(sph_gpu_tests PRIVATE "SPH_M32_MEDIA=\"${SPH_M32_MEDIA}\"")
 endif()
 gtest_discover_tests(sph_gpu_tests DISCOVERY_MODE PRE_TEST DISCOVERY_TIMEOUT 60
                      PROPERTIES LABELS gpu)

@@ -60,6 +60,11 @@ struct HudState {
   bool windVolume = true;
   std::string meshPath;
   std::string meshStatus;
+  float windYawDeg = 0.0F;
+  float windPitchDeg = 0.0F;
+  float windRollDeg = 0.0F;
+  glm::vec3 windShift{0.0F};
+  float windScale = 1.0F;
   bool smokeVolume = true;
   float smokeClipY = 0.0F;
   float exposure = 0.85F;
@@ -71,6 +76,7 @@ struct HudResult {
   bool resetScene = false;
   bool loadMesh = false;
   bool useBuiltinCar = false;
+  bool poseChanged = false;
 };
 
 struct CursorDrag {

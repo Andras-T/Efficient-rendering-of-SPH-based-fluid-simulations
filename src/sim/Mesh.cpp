@@ -7,6 +7,9 @@
 #include <assimp/scene.h>
 #include <glm/common.hpp>
 #include <glm/geometric.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/mat3x3.hpp>
+#include <glm/mat4x4.hpp>
 
 #include <algorithm>
 #include <array>
@@ -158,6 +161,94 @@ void FitMeshToTunnel(std::vector<MeshVertex>& mesh, const CarDomain& domain) {
                               tunnelMid.z};
   for (MeshVertex& vertex : mesh) {
     vertex.position = (vertex.position - center) * scale + translation;
+  }
+}
+
+namespace {
+
+struct MeshAabb {
+  glm::vec3 min{0.0F};
+  glm::vec3 max{0.0F};
+};
+
+MeshAabb BoundsOf(std::span<const MeshVertex> mesh) {
+  MeshAabb box{mesh.front().position, mesh.front().position};
+  for (const MeshVertex& vertex : mesh) {
+    box.min = glm::min(box.min, vertex.position);
+    box.max = glm::max(box.max, vertex.position);
+  }
+  return box;
+}
+
+}  // namespace
+
+void TransformObstacleMesh(std::vector<MeshVertex>& mesh, const ObstaclePose& pose) {
+  if (mesh.empty() || pose.identity()) {
+    return;
+  }
+  const MeshAabb box = BoundsOf(mesh);
+  const glm::vec3 center = 0.5F * (box.min + box.max);
+  // +pitch about -Z so a nose that faces -x (inlet) rises when the HUD pitch is positive.
+  const glm::mat4 rotation =
+      glm::rotate(glm::mat4(1.0F), pose.yaw, glm::vec3(0.0F, 1.0F, 0.0F)) *
+      glm::rotate(glm::mat4(1.0F), pose.pitch, glm::vec3(0.0F, 0.0F, -1.0F)) *
+      glm::rotate(glm::mat4(1.0F), pose.roll, glm::vec3(1.0F, 0.0F, 0.0F));
+  const glm::mat3 axes(rotation);
+  const float scale = std::max(pose.scale, 0.05F);
+  for (MeshVertex& vertex : mesh) {
+    vertex.position = center + axes * (scale * (vertex.position - center)) + pose.translation;
+    const glm::vec3 spun = axes * vertex.normal;
+    const float length = glm::length(spun);
+    if (length > 1.0e-8F) {
+      vertex.normal = spun / length;
+    }
+  }
+}
+
+void ClampMeshToLattice(std::vector<MeshVertex>& mesh, const CarDomain& domain) {
+  if (mesh.empty()) {
+    return;
+  }
+  MeshAabb box = BoundsOf(mesh);
+  const float cell = domain.cellSize;
+  const glm::vec3 interiorMin = domain.origin + glm::vec3(2.0F, 1.25F, 1.5F) * cell;
+  const glm::vec3 interiorMax =
+      domain.origin + glm::vec3(domain.grid) * cell - glm::vec3(2.0F, 1.5F, 1.5F) * cell;
+  const glm::vec3 room = interiorMax - interiorMin;
+  const glm::vec3 extent = box.max - box.min;
+  float shrink = 1.0F;
+  for (int axis = 0; axis < 3; ++axis) {
+    if (room[axis] > 1.0e-5F && extent[axis] > room[axis]) {
+      shrink = std::min(shrink, 0.98F * room[axis] / extent[axis]);
+    }
+  }
+  if (shrink < 1.0F) {
+    const glm::vec3 center = 0.5F * (box.min + box.max);
+    for (MeshVertex& vertex : mesh) {
+      vertex.position = center + shrink * (vertex.position - center);
+    }
+    box = BoundsOf(mesh);
+  }
+  glm::vec3 shift{0.0F};
+  for (int axis = 0; axis < 3; ++axis) {
+    if (box.min[axis] < interiorMin[axis]) {
+      shift[axis] = interiorMin[axis] - box.min[axis];
+    } else if (box.max[axis] > interiorMax[axis]) {
+      shift[axis] = interiorMax[axis] - box.max[axis];
+    }
+  }
+  if (glm::dot(shift, shift) > 1.0e-12F) {
+    for (MeshVertex& vertex : mesh) {
+      vertex.position += shift;
+    }
+  }
+}
+
+void ApplyObstaclePose(std::vector<MeshVertex>& mesh, const ObstaclePose& pose,
+                       const CarDomain& domain) {
+  TransformObstacleMesh(mesh, pose);
+  if (!pose.identity()) {
+    ClampMeshToLattice(mesh, domain);
   }
 }
 
@@ -389,13 +480,6 @@ AeroPaint ColorMeshByPressure(std::vector<MeshVertex>& mesh, const CarDomain& do
     rhoInf /= static_cast<float>(inletCount);
   }
   const float dynamic = std::max(1.5F * inletUx * inletUx, 1.0e-6F);
-  glm::vec3 mn = mesh.front().position;
-  glm::vec3 mx = mn;
-  for (const MeshVertex& vertex : mesh) {
-    mn = glm::min(mn, vertex.position);
-    mx = glm::max(mx, vertex.position);
-  }
-  const glm::vec3 extent = glm::max(mx - mn, glm::vec3(1.0e-4F));
   std::vector<float> cps(mesh.size() / 3, 0.0F);
   for (std::size_t i = 0, face = 0; i + 2 < mesh.size(); i += 3, ++face) {
     const glm::vec3 a = mesh[i].position;
@@ -432,21 +516,14 @@ AeroPaint ColorMeshByPressure(std::vector<MeshVertex>& mesh, const CarDomain& do
     if (density < 0.0F) {
       density = rhoInf;
     }
+    // Live lattice Cp, clamped so a coarse wake does not paint the whole
+    // body suction-blue. Facing-into-inlet follows the transformed normal, so
+    // yaw moves the red stagnation off the original nose. No AABB nose/tail.
     const float lattice = (density - rhoInf) / dynamic;
-    const glm::vec3 local = (centroid - mn) / extent;
-    const float nose = 1.0F - glm::smoothstep(0.08F, 0.40F, local.x);
-    const float tail = glm::smoothstep(0.58F, 0.92F, local.x);
+    const float live = std::isfinite(lattice) ? std::clamp(lattice, -1.2F, 1.0F) : 0.0F;
     const float windward = std::clamp(-normal.x, 0.0F, 1.0F);
     const float leeward = std::clamp(normal.x, 0.0F, 1.0F);
-    const float upper = std::clamp(normal.y, 0.0F, 1.0F);
-    const float lower = std::clamp(-normal.y, 0.0F, 1.0F);
-    const float outboard = glm::smoothstep(0.62F, 0.88F, std::abs(local.z * 2.0F - 1.0F));
-    const float wheel = (1.0F - glm::smoothstep(0.22F, 0.48F, local.y)) * outboard;
-    float cp = nose * 1.15F - tail * 0.95F;
-    cp += windward * 0.55F - leeward * 0.35F;
-    cp += lower * (0.70F - 0.25F * local.x) - upper * (0.25F + 0.55F * local.y);
-    cp += wheel * 0.80F;
-    cp += 0.12F * (std::isfinite(lattice) ? lattice : 0.0F);
+    const float cp = 0.40F * live + 0.80F * windward - 0.55F * leeward;
     cps[face] = std::isfinite(cp) ? cp : 0.0F;
   }
   paint.cpMin = -1.0F;

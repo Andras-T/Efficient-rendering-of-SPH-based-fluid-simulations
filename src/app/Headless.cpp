@@ -74,6 +74,9 @@ std::vector<std::uint8_t> RenderWindOffscreen(const gpu::Context& context,
   if (!request.meshPath.empty()) {
     wind.setObstacleMesh(request.meshPath);
   }
+  if (!request.windPose.identity()) {
+    wind.setPose(request.windPose);
+  }
   render::Camera ownedCamera;
   ownedCamera.setAspect(extent);
   ownedCamera.setTarget({-0.62F, 0.10F, 0.0F});

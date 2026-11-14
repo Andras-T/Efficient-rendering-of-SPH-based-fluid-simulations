@@ -3,6 +3,7 @@
 #include "gpu/Buffer.hpp"
 #include "gpu/Handles.hpp"
 #include "sim/Car.hpp"
+#include "sim/Mesh.hpp"
 #include "sim/Particle.hpp"
 #include "sim/WindUnits.hpp"
 
@@ -62,6 +63,8 @@ class WindSolver {
   void setObstacle(std::vector<MeshVertex> mesh);
   void setOccupancy(std::span<const std::uint32_t> occupancy);
   void useFormulaCar();
+  void setPose(const ObstaclePose& pose);
+  [[nodiscard]] const ObstaclePose& pose() const { return pose_; }
   [[nodiscard]] std::span<const MeshVertex> cpuMesh() const { return cpuMesh_; }
 
   [[nodiscard]] VkDeviceAddress meshAddress() const { return mesh_.address(); }
@@ -92,6 +95,8 @@ class WindSolver {
                  std::uint32_t salt) const;
   void uploadMesh();
   void cacheFrontalArea(std::span<const std::uint32_t> occupancy);
+  void adoptRestMesh(std::vector<MeshVertex> mesh);
+  void rebuildFromRest();
 
   const gpu::Context* context_ = nullptr;
   CarDomain domain_{};
@@ -112,7 +117,9 @@ class WindSolver {
   gpu::Buffer tracers_;
   gpu::Buffer particles_;
   gpu::Buffer mesh_;
+  std::vector<MeshVertex> restMesh_;
   std::vector<MeshVertex> cpuMesh_;
+  ObstaclePose pose_{};
   float frontalArea_ = 0.0F;
   WindAero aero_{};
 };

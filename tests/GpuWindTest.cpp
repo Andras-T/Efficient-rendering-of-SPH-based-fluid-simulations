@@ -1,5 +1,8 @@
 #include "CubeMesh.hpp"
+#include "app/Headless.hpp"
+#include "app/ImageWriter.hpp"
 #include "gpu/Context.hpp"
+#include "sim/AeroBodies.hpp"
 #include "sim/Car.hpp"
 #include "sim/Mesh.hpp"
 #include "sim/WindProbe.hpp"
@@ -8,6 +11,7 @@
 
 #include <glm/common.hpp>
 #include <glm/geometric.hpp>
+#include <glm/trigonometric.hpp>
 #include <glm/vec3.hpp>
 #include <gtest/gtest.h>
 
@@ -15,6 +19,7 @@
 #include <cmath>
 #include <cstddef>
 #include <filesystem>
+#include <numbers>
 #include <vector>
 
 namespace sph {
@@ -413,6 +418,108 @@ TEST(GpuWindTest, ProbeReadsInletAndBody) {
   EXPECT_TRUE(std::isfinite(body.speedKmh));
   EXPECT_EQ(context.validationErrorCount(), 0U);
 }
+
+TEST(GpuWindTest, RotatedBodyKeepsFiniteCd) {
+  const gpu::Context context({.validation = true});
+  sim::WindSolver wind(context, {.loadDefaultCar = false, .advectOverlays = false});
+  auto mesh = sim::BuildBenchmarkCube();
+  sim::PlaceBluffBody(mesh, wind.domain());
+  wind.setObstacle(std::move(mesh));
+  wind.setPose({.yaw = 0.5F * std::numbers::pi_v<float>});
+  wind.step(48);
+  for (int i = 0; i < 16; ++i) {
+    wind.refreshAero();
+  }
+  EXPECT_TRUE(std::isfinite(wind.aero().cd));
+  EXPECT_TRUE(std::isfinite(wind.aero().cl));
+  EXPECT_GT(wind.aero().cd, 0.0F);
+  EXPECT_GT(wind.aero().frontalArea, 0.0F);
+  std::vector<std::uint32_t> occupancy(wind.cellCount());
+  wind.downloadOccupancy(occupancy);
+  EXPECT_GT(sim::MeasureSolidOccupancy(wind.domain(), occupancy).solids, 20U);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
+TEST(GpuWindTest, Yaw180FlipsSurfaceCp) {
+  const gpu::Context context({.validation = true});
+  sim::WindSolver wind(context, {.loadDefaultCar = false, .advectOverlays = false});
+  auto mesh = sim::BuildBenchmarkCube();
+  sim::PlaceBluffBody(mesh, wind.domain());
+  std::vector<float> restX;
+  restX.reserve(mesh.size());
+  float split = 0.0F;
+  for (const sim::MeshVertex& vertex : mesh) {
+    restX.push_back(vertex.position.x);
+    split += vertex.position.x;
+  }
+  split /= static_cast<float>(mesh.size());
+  wind.setObstacle(std::move(mesh));
+  const auto redness = [](const sim::MeshVertex& vertex) {
+    return vertex.color.x - vertex.color.z;
+  };
+  const auto faceMeans = [&](float& windward, float& lee, int& windwardCount, int& leeCount) {
+    windward = 0.0F;
+    lee = 0.0F;
+    windwardCount = 0;
+    leeCount = 0;
+    const auto painted = wind.cpuMesh();
+    for (std::size_t i = 0; i < painted.size(); ++i) {
+      if (restX[i] < split - 0.02F) {
+        windward += redness(painted[i]);
+        ++windwardCount;
+      } else if (restX[i] > split + 0.02F) {
+        lee += redness(painted[i]);
+        ++leeCount;
+      }
+    }
+    ASSERT_GT(windwardCount, 4);
+    ASSERT_GT(leeCount, 4);
+    windward /= static_cast<float>(windwardCount);
+    lee /= static_cast<float>(leeCount);
+  };
+
+  wind.step(96);
+  wind.refreshAero();
+  float identityWindward = 0.0F;
+  float identityLee = 0.0F;
+  int windwardCount = 0;
+  int leeCount = 0;
+  faceMeans(identityWindward, identityLee, windwardCount, leeCount);
+  EXPECT_GT(identityWindward, identityLee + 0.05F);
+
+  wind.setPose({.yaw = std::numbers::pi_v<float>});
+  wind.step(96);
+  wind.refreshAero();
+  float yawedWindward = 0.0F;
+  float yawedLee = 0.0F;
+  faceMeans(yawedWindward, yawedLee, windwardCount, leeCount);
+  EXPECT_GT(yawedLee, yawedWindward + 0.05F);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+
+#ifdef SPH_M32_MEDIA
+TEST(GpuWindTest, CaptureRotatedBodyStills) {
+  const std::filesystem::path media(SPH_M32_MEDIA);
+  std::filesystem::create_directories(media);
+  const gpu::Context context({.validation = true});
+  constexpr VkExtent2D Extent{1280, 720};
+  const auto yawPixels = RenderOffscreen(context, {.extent = Extent,
+                                                   .frames = 400,
+                                                   .simulate = true,
+                                                   .simulation = SimulationKind::WindTunnel,
+                                                   .windVolume = true,
+                                                   .windPose = {.yaw = glm::radians(90.0F)}});
+  WritePng(media / "m33-yaw-cp.png", Extent, yawPixels);
+  const auto pitchPixels = RenderOffscreen(context, {.extent = Extent,
+                                                     .frames = 400,
+                                                     .simulate = true,
+                                                     .simulation = SimulationKind::WindTunnel,
+                                                     .windVolume = true,
+                                                     .windPose = {.pitch = glm::radians(22.0F)}});
+  WritePng(media / "m33-pitch-cp.png", Extent, pitchPixels);
+  EXPECT_EQ(context.validationErrorCount(), 0U);
+}
+#endif
 
 }  // namespace
 }  // namespace sph

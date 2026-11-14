@@ -4,6 +4,7 @@
 #include "gpu/Vulkan.hpp"
 #include "render/Camera.hpp"
 #include "render/DebugView.hpp"
+#include "sim/Mesh.hpp"
 #include "sim/Scene.hpp"
 
 #include <glm/vec3.hpp>
@@ -45,6 +46,7 @@ struct OffscreenRequest {
   bool windVolume = true;
   float windKmh = 0.0F;
   std::filesystem::path meshPath;
+  sim::ObstaclePose windPose{};
   bool smokeVolume = true;
   float smokeClipY = 0.0F;
 };

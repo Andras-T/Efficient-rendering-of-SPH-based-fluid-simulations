@@ -661,6 +661,31 @@ HudResult DrawHud(HudState& state) {
         result.useBuiltinCar = true;
       }
       ImGui::TextUnformatted("glTF, glb, OBJ, STL, FBX. Drop a file on the window.");
+      ImGui::Separator();
+      ImGui::TextUnformatted("Pose");
+      const auto poseSlider = [&](const char* label, float* value, float lo, float hi,
+                                  const char* format) {
+        ImGui::SliderFloat(label, value, lo, hi, format);
+        if (ImGui::IsItemDeactivatedAfterEdit()) {
+          result.poseChanged = true;
+        }
+      };
+      poseSlider("Yaw", &state.windYawDeg, -180.0F, 180.0F, "%.0f deg");
+      poseSlider("Pitch", &state.windPitchDeg, -40.0F, 40.0F, "%.0f deg");
+      poseSlider("Roll", &state.windRollDeg, -45.0F, 45.0F, "%.0f deg");
+      poseSlider("Shift X", &state.windShift.x, -0.60F, 0.60F, "%.2f m");
+      poseSlider("Shift Y", &state.windShift.y, -0.40F, 0.40F, "%.2f m");
+      poseSlider("Shift Z", &state.windShift.z, -0.40F, 0.40F, "%.2f m");
+      poseSlider("Scale", &state.windScale, 0.50F, 1.50F, "%.2f");
+      ImGui::TextDisabled("Release a slider to rebuild occupancy.");
+      if (ImGui::Button("Reset pose")) {
+        state.windYawDeg = 0.0F;
+        state.windPitchDeg = 0.0F;
+        state.windRollDeg = 0.0F;
+        state.windShift = {};
+        state.windScale = 1.0F;
+        result.poseChanged = true;
+      }
       if (!state.meshStatus.empty()) {
         ImGui::TextWrapped("%s", state.meshStatus.c_str());
       }
