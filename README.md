@@ -37,6 +37,8 @@ Walls: Hidden, Glass (default), or Particles (Akinci spheres). Tank: Cube, Cylin
 
 On Linux without a GPU, install Mesa's lavapipe (`mesa-vulkan-drivers`).
 
+The desktop Vulkan app on this branch is the frozen showcase (`cursor/vulkan-showcase-3742`). Browser WebGPU work is a separate branch and does not rewrite this C++ tree.
+
 ## Credits
 
 Started as the thesis "Efficient rendering of SPH based fluid simulations" by András Tóth, with guidance from András Máté Fridvalszky.
