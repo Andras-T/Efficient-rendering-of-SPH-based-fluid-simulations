@@ -4,7 +4,7 @@ import { bindCamera, createCamera } from './camera.js';
 import { colorMeshByPressure } from './cp.js';
 import { createRenderer, requestGpu } from './gpu.js';
 import { createSolver, setInletSpeed, stepSolver } from './lbm.js';
-import { fitMeshToTunnel, parseStl } from './mesh.js';
+import { fitMeshToTunnel, parsePackedMesh } from './mesh.js';
 import { buildWindOccupancy } from './occupancy.js';
 import { measureAero } from './aero.js';
 import {
@@ -54,12 +54,12 @@ async function main() {
   }
 
   statusEl.textContent = 'Loading C42…';
-  const stl = await fetch('./c42.stl');
-  if (!stl.ok) {
+  const packed = await fetch('./c42.bin');
+  if (!packed.ok) {
     showFallback('Could not load the C42 mesh.');
     return;
   }
-  const rest = parseStl(await stl.arrayBuffer());
+  const rest = parsePackedMesh(await packed.arrayBuffer());
   fitMeshToTunnel(rest, Domain);
   let pose = identityPose();
   let live = cloneMesh(rest);

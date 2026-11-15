@@ -1,11 +1,11 @@
 export function createCamera() {
   const portrait = typeof window !== 'undefined' && window.innerHeight > window.innerWidth * 1.05;
   return {
-    target: portrait ? [-0.48, -0.18, 0] : [-0.62, 0.12, 0],
-    yaw: -0.32,
-    pitch: portrait ? 0.18 : 0.22,
-    distance: portrait ? 2.05 : 1.55,
-    fov: portrait ? 0.72 : 0.9,
+    target: portrait ? [-0.62, -0.28, 0] : [-0.62, 0.12, 0],
+    yaw: portrait ? -0.55 : -0.38,
+    pitch: portrait ? 0.14 : 0.22,
+    distance: portrait ? 3.15 : 1.55,
+    fov: portrait ? 0.92 : 0.9,
     near: 0.05,
     far: 20,
   };

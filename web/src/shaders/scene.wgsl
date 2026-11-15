@@ -34,7 +34,7 @@ fn fsCar(input : VsOut) -> @location(0) vec4<f32> {
   let n = normalize(input.normal);
   let l = normalize(u.light.xyz);
   let v = normalize(u.eye.xyz - input.world);
-  let ndl = max(abs(dot(n, l)), 0.0);
+  let ndl = max(dot(n, l), 0.0);
   let spec = pow(max(dot(n, normalize(l + v)), 0.0), 32.0);
   let lit = input.color * (0.22 + 0.78 * ndl) + vec3<f32>(0.18, 0.18, 0.2) * spec;
   return vec4<f32>(lit, 1.0);

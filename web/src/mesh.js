@@ -1,5 +1,56 @@
+function asBytes(buffer) {
+  return buffer instanceof ArrayBuffer ? new Uint8Array(buffer) : buffer;
+}
+
+export function parsePackedMesh(buffer) {
+  const bytes = asBytes(buffer);
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (bytes.length < 12 || String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3]) !== 'C42M') {
+    throw new Error('mesh is not a packed C42 body');
+  }
+  const vertexCount = view.getUint32(4, true);
+  const triangleCount = view.getUint32(8, true);
+  let offset = 12;
+  const positions = new Array(vertexCount);
+  for (let i = 0; i < vertexCount; ++i) {
+    positions[i] = [
+      view.getFloat32(offset, true),
+      view.getFloat32(offset + 4, true),
+      view.getFloat32(offset + 8, true),
+    ];
+    offset += 12;
+  }
+  const normals = new Array(vertexCount);
+  for (let i = 0; i < vertexCount; ++i) {
+    normals[i] = [
+      view.getFloat32(offset, true),
+      view.getFloat32(offset + 4, true),
+      view.getFloat32(offset + 8, true),
+    ];
+    offset += 12;
+  }
+  const mesh = [];
+  for (let t = 0; t < triangleCount; ++t) {
+    const ia = view.getUint32(offset, true);
+    const ib = view.getUint32(offset + 4, true);
+    const ic = view.getUint32(offset + 8, true);
+    offset += 12;
+    for (const index of [ia, ib, ic]) {
+      mesh.push({
+        position: positions[index].slice(),
+        normal: normals[index].slice(),
+        color: [0.82, 0.84, 0.88],
+      });
+    }
+  }
+  if (mesh.length < 3) {
+    throw new Error('mesh has no triangles');
+  }
+  return mesh;
+}
+
 export function parseStl(buffer) {
-  const bytes = buffer instanceof ArrayBuffer ? new Uint8Array(buffer) : buffer;
+  const bytes = asBytes(buffer);
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const count = view.getUint32(80, true);
   const mesh = [];
