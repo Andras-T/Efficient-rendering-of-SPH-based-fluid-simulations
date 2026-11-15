@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1"
+    />
+    <meta name="theme-color" content="#0e1116" />
+    <title>Wind tunnel</title>
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+    <canvas id="present"></canvas>
+    <div id="hud">
+      <h1>Wind tunnel</h1>
+      <p class="sub">Alfa Romeo C42 · D3Q19 LBM · live Cp</p>
+      <div class="row">
+        <button id="play" type="button">Play</button>
+        <button id="reset" class="ghost" type="button">Reset pose</button>
+        <button id="tracers" type="button">Tracers</button>
+        <span id="status">Starting…</span>
+      </div>
+      <label>
+        <span>Yaw <strong id="yaw-label">0°</strong></span>
+        <input id="yaw" type="range" min="-180" max="180" value="0" step="1" />
+      </label>
+      <label>
+        <span>Pitch <strong id="pitch-label">0°</strong></span>
+        <input id="pitch" type="range" min="-40" max="40" value="0" step="1" />
+      </label>
+      <label>
+        <span>Inlet <strong id="kmh-label">180 km/h</strong></span>
+        <input id="wind" type="range" min="50" max="280" value="180" step="5" />
+      </label>
+      <div class="stats">
+        <span>Cd <strong id="cd">—</strong></span>
+        <span>Cl <strong id="cl">—</strong></span>
+      </div>
+      <div class="legend" title="Cp: suction to high pressure"></div>
+    </div>
+    <div id="fallback">
+      <div>
+        <h1>WebGL required</h1>
+        <p id="fallback-text">
+          This wind tunnel runs in the browser on WebGL (or WebGPU when the adapter is available).
+          Open it in Safari or Chrome on a recent phone.
+        </p>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
