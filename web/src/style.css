@@ -1,0 +1,131 @@
+:root {
+  color-scheme: dark;
+  --pad: max(16px, env(safe-area-inset-bottom));
+  --hud: 18px;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #0e1116;
+  color: #e8eaee;
+  overflow: hidden;
+  touch-action: none;
+}
+
+#view,
+#present {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#present {
+  display: none;
+  pointer-events: none;
+}
+
+#present.show {
+  display: block;
+}
+
+#hud {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: var(--pad);
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px 14px;
+  border-radius: 18px;
+  background: rgba(12, 14, 18, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  max-width: 520px;
+  margin: 0 auto;
+  max-height: 46vh;
+  overflow: auto;
+}
+
+@media (min-width: 900px) {
+  #hud { left: 16px; right: auto; width: 380px; margin: 0; }
+}
+
+h1 {
+  font-size: var(--hud);
+  font-weight: 650;
+  margin: 0 0 2px;
+}
+
+.sub { color: #9aa3b2; font-size: 13px; margin: 0 0 8px; }
+
+label {
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+  color: #c9d0da;
+}
+
+input[type='range'] {
+  width: 100%;
+  height: 32px;
+  accent-color: #6ea8ff;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+button {
+  min-height: 48px;
+  min-width: 96px;
+  border: 0;
+  border-radius: 12px;
+  background: #3d7dff;
+  color: white;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+button.ghost {
+  background: #232833;
+  color: #d7dbe3;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+}
+
+.legend {
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #0a28ed, #eceef2, #f00a0a);
+}
+
+#fallback {
+  position: fixed;
+  inset: 0;
+  display: none;
+  place-items: center;
+  padding: 28px;
+  background: #10141c;
+  text-align: center;
+}
+
+#fallback.show { display: grid; }
+
+#fallback h1 { font-size: 28px; }
+#status { font-size: 13px; color: #8b95a5; }
