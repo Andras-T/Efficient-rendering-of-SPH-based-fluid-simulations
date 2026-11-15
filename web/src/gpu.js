@@ -5,9 +5,20 @@ import { packMesh } from './mesh.js';
 import { cellCount, Domain } from './units.js';
 import { LbmQ } from './lbm.js';
 
+export function preferWebgl() {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  const query = new URLSearchParams(window.location.search);
+  return query.has('gl') || query.get('webgpu') === '0';
+}
+
 export async function requestGpu(canvas) {
+  if (preferWebgl()) {
+    return { ok: false, skipped: true, reason: 'WebGPU skipped' };
+  }
   if (!navigator.gpu) {
-    return { ok: false, reason: 'This browser has no WebGPU. Use Safari iOS 16.4+ or Chrome Android 113+.' };
+    return { ok: false, reason: 'This browser has no WebGPU.' };
   }
   const adapter = await navigator.gpu.requestAdapter();
   if (!adapter) {

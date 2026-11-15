@@ -3,6 +3,7 @@ import { applyObstaclePose, cloneMesh, identityPose } from './pose.js';
 import { bindCamera, createCamera } from './camera.js';
 import { colorMeshByPressure } from './cp.js';
 import { createRenderer, requestGpu } from './gpu.js';
+import { createGlRenderer, requestGl } from './gl.js';
 import { createSolver, setInletSpeed, stepSolver } from './lbm.js';
 import { fitMeshToTunnel, parsePackedMesh } from './mesh.js';
 import { buildWindOccupancy } from './occupancy.js';
@@ -44,14 +45,42 @@ function resize() {
   canvas.height = Math.floor(height * dpr);
 }
 
+async function chooseRenderer() {
+  let gpu = { ok: false, reason: 'WebGPU unavailable.' };
+  try {
+    gpu = await requestGpu(canvas);
+  } catch (error) {
+    gpu = { ok: false, reason: error instanceof Error ? error.message : String(error) };
+  }
+  if (gpu.ok) {
+    try {
+      return { renderer: createRenderer(gpu, Domain), api: 'WebGPU', gpu };
+    } catch (error) {
+      gpu = { ok: false, reason: error instanceof Error ? error.message : String(error) };
+    }
+  }
+  const gl = requestGl(canvas);
+  if (gl.ok) {
+    const renderer = createGlRenderer(gl, Domain);
+    return { renderer, api: renderer.api, gpu: null };
+  }
+  return {
+    renderer: null,
+    api: null,
+    gpu: null,
+    reason: gl.reason || gpu.reason || 'WebGPU and WebGL are unavailable.',
+  };
+}
+
 async function main() {
   resize();
   window.addEventListener('resize', resize);
-  const gpu = await requestGpu(canvas);
-  if (!gpu.ok) {
-    showFallback(gpu.reason);
+  const chosen = await chooseRenderer();
+  if (!chosen.renderer) {
+    showFallback(chosen.reason);
     return;
   }
+  const { renderer, api, gpu } = chosen;
 
   statusEl.textContent = 'Loading C42…';
   const packed = await fetch('./c42.bin');
@@ -61,14 +90,11 @@ async function main() {
   }
   const rest = parsePackedMesh(await packed.arrayBuffer());
   fitMeshToTunnel(rest, Domain);
-  let pose = identityPose();
   let live = cloneMesh(rest);
   let occupancy = buildWindOccupancy(Domain, live);
   let windKmh = DefaultWindKmh;
   let solver = createSolver(Domain, occupancy, 0.6, kmhToLattice(windKmh));
   colorMeshByPressure(live, Domain, solver.macros, occupancy, solver.inletUx);
-
-  const renderer = createRenderer(gpu, Domain);
   renderer.uploadMesh(live);
   const camera = createCamera();
   bindCamera(canvas, camera);
@@ -86,15 +112,18 @@ async function main() {
   syncLabels();
 
   const rebuild = () => {
-    pose = {
-      yaw: (Number(yawEl.value) * Math.PI) / 180,
-      pitch: (Number(pitchEl.value) * Math.PI) / 180,
-      roll: 0,
-      translation: [0, 0, 0],
-      scale: 1,
-    };
     live = cloneMesh(rest);
-    applyObstaclePose(live, pose, Domain);
+    applyObstaclePose(
+      live,
+      {
+        yaw: (Number(yawEl.value) * Math.PI) / 180,
+        pitch: (Number(pitchEl.value) * Math.PI) / 180,
+        roll: 0,
+        translation: [0, 0, 0],
+        scale: 1,
+      },
+      Domain,
+    );
     occupancy = buildWindOccupancy(Domain, live);
     solver = createSolver(Domain, occupancy, 0.6, kmhToLattice(windKmh));
     colorMeshByPressure(live, Domain, solver.macros, occupancy, solver.inletUx);
@@ -131,10 +160,11 @@ async function main() {
     rebuild();
   });
 
-  let blitPresent = /(?:\?|&)blit=1\b/.test(window.location.search);
+  const usesGpu = Boolean(gpu);
+  let blitPresent = usesGpu && /(?:\?|&)blit=1\b/.test(window.location.search);
   let blitBusy = false;
   const presentFrame = async () => {
-    if (!blitPresent || blitBusy) {
+    if (!blitPresent || blitBusy || !renderer.capture) {
       return;
     }
     blitBusy = true;
@@ -168,11 +198,15 @@ async function main() {
     }
     requestAnimationFrame(tick);
   };
-  const adapterLabel = gpu.adapter?.info?.description || gpu.adapter?.info?.vendor || 'WebGPU';
+  const adapterLabel = gpu?.adapter?.info?.description || gpu?.adapter?.info?.vendor || api;
   statusEl.textContent = `${adapterLabel}  D3Q19  C42`;
   window.__sphReady = true;
+  window.__sphApi = api;
   window.__sphCapture = async () => renderer.capture(camera, canvas.width, canvas.height);
   requestAnimationFrame(tick);
+  if (!usesGpu) {
+    return;
+  }
   (async () => {
     if (blitPresent) {
       return;
