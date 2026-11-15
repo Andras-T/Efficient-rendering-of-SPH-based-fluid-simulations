@@ -8,6 +8,7 @@ import { createSolver, setInletSpeed, stepSolver } from './lbm.js';
 import { fitMeshToTunnel, parsePackedMesh } from './mesh.js';
 import { buildWindOccupancy } from './occupancy.js';
 import { measureAero } from './aero.js';
+import { createTracers, packStreaks, stepTracers } from './tracers.js';
 import {
   Domain,
   clampWindKmh,
@@ -26,6 +27,7 @@ const pitchEl = document.querySelector('#pitch');
 const windEl = document.querySelector('#wind');
 const playEl = document.querySelector('#play');
 const resetEl = document.querySelector('#reset');
+const tracersEl = document.querySelector('#tracers');
 const cdEl = document.querySelector('#cd');
 const clEl = document.querySelector('#cl');
 const kmhEl = document.querySelector('#kmh-label');
@@ -96,6 +98,18 @@ async function main() {
   let solver = createSolver(Domain, occupancy, 0.6, kmhToLattice(windKmh));
   colorMeshByPressure(live, Domain, solver.macros, occupancy, solver.inletUx);
   renderer.uploadMesh(live);
+  let tracers = createTracers(solver, Domain);
+  let showTracers = true;
+  const syncTracers = () => {
+    if (!showTracers) {
+      renderer.uploadTracers(new Float32Array(0));
+      tracersEl.classList.add('ghost');
+      return;
+    }
+    renderer.uploadTracers(packStreaks(tracers, solver.inletUx));
+    tracersEl.classList.remove('ghost');
+  };
+  syncTracers();
   const camera = createCamera();
   bindCamera(canvas, camera);
 
@@ -128,6 +142,8 @@ async function main() {
     solver = createSolver(Domain, occupancy, 0.6, kmhToLattice(windKmh));
     colorMeshByPressure(live, Domain, solver.macros, occupancy, solver.inletUx);
     renderer.uploadMesh(live);
+    tracers = createTracers(solver, Domain);
+    syncTracers();
     frames = 0;
     statusEl.textContent = 'Occupancy rebuilt';
   };
@@ -150,6 +166,15 @@ async function main() {
   playEl.addEventListener('click', () => {
     playing = !playing;
     playEl.textContent = playing ? 'Pause' : 'Play';
+    if (playing) {
+      stepSolver(solver, 8);
+      stepTracers(tracers, solver, 8, Domain);
+      syncTracers();
+    }
+  });
+  tracersEl.addEventListener('click', () => {
+    showTracers = !showTracers;
+    syncTracers();
   });
   resetEl.addEventListener('click', () => {
     yawEl.value = '0';
@@ -181,9 +206,13 @@ async function main() {
   const tick = () => {
     resize();
     if (playing) {
-      stepSolver(solver, 1);
-      frames += 1;
-      if (frames % 4 === 0) {
+      stepSolver(solver, 2);
+      stepTracers(tracers, solver, 2, Domain);
+      frames += 2;
+      if (showTracers) {
+        syncTracers();
+      }
+      if (frames % 8 === 0) {
         colorMeshByPressure(live, Domain, solver.macros, occupancy, solver.inletUx);
         renderer.uploadMesh(live);
         const aero = measureAero(solver);
@@ -202,6 +231,12 @@ async function main() {
   statusEl.textContent = `${adapterLabel}  D3Q19  C42`;
   window.__sphReady = true;
   window.__sphApi = api;
+  window.__sphTracers = () => showTracers;
+  window.__sphPlay = () => {
+    if (!playing) {
+      playEl.click();
+    }
+  };
   window.__sphCapture = async () => renderer.capture(camera, canvas.width, canvas.height);
   requestAnimationFrame(tick);
   if (!usesGpu) {

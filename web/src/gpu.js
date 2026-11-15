@@ -99,6 +99,27 @@ export function createRenderer(gpu, domain = Domain) {
     primitive: { topology: 'triangle-list' },
     depthStencil: { format: 'depth24plus', depthWriteEnabled: false, depthCompare: 'always' },
   });
+  const streakBlend = {
+    color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+    alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+  };
+  const streakPipeline = device.createRenderPipeline({
+    layout,
+    vertex: {
+      module: shader,
+      entryPoint: 'vsStreak',
+      buffers: [{
+        arrayStride: 24,
+        attributes: [
+          { shaderLocation: 0, offset: 0, format: 'float32x3' },
+          { shaderLocation: 1, offset: 12, format: 'float32x3' },
+        ],
+      }],
+    },
+    fragment: { module: shader, entryPoint: 'fsStreak', targets: [{ format, blend: streakBlend }] },
+    primitive: { topology: 'triangle-list', cullMode: 'none' },
+    depthStencil: { format: 'depth24plus', depthWriteEnabled: false, depthCompare: 'less' },
+  });
 
   const o = domain.origin;
   const m = [
@@ -115,6 +136,8 @@ export function createRenderer(gpu, domain = Domain) {
 
   let meshBuffer = null;
   let meshCount = 0;
+  let tracerBuffer = null;
+  let tracerCount = 0;
   let depthTexture = null;
   let depthView = null;
   let depthWidth = 0;
@@ -131,6 +154,16 @@ export function createRenderer(gpu, domain = Domain) {
         meshBuffer.destroy();
       }
       meshBuffer = createBuffer(device, packed, GPUBufferUsage.VERTEX);
+    },
+    uploadTracers(packed) {
+      tracerCount = packed.length / 6;
+      if (tracerBuffer) {
+        tracerBuffer.destroy();
+        tracerBuffer = null;
+      }
+      if (tracerCount > 0) {
+        tracerBuffer = createBuffer(device, packed, GPUBufferUsage.VERTEX);
+      }
     },
     draw(camera, canvas) {
       const w = canvas.width;
@@ -186,6 +219,11 @@ export function createRenderer(gpu, domain = Domain) {
         pass.setPipeline(carPipeline);
         pass.setVertexBuffer(0, meshBuffer);
         pass.draw(meshCount);
+      }
+      if (tracerBuffer && tracerCount > 0) {
+        pass.setPipeline(streakPipeline);
+        pass.setVertexBuffer(0, tracerBuffer);
+        pass.draw(tracerCount);
       }
       pass.end();
       device.queue.submit([encoder.finish()]);
@@ -243,6 +281,11 @@ export function createRenderer(gpu, domain = Domain) {
         pass.setPipeline(carPipeline);
         pass.setVertexBuffer(0, meshBuffer);
         pass.draw(meshCount);
+      }
+      if (tracerBuffer && tracerCount > 0) {
+        pass.setPipeline(streakPipeline);
+        pass.setVertexBuffer(0, tracerBuffer);
+        pass.draw(tracerCount);
       }
       pass.end();
       encoder.copyTextureToBuffer(

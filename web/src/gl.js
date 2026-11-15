@@ -113,6 +113,22 @@ void main() {
   float t = clamp(gl_FragCoord.y / 900.0, 0.0, 1.0);
   frag = vec4(mix(vec3(0.78, 0.86, 0.94), vec3(0.62, 0.78, 0.92), t), 1.0);
 }`,
+      streakVs: `#version 300 es
+layout(location=0) in vec3 aPos;
+layout(location=1) in vec3 aCol;
+uniform mat4 uViewProj;
+out vec3 vCol;
+void main() {
+  vCol = aCol;
+  gl_Position = uViewProj * vec4(aPos, 1.0);
+}`,
+      streakFs: `#version 300 es
+precision highp float;
+in vec3 vCol;
+out vec4 frag;
+void main() {
+  frag = vec4(vCol, 0.82);
+}`,
     };
   }
   return {
@@ -175,6 +191,21 @@ void main() {
   float t = clamp(gl_FragCoord.y / 900.0, 0.0, 1.0);
   gl_FragColor = vec4(mix(vec3(0.78, 0.86, 0.94), vec3(0.62, 0.78, 0.92), t), 1.0);
 }`,
+    streakVs: `
+attribute vec3 aPos;
+attribute vec3 aCol;
+uniform mat4 uViewProj;
+varying vec3 vCol;
+void main() {
+  vCol = aCol;
+  gl_Position = uViewProj * vec4(aPos, 1.0);
+}`,
+    streakFs: `
+precision mediump float;
+varying vec3 vCol;
+void main() {
+  gl_FragColor = vec4(vCol, 0.82);
+}`,
   };
 }
 
@@ -189,10 +220,12 @@ export function createGlRenderer(gpu, domain = Domain) {
   const car = program(gl, src.carVs, src.carFs);
   const floor = program(gl, src.floorVs, src.floorFs);
   const sky = program(gl, src.skyVs, src.skyFs);
+  const streak = program(gl, src.streakVs, src.streakFs);
   const carView = gl.getUniformLocation(car, 'uViewProj');
   const carEye = gl.getUniformLocation(car, 'uEye');
   const carLight = gl.getUniformLocation(car, 'uLight');
   const floorView = gl.getUniformLocation(floor, 'uViewProj');
+  const streakView = gl.getUniformLocation(streak, 'uViewProj');
 
   const o = domain.origin;
   const m = [
@@ -216,6 +249,8 @@ export function createGlRenderer(gpu, domain = Domain) {
 
   const meshBuf = gl.createBuffer();
   let meshCount = 0;
+  const tracerBuf = gl.createBuffer();
+  let tracerCount = 0;
 
   const loc = (prog, name, fallback) => {
     const found = gl.getAttribLocation(prog, name);
@@ -226,6 +261,8 @@ export function createGlRenderer(gpu, domain = Domain) {
   const carCol = loc(car, 'aCol', 2);
   const floorPos = loc(floor, 'aPos', 0);
   const skyPos = loc(sky, 'aPos', 0);
+  const streakPos = loc(streak, 'aPos', 0);
+  const streakCol = loc(streak, 'aCol', 1);
 
   gl.enable(gl.DEPTH_TEST);
   gl.disable(gl.CULL_FACE);
@@ -288,6 +325,20 @@ export function createGlRenderer(gpu, domain = Domain) {
       onlyAttribs(carPos, carNrm, carCol);
       gl.drawArrays(gl.TRIANGLES, 0, meshCount);
     }
+    if (tracerCount > 0) {
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      gl.depthMask(false);
+      gl.useProgram(streak);
+      gl.uniformMatrix4fv(streakView, false, viewProj);
+      gl.bindBuffer(gl.ARRAY_BUFFER, tracerBuf);
+      bindAttrib(gl, streakPos, 3, 24, 0);
+      bindAttrib(gl, streakCol, 3, 24, 12);
+      onlyAttribs(streakPos, streakCol);
+      gl.drawArrays(gl.TRIANGLES, 0, tracerCount);
+      gl.depthMask(true);
+      gl.disable(gl.BLEND);
+    }
   };
 
   return {
@@ -296,6 +347,11 @@ export function createGlRenderer(gpu, domain = Domain) {
       const packed = packMesh(mesh);
       meshCount = mesh.length;
       gl.bindBuffer(gl.ARRAY_BUFFER, meshBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, packed, gl.DYNAMIC_DRAW);
+    },
+    uploadTracers(packed) {
+      tracerCount = packed.length / 6;
+      gl.bindBuffer(gl.ARRAY_BUFFER, tracerBuf);
       gl.bufferData(gl.ARRAY_BUFFER, packed, gl.DYNAMIC_DRAW);
     },
     draw(camera, canvas) {

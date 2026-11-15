@@ -6,6 +6,7 @@ async function assertHud(page) {
   await expect(page.locator('#pitch')).toBeVisible();
   await expect(page.locator('#wind')).toBeVisible();
   await expect(page.locator('#play')).toHaveText(/Play|Pause/);
+  await expect(page.locator('#tracers')).toBeVisible();
   const box = await page.locator('#yaw').boundingBox();
   expect(box).toBeTruthy();
   expect(box.height).toBeGreaterThan(24);
