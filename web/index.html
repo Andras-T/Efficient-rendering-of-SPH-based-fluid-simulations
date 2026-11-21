@@ -13,8 +13,13 @@
     <canvas id="view"></canvas>
     <canvas id="present"></canvas>
     <div id="hud">
-      <h1>Wind tunnel</h1>
-      <p class="sub">Alfa Romeo C42 · D3Q19 LBM · live Cp</p>
+      <div id="hud-head">
+        <button id="hud-hide" type="button" aria-label="Hide controls">Hide</button>
+        <div>
+          <h1>Wind tunnel</h1>
+          <p class="sub">Alfa Romeo C42 · D3Q19 LBM · live Cp</p>
+        </div>
+      </div>
       <div class="row">
         <button id="play" type="button">Play</button>
         <button id="reset" class="ghost" type="button">Reset pose</button>
@@ -38,6 +43,10 @@
         <span>Cl <strong id="cl">—</strong></span>
       </div>
       <div class="legend" title="Cp: suction to high pressure"></div>
+    </div>
+    <div id="chrome">
+      <button id="play-mini" type="button">Play</button>
+      <button id="hud-show" class="ghost" type="button" aria-label="Show controls">Menu</button>
     </div>
     <div id="fallback">
       <div>

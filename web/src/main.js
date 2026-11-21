@@ -25,9 +25,13 @@ const statusEl = document.querySelector('#status');
 const yawEl = document.querySelector('#yaw');
 const pitchEl = document.querySelector('#pitch');
 const windEl = document.querySelector('#wind');
+const hudEl = document.querySelector('#hud');
 const playEl = document.querySelector('#play');
+const playMiniEl = document.querySelector('#play-mini');
 const resetEl = document.querySelector('#reset');
 const tracersEl = document.querySelector('#tracers');
+const hudHideEl = document.querySelector('#hud-hide');
+const hudShowEl = document.querySelector('#hud-show');
 const cdEl = document.querySelector('#cd');
 const clEl = document.querySelector('#cl');
 const kmhEl = document.querySelector('#kmh-label');
@@ -114,7 +118,19 @@ async function main() {
   bindCamera(canvas, camera);
 
   let playing = false;
+  let hudOpen = true;
   let frames = 0;
+  const setHud = (open) => {
+    hudOpen = open;
+    document.body.classList.toggle('hud-collapsed', !open);
+    hudHideEl.setAttribute('aria-expanded', String(open));
+    hudShowEl.setAttribute('aria-expanded', String(open));
+  };
+  const syncPlay = () => {
+    const label = playing ? 'Pause' : 'Play';
+    playEl.textContent = label;
+    playMiniEl.textContent = label;
+  };
   const syncLabels = () => {
     yawLabel.textContent = `${Math.round(Number(yawEl.value))}°`;
     pitchLabel.textContent = `${Math.round(Number(pitchEl.value))}°`;
@@ -163,15 +179,48 @@ async function main() {
     setInletSpeed(solver, kmhToLattice(windKmh));
     syncLabels();
   });
-  playEl.addEventListener('click', () => {
+  const togglePlay = () => {
     playing = !playing;
-    playEl.textContent = playing ? 'Pause' : 'Play';
+    syncPlay();
     if (playing) {
       stepSolver(solver, 8);
       stepTracers(tracers, solver, 8, Domain);
       syncTracers();
     }
+  };
+  playEl.addEventListener('click', togglePlay);
+  playMiniEl.addEventListener('click', togglePlay);
+  hudHideEl.addEventListener('click', () => setHud(false));
+  hudShowEl.addEventListener('click', () => setHud(true));
+  let swipeY = null;
+  hudEl.addEventListener('pointerdown', (event) => {
+    if (event.target.closest('input, button, label')) {
+      swipeY = null;
+      return;
+    }
+    swipeY = event.clientY;
   });
+  hudEl.addEventListener('pointerup', (event) => {
+    if (swipeY == null) {
+      return;
+    }
+    const dy = event.clientY - swipeY;
+    swipeY = null;
+    if (dy > 48) {
+      setHud(false);
+    }
+  });
+  window.addEventListener('keydown', (event) => {
+    if (event.target instanceof HTMLInputElement) {
+      return;
+    }
+    if (event.key === 'Escape' && hudOpen) {
+      setHud(false);
+    } else if (event.key === 'h' || event.key === 'H') {
+      setHud(!hudOpen);
+    }
+  });
+  setHud(true);
   tracersEl.addEventListener('click', () => {
     showTracers = !showTracers;
     syncTracers();
@@ -232,9 +281,11 @@ async function main() {
   window.__sphReady = true;
   window.__sphApi = api;
   window.__sphTracers = () => showTracers;
+  window.__sphHud = () => hudOpen;
+  window.__sphSetHud = setHud;
   window.__sphPlay = () => {
     if (!playing) {
-      playEl.click();
+      togglePlay();
     }
   };
   window.__sphCapture = async () => renderer.capture(camera, canvas.width, canvas.height);

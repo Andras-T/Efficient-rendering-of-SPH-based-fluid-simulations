@@ -5,7 +5,7 @@ Phone-first D3Q19 lattice Boltzmann tunnel around a closed Alfa Romeo C42 triang
 - WebGPU when the adapter works; otherwise WebGL2 (WebGL1 if needed). Same HUD and live Cp.
 - JS D3Q19 is the portable solver used for occupancy rebuild, live Cp, and tests.
 - Yaw / pitch sliders rebuild occupancy and re-paint live Cp (lattice + facing-into-inlet).
-- Inlet smoke-rake tracers (default on) follow the live LBM after Play. Inlet in km/h. Drag to orbit, pinch to zoom. `?gl=1` forces WebGL.
+- Inlet smoke-rake tracers (default on) follow the live LBM after Play. Hide collapses the HUD; Menu (and Play) stay as a tiny overlay. Inlet in km/h. Drag to orbit, pinch to zoom. `?gl=1` forces WebGL. `H` / Escape toggles the panel on desktop.
 
 ```bash
 cd web

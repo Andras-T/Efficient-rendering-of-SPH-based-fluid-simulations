@@ -7,6 +7,7 @@ async function assertHud(page) {
   await expect(page.locator('#wind')).toBeVisible();
   await expect(page.locator('#play')).toHaveText(/Play|Pause/);
   await expect(page.locator('#tracers')).toBeVisible();
+  await expect(page.locator('#hud-hide')).toBeVisible();
   const box = await page.locator('#yaw').boundingBox();
   expect(box).toBeTruthy();
   expect(box.height).toBeGreaterThan(24);
@@ -28,4 +29,18 @@ test('WebGL path runs when the WebGPU adapter is forced off', async ({ page }, t
   await expect(page.locator('#status')).toContainText(/WebGL/i);
   await expect(page.locator('#fallback.show')).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath('webgl.png') });
+});
+
+test('Hide collapses the HUD and Menu brings it back', async ({ page }) => {
+  await page.goto('/?gl=1');
+  await page.waitForFunction(() => window.__sphReady === true, null, { timeout: 40_000 });
+  await assertHud(page);
+  await page.locator('#hud-hide').click();
+  await expect(page.locator('#yaw')).toBeHidden();
+  await expect(page.locator('#hud-show')).toBeVisible();
+  await expect(page.locator('#play-mini')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.__sphHud())).toBe(false);
+  await page.locator('#hud-show').click();
+  await expect(page.locator('#yaw')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.__sphHud())).toBe(true);
 });
