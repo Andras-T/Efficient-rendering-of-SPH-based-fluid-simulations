@@ -7,19 +7,16 @@
       content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1"
     />
     <meta name="theme-color" content="#0e1116" />
+    <meta name="wind-tunnel-build" content="m37-hide" />
     <title>Wind tunnel</title>
   </head>
   <body>
     <canvas id="view"></canvas>
     <canvas id="present"></canvas>
     <div id="hud">
-      <div id="hud-head">
-        <button id="hud-hide" type="button" aria-label="Hide controls">Hide</button>
-        <div>
-          <h1>Wind tunnel</h1>
-          <p class="sub">Alfa Romeo C42 · D3Q19 LBM · live Cp</p>
-        </div>
-      </div>
+      <button id="hud-hide" type="button" aria-label="Hide controls">Hide menu</button>
+      <h1>Wind tunnel</h1>
+      <p class="sub">Alfa Romeo C42 · D3Q19 LBM · live Cp</p>
       <div class="row">
         <button id="play" type="button">Play</button>
         <button id="reset" class="ghost" type="button">Reset pose</button>
@@ -57,6 +54,6 @@
         </p>
       </div>
     </div>
-    <script type="module" src="/src/main.js"></script>
+    <script type="module" src="/src/main.js?v=m37-hide"></script>
   </body>
 </html>

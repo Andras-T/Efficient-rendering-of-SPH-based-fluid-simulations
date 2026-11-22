@@ -1,4 +1,14 @@
 import './style.css';
+
+export const BuildId = 'm37-hide';
+window.__sphBuild = BuildId;
+if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then((regs) => {
+    for (const registration of regs) {
+      void registration.unregister();
+    }
+  });
+}
 import { applyObstaclePose, cloneMesh, identityPose } from './pose.js';
 import { bindCamera, createCamera } from './camera.js';
 import { colorMeshByPressure } from './cp.js';
@@ -194,7 +204,7 @@ async function main() {
   hudShowEl.addEventListener('click', () => setHud(true));
   let swipeY = null;
   hudEl.addEventListener('pointerdown', (event) => {
-    if (event.target.closest('input, button, label')) {
+    if (event.target.closest('input, label, #play, #reset, #tracers')) {
       swipeY = null;
       return;
     }

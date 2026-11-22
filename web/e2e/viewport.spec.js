@@ -8,6 +8,13 @@ async function assertHud(page) {
   await expect(page.locator('#play')).toHaveText(/Play|Pause/);
   await expect(page.locator('#tracers')).toBeVisible();
   await expect(page.locator('#hud-hide')).toBeVisible();
+  await expect(page.locator('#hud-hide')).toHaveText(/Hide menu/);
+  const hideBox = await page.locator('#hud-hide').boundingBox();
+  const hudBox = await page.locator('#hud').boundingBox();
+  expect(hideBox).toBeTruthy();
+  expect(hudBox).toBeTruthy();
+  expect(hideBox.y).toBeLessThan(hudBox.y + 16);
+  expect(hideBox.width).toBeGreaterThan(hudBox.width * 0.7);
   const box = await page.locator('#yaw').boundingBox();
   expect(box).toBeTruthy();
   expect(box.height).toBeGreaterThan(24);
