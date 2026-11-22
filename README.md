@@ -37,7 +37,11 @@ Walls: Hidden, Glass (default), or Particles (Akinci spheres). Tank: Cube, Cylin
 
 On Linux without a GPU, install Mesa's lavapipe (`mesa-vulkan-drivers`).
 
-The desktop Vulkan app on this branch is the frozen showcase (`cursor/vulkan-showcase-3742`). Browser WebGPU work is a separate branch and does not rewrite this C++ tree.
+The desktop Vulkan app is frozen on `cursor/vulkan-showcase-3742`. The phone WebGPU wind tunnel lives in `web/` (Vite + WGSL) and does not rewrite this C++ tree.
+
+```bash
+cd web && npm install && npm test && npm run dev
+```
 
 ## Credits
 

@@ -15,5 +15,12 @@
 *.png
 !/docs/**/*.png
 !/tests/goldens/*.png
+
+# WebGPU app
+node_modules/
+web/dist/
+web/test-results/
+web/playwright-report/
+web/blob-report/
 *.rdc
 imgui.ini
